@@ -1,8 +1,8 @@
 "use client";
 
-import { createContext, startTransition, useActionState, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, startTransition, useActionState, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
-import { Alert, Button, buttonVariants, cx } from "@/components/ui";
+import { Button, buttonVariants, cx } from "@/components/ui";
 import type { ActionState } from "@/lib/action-state";
 
 const PendingContext = createContext<boolean | null>(null);
@@ -84,15 +84,14 @@ export function ActionForm({
           startTransition(() => formAction(data));
         }}
       >
-        {state.error && <Alert>{state.error}</Alert>}
-        {state.ok && <Alert tone="ok">{state.ok}</Alert>}
+        <StateNotice state={state} />
         {typeof children === "function" ? children(state) : children}
       </form>
     </PendingContext.Provider>
   );
 }
 
-/** Botão que dispara uma Server Action, com confirmação em duas etapas quando `confirm` é verdadeiro. */
+/** Botão que dispara uma Server Action; com `confirm`, pede confirmação numa janela antes. */
 export function ActionButton({
   action,
   label,
@@ -101,6 +100,7 @@ export function ActionButton({
   hidden,
   confirm = false,
   confirmLabel = "Confirmar",
+  confirmText,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   label: string;
@@ -109,35 +109,189 @@ export function ActionButton({
   hidden?: Record<string, string>;
   confirm?: boolean;
   confirmLabel?: string;
+  /** Texto explicativo da janela de confirmação. */
+  confirmText?: string;
 }) {
   const [state, formAction, pending] = useActionState(action, {} as ActionState);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
   const inputs = hidden && Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />);
+
+  // Fecha a confirmação quando a ação termina (o resultado aparece em outra janela).
+  useEffect(() => {
+    if (!pending) dialog.current?.close();
+  }, [pending]);
+
   return (
     <PendingContext.Provider value={pending}>
-      <form action={formAction} className="inline-flex flex-col items-end gap-1">
+      <form action={formAction} className="inline-flex">
         {inputs}
         {confirm ? (
-          <details className="relative">
-            <summary
-              className={cx(buttonVariants[variant], "cursor-pointer list-none py-1.5 text-[13px] [&::-webkit-details-marker]:hidden")}
+          <>
+            <button
+              type="button"
+              onClick={() => dialog.current?.showModal()}
+              className={cx(buttonVariants[variant], "py-1.5 text-[13px]")}
             >
               {label}
-            </summary>
-            <div className="absolute right-0 z-10 mt-1 flex items-center gap-2 whitespace-nowrap rounded-lg border border-line bg-surface p-2 shadow-sm">
-              <span className="text-[12px] text-muted">Tem certeza?</span>
-              <SubmitButton variant={variant === "danger" ? "danger" : "primary"} pendingLabel={pendingLabel} className="py-1 text-[12px]">
-                {confirmLabel}
-              </SubmitButton>
-            </div>
-          </details>
+            </button>
+            <dialog
+              ref={dialog}
+              aria-labelledby={titleId}
+              onClick={(e) => e.target === dialog.current && !pending && dialog.current?.close()}
+              className={DIALOG}
+            >
+              <div className="grid gap-4 p-5">
+                <div className="flex items-start gap-3">
+                  <ToneIcon tone={variant === "danger" ? "danger" : "warn"} />
+                  <div className="grid gap-1">
+                    <h2 id={titleId} className="text-[16px] font-semibold">{label}?</h2>
+                    <p className="text-[13.5px] text-muted">{confirmText ?? "Tem certeza? Confirme para continuar."}</p>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button type="button" onClick={() => dialog.current?.close()} disabled={pending} className={buttonVariants.secondary}>
+                    Cancelar
+                  </button>
+                  <SubmitButton variant={variant === "danger" ? "danger" : "primary"} pendingLabel={pendingLabel}>
+                    {confirmLabel}
+                  </SubmitButton>
+                </div>
+              </div>
+            </dialog>
+          </>
         ) : (
           <SubmitButton variant={variant} pendingLabel={pendingLabel} className="py-1.5 text-[13px]">
             {label}
           </SubmitButton>
         )}
-        {state.error && <span className="max-w-xs text-right text-[12px] text-danger">{state.error}</span>}
-        {state.ok && <span className="max-w-xs text-right text-[12px] text-ok">{state.ok}</span>}
+        <StateNotice state={state} />
       </form>
     </PendingContext.Provider>
+  );
+}
+
+const DIALOG =
+  "m-auto w-[min(440px,calc(100vw-2rem))] rounded-xl border border-line bg-surface p-0 text-ink shadow-[0_18px_50px_rgba(0,0,0,0.25)] backdrop:bg-ink/50 backdrop:backdrop-blur-[1px]";
+
+/** Mostra numa janela o resultado de uma ação (sucesso ou erro). */
+function StateNotice({ state }: { state: ActionState }) {
+  const [shown, setShown] = useState<ActionState | null>(null);
+  useEffect(() => {
+    if (state.error || state.ok) setShown(state);
+  }, [state]);
+  if (!shown) return null;
+  return (
+    <NoticeDialog
+      tone={shown.error ? "danger" : "ok"}
+      message={shown.error ?? shown.ok ?? ""}
+      onClose={() => setShown(null)}
+    />
+  );
+}
+
+/**
+ * Aviso em janela sobre a página. Sucesso fecha sozinho em poucos segundos;
+ * erro e atenção ficam até a pessoa clicar em OK (ou Esc).
+ */
+export function NoticeDialog({
+  tone,
+  message,
+  title,
+  onClose,
+  duration = 2600,
+}: {
+  tone: "ok" | "danger" | "warn" | "brand";
+  message: ReactNode;
+  title?: string;
+  onClose: () => void;
+  /** Tempo até fechar sozinho (só avisos de sucesso). */
+  duration?: number;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const close = useRef(onClose);
+  close.current = onClose;
+
+  useEffect(() => {
+    const d = ref.current;
+    if (!d) return;
+    if (!d.open) d.showModal();
+    const onEnd = () => close.current();
+    d.addEventListener("close", onEnd);
+    const timer = tone === "ok" ? setTimeout(() => d.close(), duration) : undefined;
+    return () => {
+      d.removeEventListener("close", onEnd);
+      if (timer) clearTimeout(timer);
+    };
+  }, [tone, message, duration]);
+
+  const heading = title ?? (tone === "ok" ? "Pronto" : tone === "danger" ? "Não foi possível concluir" : tone === "warn" ? "Atenção" : "Aviso");
+  return (
+    <dialog
+      ref={ref}
+      role={tone === "danger" ? "alertdialog" : "dialog"}
+      aria-label={heading}
+      onClick={(e) => e.target === ref.current && ref.current?.close()}
+      className={DIALOG}
+    >
+      <div className="grid gap-4 p-5">
+        <div className="flex items-start gap-3">
+          <ToneIcon tone={tone} />
+          <div className="grid gap-1">
+            <h2 className="text-[16px] font-semibold">{heading}</h2>
+            <div className="text-[14px]">{message}</div>
+          </div>
+        </div>
+        <div className="flex justify-end">
+          <button type="button" autoFocus onClick={() => ref.current?.close()} className={buttonVariants[tone === "danger" ? "secondary" : "primary"]}>
+            OK
+          </button>
+        </div>
+      </div>
+      {tone === "ok" && <span aria-hidden className="block h-1 origin-left bg-ok/70" style={{ animation: `shrink ${duration}ms linear forwards` }} />}
+    </dialog>
+  );
+}
+
+function ToneIcon({ tone }: { tone: "ok" | "danger" | "warn" | "brand" }) {
+  const cls = { ok: "bg-ok-soft text-ok", danger: "bg-danger-soft text-danger", warn: "bg-warn-soft text-warn", brand: "bg-accent-soft text-accent" }[tone];
+  return (
+    <span aria-hidden className={cx("grid h-9 w-9 shrink-0 place-items-center rounded-full", cls)}>
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {tone === "ok" ? <path d="M5 10.5l3.2 3.2L15 7" /> : tone === "brand" ? <path d="M10 9v5M10 6h.01" /> : <path d="M10 6v5M10 14h.01" />}
+      </svg>
+    </span>
+  );
+}
+
+/**
+ * Barra de ações do formulário (salvar, publicar…), presa no topo da tela
+ * enquanto a pessoa rola a página, para os botões estarem sempre à vista.
+ */
+export function FormBar({ children, info }: { children: ReactNode; info?: ReactNode }) {
+  return (
+    <div className="sticky top-[57px] z-10 -mx-1 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface/95 px-3 py-2.5 shadow-[0_4px_14px_rgba(0,0,0,0.06)] backdrop-blur lg:top-2">
+      <div className="min-w-0 text-[13px] text-muted">{info}</div>
+      <div className="flex flex-wrap items-center gap-2">{children}</div>
+    </div>
+  );
+}
+
+/** Aviso vindo do endereço (?aviso=…) depois de criar algo: mostra em janela e limpa o endereço. */
+export function PageNotice({ message, tone = "ok" }: { message: ReactNode; tone?: "ok" | "warn" | "brand" }) {
+  const [open, setOpen] = useState(true);
+  if (!open) return null;
+  return (
+    <NoticeDialog
+      tone={tone}
+      message={message}
+      duration={6000}
+      onClose={() => {
+        setOpen(false);
+        const url = new URL(window.location.href);
+        url.searchParams.delete("aviso");
+        window.history.replaceState(null, "", url);
+      }}
+    />
   );
 }

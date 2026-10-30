@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ActionButton } from "@/components/forms";
+import { ActionButton, PageNotice } from "@/components/forms";
 import { Alert, Card, PageHeader } from "@/components/ui";
 import { requirePermission } from "@/lib/auth";
 import type { AudienceRule, ContentRow } from "@/lib/learning";
@@ -43,17 +43,19 @@ export default async function ConteudoPage({ params, searchParams }: { params: P
               Ver como colaborador
             </Link>
             {usedIn.length === 0 && (
-              <ActionButton action={deleteContent} hidden={{ id: c.id }} label="Excluir" variant="danger" confirm confirmLabel="Excluir conteúdo" />
+              <ActionButton action={deleteContent} hidden={{ id: c.id }} label="Excluir" variant="danger" confirm confirmLabel="Excluir conteúdo" confirmText="O conteúdo e o arquivo enviado serão apagados definitivamente." />
             )}
           </div>
         }
       />
       {aviso === "criado" && (
-        <Alert tone="ok">
-          {c.status === "publicado"
-            ? "Conteúdo criado e publicado. Para os colaboradores verem, inclua em uma trilha ou marque para a biblioteca."
-            : "Conteúdo criado como rascunho. Quando estiver pronto, clique em Publicar."}
-        </Alert>
+        <PageNotice
+          message={
+            c.status === "publicado"
+              ? "Conteúdo criado e publicado. Para os colaboradores verem, inclua em uma trilha ou marque para a biblioteca."
+              : "Conteúdo criado como rascunho. Quando estiver pronto, clique em Publicar."
+          }
+        />
       )}
       {usedIn.length > 0 && (
         <Alert tone="brand">

@@ -96,8 +96,8 @@ await step("cria e exclui uma área sem vínculos; área em uso não oferece exc
   await A.getByText('Área "Implantação" criada.').waitFor();
   const row = A.locator("div.rounded-xl", { hasText: "Implantação" }).first();
   await row.locator("summary").first().click();
-  await row.locator("summary", { hasText: "Excluir" }).click();
-  await row.getByRole("button", { name: "Excluir área" }).click();
+  await row.getByRole("button", { name: "Excluir", exact: true }).click();
+  await A.getByRole("dialog").getByRole("button", { name: "Excluir área" }).click();
   await A.waitForTimeout(800);
   await A.reload();
   assert.equal(await A.getByText("Implantação").count(), 0);
@@ -133,7 +133,7 @@ await step("cria cargo com níveis Júnior e Pleno", async () => {
   await A.getByText('Cargo "Consultor Comercial" criado.').waitFor();
   await A.reload();
   const item = A.locator("div.rounded-xl", { hasText: "Consultor Comercial" }).first();
-  assert.deepEqual((await item.locator("span.rounded-full").allInnerTexts()).map((s) => s.trim()), ["Júnior", "Pleno"]);
+  const got = (await item.locator("span.rounded-full:visible").allInnerTexts()).map((s) => s.trim()); assert.deepEqual(got, ["Júnior", "Pleno"]);
   await A.screenshot({ path: `${SHOTS}/03-cargos.png`, fullPage: true });
 });
 
@@ -171,6 +171,7 @@ await step("recusa onboarding antes da admissão sem apagar o que foi digitado",
   await A.getByText("O onboarding não pode começar antes da admissão.").first().waitFor();
   assert.equal(await A.inputValue("#full_name"), "Carla Colaboradora");
   assert.equal(await mailCount("carla@implantta.com.br"), 0);
+  await A.getByRole("alertdialog").getByRole("button", { name: "OK" }).click();
 });
 
 await step("cadastra colaboradora com área, cargo, nível e supervisor", async () => {
@@ -285,7 +286,7 @@ await step("admin não consegue desativar a si mesmo pela tela", async () => {
     headers: { apikey: process.env.SERVICE_KEY, Authorization: `Bearer ${process.env.SERVICE_KEY}` },
   }).then(async (r) => ({ data: await r.json() }));
   await A.goto(`${BASE}/colaboradores/${data[0].id}`);
-  assert.equal(await A.locator("summary", { hasText: "Desativar" }).count(), 0);
+  assert.equal(await A.getByRole("button", { name: "Desativar", exact: true }).count(), 0);
   await A.selectOption("#status", "inativo");
   await A.getByRole("button", { name: "Salvar alterações" }).click();
   await A.getByText("Você não pode desativar a sua própria conta.").waitFor();
@@ -294,8 +295,8 @@ await step("admin não consegue desativar a si mesmo pela tela", async () => {
 await step("desativar colaboradora bloqueia o acesso dela na hora", async () => {
   await A.goto(`${BASE}/colaboradores?q=carla`);
   await A.getByRole("link", { name: "Carla C. Souza" }).click();
-  await A.locator("summary", { hasText: "Desativar" }).click();
-  await A.getByRole("button", { name: "Desativar acesso" }).click();
+  await A.getByRole("button", { name: "Desativar", exact: true }).click();
+  await A.getByRole("dialog").getByRole("button", { name: "Desativar acesso" }).click();
   await A.waitForTimeout(800);
   await carla.page.goto(`${BASE}/painel`);
   assert.match(carla.page.url(), /acesso-pendente\?motivo=inativo/);

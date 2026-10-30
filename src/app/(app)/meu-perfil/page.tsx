@@ -4,7 +4,11 @@ import { Card, Field, Input, PageHeader, StatusBadge, formatDate } from "@/compo
 import { requireUser } from "@/lib/auth";
 import { PROFILE_SELECT, type ProfileRow } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
+import { THEME_COOKIE, parseTheme } from "@/lib/theme";
 import { changeMyPassword, updateMyName } from "./actions";
+import { AvatarEditor } from "./avatar-editor";
+import { ThemePicker } from "./theme-picker";
 
 export const metadata: Metadata = { title: "Meu perfil" };
 
@@ -13,6 +17,7 @@ export default async function MeuPerfilPage() {
   const supabase = await createClient();
   const { data } = await supabase.from("profiles").select(PROFILE_SELECT).eq("id", me.userId).single();
   const p = data as unknown as ProfileRow;
+  const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
 
   return (
     <>
@@ -42,6 +47,12 @@ export default async function MeuPerfilPage() {
           </dl>
         </Card>
         <div className="grid gap-6">
+          <Card title="Foto">
+            <AvatarEditor userId={me.userId} name={p.full_name} path={me.profile.avatar_path} />
+          </Card>
+          <Card title="Aparência" description="Vale para este navegador.">
+            <ThemePicker current={theme} />
+          </Card>
           <Card title="Nome">
             <ActionForm action={updateMyName}>
               <Field label="Nome completo" htmlFor="full_name">

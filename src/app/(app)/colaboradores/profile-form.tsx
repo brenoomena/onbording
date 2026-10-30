@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ActionForm, SubmitButton } from "@/components/forms";
+import { ActionForm, SubmitButton, FormBar } from "@/components/forms";
 import { Field, Input, Select } from "@/components/ui";
 import type { ActionState } from "@/lib/action-state";
 import type { PersonOption, Structure } from "@/lib/queries";
@@ -62,6 +62,11 @@ export function ProfileForm({
         const e = state.fieldErrors ?? {};
         return (
           <>
+            <FormBar info={mode === "create" ? "O convite de acesso é enviado por e-mail ao cadastrar." : "Cadastro do colaborador"}>
+              <SubmitButton pendingLabel={mode === "create" ? "Enviando convite…" : "Salvando…"}>
+                {mode === "create" ? "Cadastrar e enviar convite" : "Salvar alterações"}
+              </SubmitButton>
+            </FormBar>
             {values.id && <input type="hidden" name="id" value={values.id} />}
 
             <fieldset className="grid gap-4 sm:grid-cols-2">
@@ -200,11 +205,6 @@ export function ProfileForm({
               </Field>
             </fieldset>
 
-            <div className="flex flex-wrap items-center gap-3 border-t border-line pt-4">
-              <SubmitButton pendingLabel={mode === "create" ? "Enviando convite…" : "Salvando…"}>
-                {mode === "create" ? "Cadastrar e enviar convite" : "Salvar alterações"}
-              </SubmitButton>
-            </div>
           </>
         );
       }}

@@ -26,8 +26,9 @@
   color-scheme: light;
 }
 
+/* Tema escuro: automático (segue o sistema) ou escolhido em Meu perfil (data-theme). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: 38 41 45;
     --surface: 48 52 58;
     --sunken: 56 61 68;
@@ -46,6 +47,25 @@
     --danger-soft: 69 26 26;
     color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+  --bg: 38 41 45;
+  --surface: 48 52 58;
+  --sunken: 56 61 68;
+  --ink: 238 242 246;
+  --muted: 166 175 185;
+  --line: 65 71 79;
+  --brand: 20 175 252;
+  --on-brand: 19 34 44;
+  --accent: 92 200 255;
+  --accent-soft: 29 58 76;
+  --ok: 74 222 128;
+  --ok-soft: 23 51 34;
+  --warn: 250 204 21;
+  --warn-soft: 66 52 16;
+  --danger: 248 113 113;
+  --danger-soft: 69 26 26;
+  color-scheme: dark;
 }
 
 html,
@@ -107,3 +127,5 @@ h3 {
 .prose-onb .copy-code:hover { border-color: rgb(var(--brand)); }
 .prose-onb .copy-code[data-copied] { border-color: rgb(var(--ok)); }
 .prose-onb > :first-child { margin-top: 0; }
+
+@keyframes shrink { from { transform: scaleX(1); } to { transform: scaleX(0); } }

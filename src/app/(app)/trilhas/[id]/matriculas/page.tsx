@@ -111,7 +111,7 @@ export default async function MatriculasPage({ params }: { params: Promise<{ id:
                   <td className="text-[13px]">{ORIGIN[r.origin] ?? r.origin}</td>
                   <td>
                     {r.status === "nao_iniciada" && (
-                      <ActionButton action={removeEnrollment} hidden={{ id: r.id }} label="Remover" variant="ghost" confirm confirmLabel="Remover" />
+                      <ActionButton action={removeEnrollment} hidden={{ id: r.id }} label="Remover" variant="ghost" confirm confirmLabel="Remover" confirmText="A pessoa deixa de ver a trilha. O progresso nos conteúdos é mantido." />
                     )}
                   </td>
                 </tr>

@@ -143,6 +143,7 @@ await step("rascunho é publicado pelo botão Publicar", async () => {
   const id = A.url().split("/conteudos/")[1].split("?")[0];
   assert.equal((await rest(`contents?select=status&id=eq.${id}`))[0].status, "rascunho");
   await A.getByText("criado como rascunho").waitFor();
+  await A.getByRole("dialog").getByRole("button", { name: "OK" }).click();
   await A.getByRole("button", { name: "Publicar", exact: true }).click();
   await A.getByText("Conteúdo publicado.").waitFor();
   assert.equal((await rest(`contents?select=status&id=eq.${id}`))[0].status, "publicado");
@@ -235,7 +236,7 @@ await step("estuda o texto com tempo ativo registrado e conclui", async () => {
 });
 
 await step("link externo mostra a senha de acesso e aceita conclusão declarada", async () => {
-  await V.getByRole("link", { name: "Próximo →" }).click();
+  await V.getByRole("link", { name: "Próximo →" }).first().click();
   await V.getByText("@123456TR").waitFor();
   await V.getByRole("button", { name: /Já concluí no Learning Rocks/ }).click();
   await V.getByText(/Concluído em/).waitFor();
@@ -325,6 +326,8 @@ await step("trilha opcional aparece como disponível e a vendedora se inscreve",
   await A.locator("select[name=rule_area]").selectOption({ label: "Contábil" });
   await A.getByRole("button", { name: "Criar trilha" }).click();
   await A.waitForURL(/aviso=criada/);
+  await A.getByRole("dialog").getByRole("button", { name: "OK" }).click();
+  await A.waitForFunction(() => !location.search.includes("aviso="));
   await A.fill("#new-mod-title", "Módulo único");
   await A.getByRole("button", { name: "Criar módulo" }).click();
   await A.getByText('Módulo "Módulo único" criado.').waitFor();
@@ -340,6 +343,34 @@ await step("trilha opcional aparece como disponível e a vendedora se inscreve",
   await V.getByRole("link", { name: /Negociação avançada/ }).waitFor();
   // O texto já concluído conta para a nova trilha também.
   assert.match(await V.getByRole("link", { name: /Negociação avançada/ }).innerText(), /100%|Concluída/);
+});
+
+await step("meu perfil: tema escolhido fica salvo e menu mostra as iniciais", async () => {
+  await V.goto(`${BASE}/meu-perfil`);
+  assert.equal((await V.locator("aside a[title='Meu perfil'] span[aria-hidden]").first().innerText()).trim(), "VV");
+  await V.screenshot({ path: `${SHOTS}/12-meu-perfil.png`, fullPage: true });
+  await V.getByRole("radio", { name: /Escuro/ }).click();
+  assert.equal(await V.evaluate(() => document.documentElement.dataset.theme), "dark");
+  await V.reload();
+  assert.equal(await V.evaluate(() => document.documentElement.dataset.theme), "dark");
+  assert.equal(await V.getByRole("radio", { name: /Escuro/ }).getAttribute("aria-checked"), "true");
+  await V.screenshot({ path: `${SHOTS}/13-meu-perfil-escuro.png`, fullPage: true });
+  await V.getByRole("radio", { name: /Claro/ }).click();
+  assert.equal(await V.evaluate(() => document.documentElement.dataset.theme), "light");
+  await V.getByRole("radio", { name: /Automático/ }).click();
+  assert.equal(await V.evaluate(() => document.documentElement.dataset.theme), undefined);
+});
+
+await step("confirmação de exclusão abre em janela e pode ser cancelada", async () => {
+  await A.goto(`${BASE}/conteudos`);
+  await A.getByRole("link", { name: "Rascunho para publicar" }).click();
+  await A.getByRole("button", { name: "Excluir", exact: true }).click();
+  const dlg = A.getByRole("dialog", { name: "Excluir?" });
+  await dlg.getByText("apagados definitivamente").waitFor();
+  await A.screenshot({ path: `${SHOTS}/14-confirmar-exclusao.png` });
+  await dlg.getByRole("button", { name: "Cancelar" }).click();
+  await A.getByRole("heading", { name: "Rascunho para publicar" }).waitFor();
+  await A.locator("form").filter({ has: A.locator("#title") }).locator("> div").first().screenshot({ path: `${SHOTS}/15-barra-acoes.png` });
 });
 
 await step("telas novas cabem no celular", async () => {

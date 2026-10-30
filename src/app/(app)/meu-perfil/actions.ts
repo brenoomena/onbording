@@ -37,3 +37,25 @@ export async function changeMyPassword(_: ActionState, fd: FormData): Promise<Ac
   }
   return { ok: "Senha alterada." };
 }
+
+/** Grava o novo caminho da foto e apaga a anterior. */
+export async function setMyAvatar(path: string): Promise<ActionState> {
+  const me = await requireUser();
+  if (typeof path !== "string" || !path.startsWith(`${me.userId}/`)) return { error: "Arquivo de foto inválido." };
+  const supabase = await createClient();
+  const { data: old, error } = await supabase.rpc("set_my_avatar", { p_path: path });
+  if (error) return { error: friendlyError(error) };
+  if (old && old !== path) await supabase.storage.from("avatars").remove([old as string]);
+  revalidatePath("/", "layout");
+  return { ok: "Foto atualizada." };
+}
+
+export async function removeMyAvatar(): Promise<ActionState> {
+  await requireUser();
+  const supabase = await createClient();
+  const { data: old, error } = await supabase.rpc("set_my_avatar", { p_path: null });
+  if (error) return { error: friendlyError(error) };
+  if (old) await supabase.storage.from("avatars").remove([old as string]);
+  revalidatePath("/", "layout");
+  return { ok: "Foto removida." };
+}

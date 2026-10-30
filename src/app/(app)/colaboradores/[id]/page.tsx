@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ActionButton } from "@/components/forms";
+import { ActionButton, PageNotice } from "@/components/forms";
 import { Alert, Card, PageHeader, StatusBadge, formatDate, formatDateTime } from "@/components/ui";
 import { requirePermission } from "@/lib/auth";
 import { P } from "@/lib/permissions";
@@ -105,7 +105,7 @@ export default async function ColaboradorPage({
     <>
       {header}
       {aviso === "convidado" && (
-        <Alert tone="ok">Colaborador cadastrado. O convite de acesso foi enviado para {person.email}.</Alert>
+        <PageNotice message={`Colaborador cadastrado. O convite de acesso foi enviado para ${person.email}.`} />
       )}
       {isSelf && (
         <Alert tone="brand">Este é o seu cadastro. Por segurança, você não pode alterar o próprio perfil de acesso nem se desativar.</Alert>

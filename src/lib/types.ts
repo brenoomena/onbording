@@ -42,6 +42,7 @@ export interface Permission {
 export interface Profile {
   id: string;
   full_name: string;
+  avatar_path: string | null;
   email: string;
   role_id: string;
   area_id: string | null;

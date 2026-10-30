@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ActionButton, ActionForm, SubmitButton } from "@/components/forms";
+import { ActionButton, ActionForm, SubmitButton, PageNotice, FormBar } from "@/components/forms";
 import { Alert, Badge, Card, Field, Input, PageHeader } from "@/components/ui";
 import { RichTextarea } from "@/components/rich-textarea";
 import { requirePermission } from "@/lib/auth";
@@ -49,11 +49,11 @@ export default async function PerfilPage({ params, searchParams }: { params: Pro
         }
         actions={
           !role.is_system && (
-            <ActionButton action={deleteRole} hidden={{ id: role.id }} label="Excluir perfil" variant="danger" confirm confirmLabel="Excluir" />
+            <ActionButton action={deleteRole} hidden={{ id: role.id }} label="Excluir perfil" variant="danger" confirm confirmLabel="Excluir" confirmText="O perfil de acesso será apagado. Só é possível se ninguém estiver usando." />
           )
         }
       />
-      {aviso === "criado" && <Alert tone="ok">Perfil criado. Agora escolha as permissões e salve.</Alert>}
+      {aviso === "criado" && <PageNotice message="Perfil criado. Agora escolha as permissões e salve." />}
       {isAdminRole && <Alert tone="brand">O Administrador tem sempre todas as permissões, para que a plataforma nunca fique sem quem a administre.</Alert>}
       {!isAdminRole && isOwnRole && locked && (
         <Alert tone="warn">Este é o seu perfil. Por segurança, só um administrador pode alterar as permissões dele.</Alert>
@@ -61,6 +61,9 @@ export default async function PerfilPage({ params, searchParams }: { params: Pro
 
       <Card>
         <ActionForm action={saveRole}>
+          <FormBar info={<Link href="/perfis" className="font-medium text-accent hover:underline">← Voltar aos perfis</Link>}>
+            <SubmitButton>Salvar perfil</SubmitButton>
+          </FormBar>
           <input type="hidden" name="id" value={role.id} />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Nome" htmlFor="name">
@@ -105,10 +108,6 @@ export default async function PerfilPage({ params, searchParams }: { params: Pro
             <p className="text-[12.5px] text-muted">As permissões das próximas etapas (trilhas, avaliações, PDI) aparecem aqui quando cada módulo for entregue.</p>
           </div>
 
-          <div className="flex flex-wrap gap-3 border-t border-line pt-4">
-            <SubmitButton>Salvar perfil</SubmitButton>
-            <Link href="/perfis" className="self-center text-[13px] font-medium text-accent hover:underline">← Voltar</Link>
-          </div>
         </ActionForm>
       </Card>
     </>

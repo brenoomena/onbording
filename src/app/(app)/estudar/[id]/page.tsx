@@ -93,22 +93,16 @@ export default async function EstudarPage({
       {preview && <Alert tone="brand">Pré-visualização: o seu tempo e a conclusão não são registrados.</Alert>}
       {content.description && <Markdown>{content.description}</Markdown>}
 
-      <article className="rounded-xl border border-line bg-surface p-5 sm:p-7">
-        <ContentViewer content={content} fileUrl={fileUrl} />
-        {content.kind === "link" && (
-          <p className="mt-4 text-[13px] text-muted">Quando terminar, volte aqui e marque como concluído.</p>
-        )}
-      </article>
-
-      {content.objective && <ObjectiveNote text={content.objective} />}
-
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface p-4">
+      <div className="sticky top-[57px] z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface/95 p-3 shadow-[0_4px_14px_rgba(0,0,0,0.06)] backdrop-blur sm:px-4 lg:top-2">
         <div className="text-[13px] text-muted">
           {mine ? `Tempo ativo neste conteúdo: ${formatMinutes(mine.active_seconds)} · ${mine.visits} ${mine.visits === 1 ? "acesso" : "acessos"}` : "Primeiro acesso"}
         </div>
         {!preview &&
           (done ? (
-            <Badge tone="ok">Concluído</Badge>
+            <span className="flex items-center gap-2">
+              <Badge tone="ok">Concluído</Badge>
+              {nav.next && <Link href={`/estudar/${nav.next}${q}`} className={buttonVariants.primary}>Próximo →</Link>}
+            </span>
           ) : (
             <ActionForm action={completeContent}>
               <input type="hidden" name="content_id" value={id} />
@@ -119,6 +113,15 @@ export default async function EstudarPage({
             </ActionForm>
           ))}
       </div>
+
+      <article className="rounded-xl border border-line bg-surface p-5 sm:p-7">
+        <ContentViewer content={content} fileUrl={fileUrl} />
+        {content.kind === "link" && (
+          <p className="mt-4 text-[13px] text-muted">Quando terminar, volte aqui e marque como concluído no botão acima.</p>
+        )}
+      </article>
+
+      {content.objective && <ObjectiveNote text={content.objective} />}
 
       {nav.trackId && (
         <nav aria-label="Navegação da trilha" className="flex flex-wrap items-center justify-between gap-2">

@@ -47,7 +47,7 @@ describe("tempo", () => {
   });
 });
 
-import { normalizeUrl, plainText } from "@/lib/text";
+import { initials, normalizeUrl, plainText } from "@/lib/text";
 
 describe("plainText", () => {
   it("tira as marcações e junta as linhas", () => {
@@ -65,5 +65,14 @@ describe("normalizeUrl", () => {
     expect(normalizeUrl("ana@implantta.com.br")).toBe("mailto:ana@implantta.com.br");
     expect(normalizeUrl("abvcsaas")).toBeNull();
     expect(normalizeUrl("dois termos.com")).toBeNull();
+  });
+});
+
+describe("initials", () => {
+  it("usa a primeira letra do nome e do último sobrenome", () => {
+    expect(initials("Breno da Silva Omena")).toBe("BO");
+    expect(initials("ana")).toBe("A");
+    expect(initials("  ")).toBe("?");
+    expect(initials("Élida Ávila")).toBe("ÉÁ");
   });
 });

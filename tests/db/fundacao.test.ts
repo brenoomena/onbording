@@ -134,6 +134,20 @@ run("Etapa 1 · banco, permissões e RLS", () => {
     expect(r.rows[0]).toEqual({ full_name: "Carla C. Souza", status: "onboarding" });
   });
 
+  it("cada pessoa troca só a própria foto, e só por arquivo da própria pasta", async () => {
+    const own = `${colabTime}/foto.webp`;
+    const old = await asUser(db.pool, colabTime, (q) => q("select public.set_my_avatar($1) as old", [own]));
+    expect(old.rows[0].old).toBeNull();
+    const r = await asSystem(db.pool, (q) => q("select avatar_path from profiles where id = $1", [colabTime]));
+    expect(r.rows[0].avatar_path).toBe(own);
+    // Arquivo da pasta de outra pessoa ou com ".." é recusado
+    await expect(asUser(db.pool, colabTime, (q) => q("select public.set_my_avatar($1)", [`${sup}/x.webp`]))).rejects.toThrow(/inválido/);
+    await expect(asUser(db.pool, colabTime, (q) => q("select public.set_my_avatar($1)", [`${colabTime}/../${sup}/x.webp`]))).rejects.toThrow(/inválido/);
+    // Remover devolve o caminho antigo, para apagar o arquivo
+    const removed = await asUser(db.pool, colabTime, (q) => q("select public.set_my_avatar(null) as old"));
+    expect(removed.rows[0].old).toBe(own);
+  });
+
   it("supervisor não consegue se promover a administrador", async () => {
     const r = await asUser(db.pool, sup, (q) =>
       q("update profiles set role_id = (select id from roles where key='admin') where id = $1 returning id", [sup]),

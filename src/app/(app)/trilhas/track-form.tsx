@@ -1,7 +1,7 @@
 "use client";
 
 import { AudienceEditor } from "@/components/audience-editor";
-import { ActionForm, SubmitButton } from "@/components/forms";
+import { ActionForm, SubmitButton, FormBar } from "@/components/forms";
 import { Field, Input, Select } from "@/components/ui";
 import { RichTextarea } from "@/components/rich-textarea";
 import type { ActionState } from "@/lib/action-state";
@@ -25,6 +25,9 @@ export function TrackForm({
         const e = state.fieldErrors ?? {};
         return (
           <>
+            <FormBar info={track ? "Alterações na trilha" : "Nova trilha (começa como rascunho)"}>
+              <SubmitButton>{track ? "Salvar trilha" : "Criar trilha"}</SubmitButton>
+            </FormBar>
             {track && <input type="hidden" name="id" value={track.id} />}
             <Field label="Nome da trilha" htmlFor="name" error={e.name}>
               <Input id="name" name="name" defaultValue={track?.name} required minLength={3} maxLength={120} />
@@ -73,9 +76,6 @@ export function TrackForm({
                 emptyHint="Sem público definido, a trilha só chega a quem for matriculado manualmente."
               />
             </fieldset>
-            <div className="border-t border-line pt-4">
-              <SubmitButton>{track ? "Salvar trilha" : "Criar trilha"}</SubmitButton>
-            </div>
           </>
         );
       }}

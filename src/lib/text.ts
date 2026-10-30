@@ -21,3 +21,12 @@ export function normalizeUrl(raw: string): string | null {
   if (/^(www\.)?[a-z0-9-]+(\.[a-z0-9-]+)+([/?#].*)?$/i.test(v)) return `https://${v.replace(/\(/g, "%28").replace(/\)/g, "%29")}`;
   return null;
 }
+
+/** Iniciais do primeiro e do último nome ("Breno da Silva Omena" → "BO"). */
+export function initials(fullName: string | null | undefined): string {
+  const parts = (fullName ?? "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  const first = parts[0][0];
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
+  return (first + last).toLocaleUpperCase("pt-BR");
+}

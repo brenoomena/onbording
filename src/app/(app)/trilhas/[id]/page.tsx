@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Markdown } from "@/components/markdown";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ActionButton, ActionForm, SubmitButton } from "@/components/forms";
+import { ActionButton, ActionForm, SubmitButton, PageNotice } from "@/components/forms";
 import { Alert, Badge, Card, Field, Input, PageHeader, Select, buttonVariants } from "@/components/ui";
 import { RichTextarea } from "@/components/rich-textarea";
 import { requirePermission } from "@/lib/auth";
@@ -72,16 +72,16 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
               <ActionButton action={setTrackStatus} hidden={{ id, status: "publicado" }} label="Publicar" variant="primary" />
             )}
             {track.status === "publicado" && (
-              <ActionButton action={setTrackStatus} hidden={{ id, status: "rascunho" }} label="Voltar para rascunho" confirm confirmLabel="Despublicar" />
+              <ActionButton action={setTrackStatus} hidden={{ id, status: "rascunho" }} label="Voltar para rascunho" confirm confirmLabel="Despublicar" confirmText="A trilha some para os colaboradores até ser publicada de novo." />
             )}
             {track.status !== "arquivado" && (
-              <ActionButton action={setTrackStatus} hidden={{ id, status: "arquivado" }} label="Arquivar" confirm confirmLabel="Arquivar trilha" />
+              <ActionButton action={setTrackStatus} hidden={{ id, status: "arquivado" }} label="Arquivar" confirm confirmLabel="Arquivar trilha" confirmText="A trilha sai das listas e para de receber matrículas automáticas." />
             )}
-            {!enrolled && <ActionButton action={deleteTrack} hidden={{ id }} label="Excluir" variant="danger" confirm confirmLabel="Excluir trilha" />}
+            {!enrolled && <ActionButton action={deleteTrack} hidden={{ id }} label="Excluir" variant="danger" confirm confirmLabel="Excluir trilha" confirmText="A trilha e os módulos serão apagados definitivamente. Os conteúdos continuam cadastrados." />}
           </div>
         }
       />
-      {aviso === "criada" && <Alert tone="ok">Trilha criada como rascunho. Monte os módulos abaixo e publique quando estiver pronta.</Alert>}
+      {aviso === "criada" && <PageNotice message="Trilha criada como rascunho. Monte os módulos abaixo e publique quando estiver pronta." />}
       {track.status === "publicado" && drafts.length > 0 && (
         <Alert tone="warn">
           {drafts.length} {drafts.length === 1 ? "conteúdo desta trilha está" : "conteúdos desta trilha estão"} em rascunho e não aparece

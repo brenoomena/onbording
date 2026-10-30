@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AudienceEditor } from "@/components/audience-editor";
-import { ActionForm, SubmitButton } from "@/components/forms";
+import { ActionForm, SubmitButton, FormBar } from "@/components/forms";
 import { Alert, Badge, Field, Input, Select, cx } from "@/components/ui";
 import { RichTextarea } from "@/components/rich-textarea";
 import type { ActionState } from "@/lib/action-state";
@@ -61,6 +61,7 @@ export function ContentForm({
         const e = state.fieldErrors ?? {};
         return (
           <>
+            <PublishBar status={content?.status} isNew={!content} />
             {content && <input type="hidden" name="id" value={content.id} />}
 
             <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
@@ -196,7 +197,6 @@ export function ContentForm({
               )}
             </fieldset>
 
-            <PublishBar status={content?.status} isNew={!content} />
           </>
         );
       }}
@@ -212,12 +212,14 @@ export function ContentForm({
 function PublishBar({ status = "rascunho", isNew }: { status?: PublishStatus; isNew: boolean }) {
   const tone = status === "publicado" ? "ok" : status === "arquivado" ? "neutral" : "warn";
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-      <p className="flex items-center gap-2 text-[13px] text-muted">
-        Situação {isNew ? "ao criar" : "atual"}: <Badge tone={tone}>{PUBLISH_LABEL[status]}</Badge>
-        {status !== "publicado" && <span>· só quem gerencia conteúdos vê.</span>}
-      </p>
-      <div className="flex flex-wrap gap-2">
+    <FormBar
+      info={
+        <span className="flex flex-wrap items-center gap-2">
+          Situação {isNew ? "ao criar" : "atual"}: <Badge tone={tone}>{PUBLISH_LABEL[status]}</Badge>
+          {status !== "publicado" && <span className="hidden sm:inline">· só quem gerencia conteúdos vê.</span>}
+        </span>
+      }
+    >
         {status === "publicado" ? (
           <>
             <SubmitButton name="status" value="publicado">Salvar alterações</SubmitButton>
@@ -234,7 +236,6 @@ function PublishBar({ status = "rascunho", isNew }: { status?: PublishStatus; is
             </SubmitButton>
           </>
         )}
-      </div>
-    </div>
+    </FormBar>
   );
 }

@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { Wordmark } from "@/components/auth-shell";
+import { Avatar } from "@/components/avatar";
 import { Nav } from "@/components/nav";
 import { requireUser } from "@/lib/auth";
 import { visibleMenu } from "@/lib/permissions";
@@ -14,10 +16,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const userBlock = (
     <div className="grid gap-2 border-t border-line pt-4">
-      <div className="min-w-0 px-3">
-        <p className="truncate text-[13px] font-semibold">{me.profile.full_name}</p>
-        <p className="truncate text-[12px] text-muted">{me.profile.role.name}</p>
-      </div>
+      <Link href="/meu-perfil" className="flex min-w-0 items-center gap-2.5 rounded-lg px-2 py-1 hover:bg-sunken" title="Meu perfil">
+        <Avatar name={me.profile.full_name} path={me.profile.avatar_path} size={36} />
+        <span className="min-w-0">
+          <span className="block truncate text-[13px] font-semibold">{me.profile.full_name}</span>
+          <span className="block truncate text-[12px] text-muted">{me.profile.role.name}</span>
+        </span>
+      </Link>
       <form action="/sair" method="post" className="px-1">
         <button type="submit" className="w-full rounded-lg px-2 py-1.5 text-left text-[13px] font-medium text-muted hover:bg-sunken hover:text-ink">
           Sair
