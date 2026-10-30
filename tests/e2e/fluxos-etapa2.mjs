@@ -202,10 +202,37 @@ await step("biblioteca mostra os 11 materiais de apoio por categoria", async () 
   await V.screenshot({ path: `${SHOTS}/07-materiais.png`, fullPage: true });
 });
 
-await step("vídeo do Drive aparece incorporado", async () => {
-  await V.getByRole("link", { name: /Vídeo Institucional Thomson Reuters/ }).click();
-  const src = await V.locator("iframe").getAttribute("src");
+await step("material abre em janela sobre a lista (sem trocar de página)", async () => {
+  await V.getByRole("button", { name: /Vídeo Institucional Thomson Reuters/ }).click();
+  const dlg = V.locator("dialog[open]");
+  await dlg.waitFor();
+  assert.match(V.url(), /\/materiais\?material=/);
+  const src = await dlg.locator("iframe").getAttribute("src");
   assert.match(src, /drive\.google\.com\/file\/d\/.+\/preview/);
+  await V.screenshot({ path: `${SHOTS}/08-material-janela.png` });
+  const before = await dlg.locator("#material-title").textContent();
+  await V.keyboard.press("ArrowRight");
+  await V.waitForFunction((t) => document.querySelector("#material-title")?.textContent !== t, before);
+  await V.keyboard.press("Escape");
+  await V.waitForFunction(() => !location.search.includes("material="));
+  assert.equal(await V.locator("dialog[open]").count(), 0);
+  assert.doesNotMatch(V.url(), /material=/);
+});
+
+await step("link compartilhado abre o material direto na janela", async () => {
+  await V.getByRole("button", { name: /Catálogo Empresarial/ }).click();
+  const url = V.url();
+  await V.goto("about:blank");
+  await V.goto(url);
+  await V.locator("dialog[open] #material-title", { hasText: "Catálogo Empresarial" }).waitFor();
+  await V.locator("dialog[open]").getByRole("button", { name: "Fechar" }).click();
+});
+
+await step("busca filtra materiais na hora", async () => {
+  await V.getByLabel("Buscar material").fill("catalogo");
+  await V.waitForFunction(() => document.querySelectorAll("main ul li").length < 11);
+  assert.ok((await V.locator("main ul li").count()) >= 1);
+  await V.getByLabel("Buscar material").fill("");
 });
 
 await step("vendedora não abre gestão de trilhas e conteúdos", async () => {

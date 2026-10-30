@@ -1,79 +1,46 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Badge, EmptyState, Input, PageHeader, buttonVariants } from "@/components/ui";
+import { PageHeader } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
-import { KIND_LABEL, type ContentKind } from "@/lib/learning";
 import { loadProgressOf } from "@/lib/my-learning";
 import { createClient } from "@/lib/supabase/server";
+import { MaterialsBrowser, type Material } from "./materials-browser";
 
 export const metadata: Metadata = { title: "Materiais" };
 
-interface Row {
-  id: string;
-  title: string;
-  description: string | null;
-  category: string | null;
-  kind: ContentKind;
-  external_platform: string | null;
-}
+type Row = Omit<Material, "fileUrl"> & { storage_path: string | null };
 
-export default async function MateriaisPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+export default async function MateriaisPage() {
   const me = await requireUser();
-  const { q: rawQ } = await searchParams;
   const supabase = await createClient();
-  let query = supabase
-    .from("contents")
-    .select("id, title, description, category, kind, external_platform")
-    .eq("is_library", true)
-    .eq("status", "publicado")
-    .order("title");
-  const q = (rawQ ?? "").replace(/[%,()*]/g, " ").trim();
-  if (q) query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%`);
-  const [{ data }, progress] = await Promise.all([query, loadProgressOf(me.userId)]);
+  const [{ data }, progress] = await Promise.all([
+    supabase
+      .from("contents")
+      .select("id, title, description, category, kind, body, url, storage_path, mime_type, file_name, file_size, external_platform, access_note, estimated_minutes")
+      .eq("is_library", true)
+      .eq("status", "publicado")
+      .order("title"),
+    loadProgressOf(me.userId),
+  ]);
   const rows = (data ?? []) as Row[];
 
-  const groups = new Map<string, Row[]>();
-  for (const r of rows) {
-    const k = r.category ?? "Outros";
-    groups.set(k, [...(groups.get(k) ?? []), r]);
+  // Links temporários (1 h) para os arquivos enviados à plataforma.
+  const paths = rows.map((r) => r.storage_path).filter((p): p is string => !!p);
+  const signed = new Map<string, string>();
+  if (paths.length) {
+    const { data: urls } = await supabase.storage.from("conteudos").createSignedUrls(paths, 3600);
+    for (const u of urls ?? []) if (u.path && u.signedUrl) signed.set(u.path, u.signedUrl);
   }
-  const ordered = [...groups.entries()].sort(([a], [b]) => a.localeCompare(b, "pt-BR"));
+
+  const items: Material[] = rows.map(({ storage_path, ...r }) => ({ ...r, fileUrl: storage_path ? signed.get(storage_path) ?? null : null }));
 
   return (
     <>
-      <PageHeader eyebrow="Aprendizagem" title="Materiais de apoio" description="Vídeos, apresentações e catálogos para consultar quando precisar, inclusive durante as reuniões com clientes." />
-      <form method="get" className="flex flex-wrap gap-2">
-        <Input name="q" defaultValue={rawQ} placeholder="Buscar material" aria-label="Buscar material" className="max-w-sm" />
-        <button type="submit" className={buttonVariants.secondary}>Buscar</button>
-        {q && <Link href="/materiais" className={buttonVariants.ghost}>Limpar</Link>}
-      </form>
-      {rows.length === 0 ? (
-        <EmptyState title={q ? "Nenhum material encontrado" : "Nenhum material disponível para você ainda"} />
-      ) : (
-        ordered.map(([cat, items]) => (
-          <section key={cat} className="grid gap-2">
-            <h2 className="flex items-baseline gap-2 text-[13px] font-semibold uppercase tracking-[0.05em] text-muted">
-              {cat} <span className="font-mono text-[11px] font-normal">{items.length}</span>
-            </h2>
-            <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
-              {items.map((c) => (
-                <li key={c.id}>
-                  <Link href={`/estudar/${c.id}`} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 hover:bg-accent-soft/40">
-                    <span className="min-w-0">
-                      <span className="block font-medium">{c.title}</span>
-                      {c.description && <span className="block text-[12.5px] text-muted">{c.description}</span>}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      {progress.byContent.has(c.id) && <Badge tone="ok">Visto</Badge>}
-                      <Badge>{KIND_LABEL[c.kind]}</Badge>
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))
-      )}
+      <PageHeader
+        eyebrow="Aprendizagem"
+        title="Materiais de apoio"
+        description="Vídeos, apresentações e catálogos para consultar quando precisar, inclusive durante as reuniões com clientes. Clique para ver sem sair da lista."
+      />
+      <MaterialsBrowser items={items} viewed={[...progress.byContent.keys()]} />
     </>
   );
 }

@@ -32,6 +32,8 @@ describe("vídeos incorporados", () => {
     expect(embedUrl("https://youtu.be/xyz")).toBe("https://www.youtube-nocookie.com/embed/xyz");
     expect(embedUrl("https://vimeo.com/12345")).toBe("https://player.vimeo.com/video/12345");
     expect(embedUrl("https://drive.google.com/file/d/ID_1/view?usp=drivesdk")).toBe("https://drive.google.com/file/d/ID_1/preview");
+    expect(embedUrl("https://docs.google.com/presentation/d/ABC/edit#slide=id.p")).toBe("https://docs.google.com/presentation/d/ABC/preview");
+    expect(embedUrl("https://dominiosistemas.learning.rocks/contents/1")).toBeNull();
     expect(embedUrl("https://exemplo.com/video.mp4")).toBeNull();
   });
 });

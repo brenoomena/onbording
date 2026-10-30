@@ -101,7 +101,12 @@ export function itemStates(
   return states;
 }
 
-/** Converte links do YouTube, Vimeo e Google Drive em endereços para incorporar na página. */
+/** Vídeos do YouTube e Vimeo: proporção 16:9. O resto (Drive, Docs) usa a altura da tela. */
+export function isVideoEmbed(src: string): boolean {
+  return src.includes("youtube-nocookie.com") || src.includes("player.vimeo.com");
+}
+
+/** Converte links do YouTube, Vimeo, Google Drive e Google Docs em endereços para incorporar na página. */
 export function embedUrl(url: string | null): string | null {
   if (!url) return null;
   try {
@@ -122,6 +127,10 @@ export function embedUrl(url: string | null): string | null {
     if (host === "drive.google.com") {
       const m = u.pathname.match(/\/file\/d\/([^/]+)/);
       return m ? `https://drive.google.com/file/d/${m[1]}/preview` : null;
+    }
+    if (host === "docs.google.com") {
+      const m = u.pathname.match(/^\/(document|presentation|spreadsheets)\/d\/([^/]+)/);
+      return m ? `https://docs.google.com/${m[1]}/d/${m[2]}/preview` : null;
     }
     return null;
   } catch {
