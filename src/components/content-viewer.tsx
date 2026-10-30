@@ -28,7 +28,7 @@ export function ContentViewer({
   /** Ocupa a altura disponível (janela); senão usa alturas fixas (página). */
   fill?: boolean;
 }) {
-  const tall = fill ? "min-h-[50vh] flex-1" : "h-[75vh]";
+  const tall = fill ? "h-[62dvh] min-h-[320px]" : "h-[75vh]";
   const embed = content.kind === "video" || content.kind === "link" ? embedUrl(content.url) : null;
 
   if (content.kind === "texto" && content.body) {
@@ -107,11 +107,21 @@ export function ContentViewer({
   );
 }
 
+/** Objetivo e orientações do conteúdo, mostrado logo abaixo do conteúdo central. */
+export function ObjectiveNote({ text }: { text: string }) {
+  return (
+    <section aria-label="Objetivo e orientações" className="rounded-xl border border-line bg-surface px-5 py-4">
+      <h2 className="mb-1.5 text-[13px] font-semibold uppercase tracking-[0.05em] text-muted">Objetivo e orientações</h2>
+      <Markdown size="sm">{text}</Markdown>
+    </section>
+  );
+}
+
 function AccessNote({ note }: { note: string }) {
   return (
     <div className="rounded-lg border border-accent/30 bg-accent-soft px-4 py-3 text-[14px]">
       <p className="font-semibold">Como acessar</p>
-      <p className="mt-1 break-words">{note}</p>
+      <Markdown size="sm" className="mt-1 break-words">{note}</Markdown>
     </div>
   );
 }

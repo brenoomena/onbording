@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { plainText } from "@/components/markdown";
 import Link from "next/link";
 import { ProgressBar } from "@/components/progress-bar";
 import { Badge, EmptyState, LinkButton, PageHeader } from "@/components/ui";
@@ -58,7 +59,7 @@ export default async function TrilhasPage() {
                     <Badge tone={tone[t.status]}>{PUBLISH_LABEL[t.status]}</Badge>
                   </div>
                 </div>
-                {t.description && <p className="line-clamp-2 text-[13px] text-muted">{t.description}</p>}
+                {t.description && <p className="line-clamp-2 text-[13px] text-muted">{plainText(t.description)}</p>}
                 <p className="text-[12.5px] tabular-nums text-muted">
                   {t.modules.length} {t.modules.length === 1 ? "módulo" : "módulos"} · {items} {items === 1 ? "conteúdo" : "conteúdos"} · {total}{" "}
                   {total === 1 ? "matrícula" : "matrículas"} · {done} {done === 1 ? "concluída" : "concluídas"}

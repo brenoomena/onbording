@@ -99,3 +99,11 @@ h3 {
 .prose-onb th, .prose-onb td { border: 1px solid rgb(var(--line)); padding: 0.4em 0.7em; text-align: left; }
 .prose-onb img { border-radius: 8px; }
 .prose-onb hr { border-color: rgb(var(--line)); }
+
+/* Textos curtos (descrições, orientações) */
+.prose-onb.prose-sm { font-size: 14px; line-height: 1.6; }
+.prose-onb.prose-sm > * + * { margin-top: 0.6em; }
+.prose-onb .copy-code { cursor: pointer; border: 1px solid rgb(var(--line)); }
+.prose-onb .copy-code:hover { border-color: rgb(var(--brand)); }
+.prose-onb .copy-code[data-copied] { border-color: rgb(var(--ok)); }
+.prose-onb > :first-child { margin-top: 0; }

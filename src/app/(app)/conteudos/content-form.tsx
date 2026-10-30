@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { AudienceEditor } from "@/components/audience-editor";
 import { ActionForm, SubmitButton } from "@/components/forms";
-import { Markdown } from "@/components/markdown";
-import { Alert, Field, Input, Select, Textarea, cx } from "@/components/ui";
+import { Alert, Field, Input, Select, cx } from "@/components/ui";
+import { RichTextarea } from "@/components/rich-textarea";
 import type { ActionState } from "@/lib/action-state";
 import { KIND_LABEL, PUBLISH_LABEL, formatBytes, type AudienceRule, type ContentKind, type ContentRow, type PublishStatus } from "@/lib/learning";
 import type { PersonOption, Structure } from "@/lib/queries";
@@ -28,8 +28,6 @@ export function ContentForm({
   categories: string[];
 }) {
   const [kind, setKind] = useState<ContentKind>(content?.kind ?? "link");
-  const [body, setBody] = useState(content?.body ?? "");
-  const [tab, setTab] = useState<"escrever" | "ver">("escrever");
   const [library, setLibrary] = useState(content?.is_library ?? false);
   const [file, setFile] = useState({
     path: content?.storage_path ?? "",
@@ -75,7 +73,7 @@ export function ContentForm({
               </Field>
             </div>
             <Field label="Descrição" htmlFor="description" hint="Aparece na lista e no topo do conteúdo." error={e.description}>
-              <Textarea id="description" name="description" rows={2} defaultValue={content?.description ?? ""} maxLength={600} />
+              <RichTextarea id="description" name="description" rows={3} defaultValue={content?.description ?? ""} maxLength={1000} />
             </Field>
 
             <fieldset className="grid gap-3">
@@ -96,39 +94,15 @@ export function ContentForm({
               </div>
 
               {kind === "texto" && (
-                <div className="grid gap-2">
-                  <div className="flex gap-1 text-[13px]">
-                    {(["escrever", "ver"] as const).map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() => setTab(t)}
-                        className={cx("rounded-md px-3 py-1 font-medium", tab === t ? "bg-sunken text-ink" : "text-muted")}
-                      >
-                        {t === "escrever" ? "Escrever" : "Pré-visualizar"}
-                      </button>
-                    ))}
-                  </div>
-                  <input type="hidden" name="body" value={body} />
-                  {tab === "escrever" ? (
-                    <Textarea
-                      id="body"
-                      aria-label="Texto do conteúdo"
-                      rows={16}
-                      value={body}
-                      onChange={(ev) => setBody(ev.target.value)}
-                      className="font-mono text-[13px]"
-                      placeholder={"## Título da seção\n\nParágrafo de texto. **Negrito**, *itálico* e [links](https://...).\n\n- item de lista\n\n> Destaque"}
-                    />
-                  ) : (
-                    <div className="min-h-[200px] rounded-lg border border-line bg-surface p-4">
-                      {body.trim() ? <Markdown>{body}</Markdown> : <p className="text-muted">Nada escrito ainda.</p>}
-                    </div>
-                  )}
-                  <p className="text-[12px] text-muted">
-                    Formatação: <code>## Subtítulo</code>, <code>**negrito**</code>, <code>- lista</code>, <code>&gt; destaque</code>,{" "}
-                    <code>[texto](https://link)</code>, <code>![imagem](https://endereço-da-imagem)</code>.
-                  </p>
+                <div className="grid gap-1.5">
+                  <label htmlFor="body" className="text-[13px] font-medium">Texto do conteúdo</label>
+                  <RichTextarea
+                    id="body"
+                    name="body"
+                    rows={16}
+                    defaultValue={content?.body ?? ""}
+                    placeholder="Escreva o conteúdo. Use a barra acima para títulos, listas, links e logins."
+                  />
                   {e.body && <p className="text-[12px] text-danger">{e.body}</p>}
                 </div>
               )}
@@ -153,7 +127,7 @@ export function ContentForm({
                     hint="Aparece só para quem tem acesso ao conteúdo. Ex.: login e senha padrão da plataforma externa."
                     error={e.access_note}
                   >
-                    <Input id="access_note" name="access_note" defaultValue={content?.access_note ?? ""} maxLength={500} />
+                    <RichTextarea id="access_note" name="access_note" rows={3} defaultValue={content?.access_note ?? ""} maxLength={1000} />
                   </Field>
                 </div>
               )}
@@ -199,8 +173,13 @@ export function ContentForm({
                 </Select>
               </Field>
             </div>
-            <Field label="Objetivo de aprendizagem" htmlFor="objective" error={e.objective}>
-              <Textarea id="objective" name="objective" rows={2} defaultValue={content?.objective ?? ""} maxLength={600} />
+            <Field
+              label="Objetivo e orientações"
+              htmlFor="objective"
+              hint="Aparece logo abaixo do conteúdo (vídeo, foto, arquivo). Use para o objetivo, orientações, links extras e logins de acesso."
+              error={e.objective}
+            >
+              <RichTextarea id="objective" name="objective" rows={5} defaultValue={content?.objective ?? ""} maxLength={4000} />
             </Field>
 
             <fieldset className="grid gap-3 rounded-xl border border-line p-4">

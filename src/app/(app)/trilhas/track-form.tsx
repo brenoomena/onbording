@@ -2,7 +2,8 @@
 
 import { AudienceEditor } from "@/components/audience-editor";
 import { ActionForm, SubmitButton } from "@/components/forms";
-import { Field, Input, Select, Textarea } from "@/components/ui";
+import { Field, Input, Select } from "@/components/ui";
+import { RichTextarea } from "@/components/rich-textarea";
 import type { ActionState } from "@/lib/action-state";
 import type { AudienceRule, TrackRow } from "@/lib/learning";
 import type { Structure } from "@/lib/queries";
@@ -29,10 +30,10 @@ export function TrackForm({
               <Input id="name" name="name" defaultValue={track?.name} required minLength={3} maxLength={120} />
             </Field>
             <Field label="Descrição" htmlFor="description" error={e.description}>
-              <Textarea id="description" name="description" rows={2} defaultValue={track?.description ?? ""} maxLength={1000} />
+              <RichTextarea id="description" name="description" rows={3} defaultValue={track?.description ?? ""} maxLength={2000} />
             </Field>
             <Field label="Objetivo de aprendizagem" htmlFor="objective" error={e.objective}>
-              <Textarea id="objective" name="objective" rows={2} defaultValue={track?.objective ?? ""} maxLength={600} />
+              <RichTextarea id="objective" name="objective" rows={3} defaultValue={track?.objective ?? ""} maxLength={2000} />
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Nível recomendado" htmlFor="recommended_level_id">

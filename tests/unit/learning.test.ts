@@ -46,3 +46,13 @@ describe("tempo", () => {
     expect(formatMinutes(125 * 60)).toBe("2 h 5 min");
   });
 });
+
+import { plainText } from "@/lib/text";
+
+describe("plainText", () => {
+  it("tira as marcações e junta as linhas", () => {
+    expect(plainText("**Login:** `ana@x.com`\n**Senha:** `123`")).toBe("Login: ana@x.com · Senha: 123");
+    expect(plainText("### Título\n- item [site](https://a.b)")).toBe("Título · item site");
+    expect(plainText(null)).toBe("");
+  });
+});

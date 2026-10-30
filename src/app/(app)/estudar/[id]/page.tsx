@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { Markdown } from "@/components/markdown";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/forms";
-import { ContentViewer } from "@/components/content-viewer";
+import { ContentViewer, ObjectiveNote } from "@/components/content-viewer";
 import { StudyTracker } from "@/components/study-tracker";
 import { Alert, Badge, PageHeader, buttonVariants, formatDate } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
@@ -90,10 +91,7 @@ export default async function EstudarPage({
         }
       />
       {preview && <Alert tone="brand">Pré-visualização: o seu tempo e a conclusão não são registrados.</Alert>}
-      {content.description && <p className="max-w-3xl text-[15px]">{content.description}</p>}
-      {content.objective && (
-        <p className="max-w-3xl text-[14px] text-muted"><span className="font-semibold text-ink">Objetivo:</span> {content.objective}</p>
-      )}
+      {content.description && <Markdown>{content.description}</Markdown>}
 
       <article className="rounded-xl border border-line bg-surface p-5 sm:p-7">
         <ContentViewer content={content} fileUrl={fileUrl} />
@@ -101,6 +99,8 @@ export default async function EstudarPage({
           <p className="mt-4 text-[13px] text-muted">Quando terminar, volte aqui e marque como concluído.</p>
         )}
       </article>
+
+      {content.objective && <ObjectiveNote text={content.objective} />}
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface p-4">
         <div className="text-[13px] text-muted">

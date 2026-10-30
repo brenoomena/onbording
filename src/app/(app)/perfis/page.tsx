@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { plainText } from "@/components/markdown";
 import Link from "next/link";
 import { ActionForm, SubmitButton } from "@/components/forms";
-import { Badge, Card, Field, Input, PageHeader, Textarea } from "@/components/ui";
+import { Badge, Card, Field, Input, PageHeader } from "@/components/ui";
+import { RichTextarea } from "@/components/rich-textarea";
 import { requirePermission } from "@/lib/auth";
 import { P } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
@@ -45,7 +47,7 @@ export default async function PerfisPage() {
                 <p className="flex flex-wrap items-center gap-2 font-semibold">
                   {r.name} {r.is_system && <Badge>Padrão</Badge>}
                 </p>
-                {r.description && <p className="text-[13px] text-muted">{r.description}</p>}
+                {r.description && <p className="text-[13px] text-muted">{plainText(r.description)}</p>}
                 <p className="text-[12.5px] tabular-nums text-muted">
                   {perms} de {totalPerms ?? 0} permissões · {people} {people === 1 ? "pessoa" : "pessoas"}
                 </p>
@@ -59,7 +61,7 @@ export default async function PerfisPage() {
               <Input id="role-name" name="name" required minLength={2} maxLength={60} placeholder="Ex.: Recursos Humanos" />
             </Field>
             <Field label="Descrição" htmlFor="role-desc">
-              <Textarea id="role-desc" name="description" maxLength={300} />
+              <RichTextarea id="role-desc" name="description" maxLength={600} />
             </Field>
             <div><SubmitButton>Criar perfil</SubmitButton></div>
           </ActionForm>

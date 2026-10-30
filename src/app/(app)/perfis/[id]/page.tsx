@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionButton, ActionForm, SubmitButton } from "@/components/forms";
-import { Alert, Badge, Card, Field, Input, PageHeader, Textarea } from "@/components/ui";
+import { Alert, Badge, Card, Field, Input, PageHeader } from "@/components/ui";
+import { RichTextarea } from "@/components/rich-textarea";
 import { requirePermission } from "@/lib/auth";
 import { P } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
@@ -66,7 +67,7 @@ export default async function PerfilPage({ params, searchParams }: { params: Pro
               <Input id="name" name="name" defaultValue={role.name} required minLength={2} maxLength={60} />
             </Field>
             <Field label="Descrição" htmlFor="description">
-              <Textarea id="description" name="description" rows={1} defaultValue={role.description ?? ""} maxLength={300} />
+              <RichTextarea id="description" name="description" rows={2} defaultValue={role.description ?? ""} maxLength={600} />
             </Field>
           </div>
 

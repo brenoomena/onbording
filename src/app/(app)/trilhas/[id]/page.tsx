@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { Markdown } from "@/components/markdown";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionButton, ActionForm, SubmitButton } from "@/components/forms";
-import { Alert, Badge, Card, Field, Input, PageHeader, Select, Textarea, buttonVariants } from "@/components/ui";
+import { Alert, Badge, Card, Field, Input, PageHeader, Select, buttonVariants } from "@/components/ui";
+import { RichTextarea } from "@/components/rich-textarea";
 import { requirePermission } from "@/lib/auth";
 import { KIND_LABEL, PUBLISH_LABEL, type AudienceRule } from "@/lib/learning";
 import { P } from "@/lib/permissions";
@@ -96,7 +98,7 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
               <div className="min-w-0">
                 <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-accent">Módulo {mi + 1}</p>
                 <p className="font-semibold">{m.title}</p>
-                {m.description && <p className="text-[13px] text-muted">{m.description}</p>}
+                {m.description && <Markdown size="sm" className="text-muted">{m.description}</Markdown>}
               </div>
               <div className="flex flex-wrap items-start gap-1">
                 {mi > 0 && <ActionButton action={moveModule} hidden={{ id: m.id, direction: "-1", track_id: id }} label="↑" variant="ghost" pendingLabel="…" />}
@@ -112,7 +114,7 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
                         <Input id={`mt-${m.id}`} name="title" defaultValue={m.title} required />
                       </Field>
                       <Field label="Descrição" htmlFor={`md-${m.id}`}>
-                        <Textarea id={`md-${m.id}`} name="description" rows={2} defaultValue={m.description ?? ""} />
+                        <RichTextarea id={`md-${m.id}`} name="description" rows={2} defaultValue={m.description ?? ""} maxLength={1000} />
                       </Field>
                       <div className="flex items-center justify-between gap-2">
                         <SubmitButton className="py-1.5 text-[13px]">Salvar</SubmitButton>

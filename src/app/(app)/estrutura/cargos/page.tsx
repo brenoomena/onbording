@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ActionButton, ActionForm, SubmitButton } from "@/components/forms";
-import { Badge, Card, EmptyState, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
+import { Badge, Card, EmptyState, Field, Input, PageHeader, Select } from "@/components/ui";
+import { RichTextarea } from "@/components/rich-textarea";
 import { requirePermission } from "@/lib/auth";
 import { P } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
@@ -49,7 +50,7 @@ function PositionFields({ position, areas, levels }: { position?: PositionRow; a
         </div>
       </fieldset>
       <Field label="Descrição" htmlFor={`desc-${p}`} hint="Opcional. Principais responsabilidades.">
-        <Textarea id={`desc-${p}`} name="description" defaultValue={position?.description ?? ""} maxLength={300} />
+        <RichTextarea id={`desc-${p}`} name="description" defaultValue={position?.description ?? ""} maxLength={600} />
       </Field>
     </>
   );

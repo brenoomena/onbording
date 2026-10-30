@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { plainText } from "@/components/markdown";
 import { ActionButton, ActionForm, SubmitButton } from "@/components/forms";
-import { Badge, Card, EmptyState, Field, Input, PageHeader, Textarea } from "@/components/ui";
+import { Badge, Card, EmptyState, Field, Input, PageHeader } from "@/components/ui";
+import { RichTextarea } from "@/components/rich-textarea";
 import { requirePermission } from "@/lib/auth";
 import { P } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
@@ -27,7 +29,7 @@ function AreaFields({ area }: { area?: AreaRow }) {
         <Input id={`name-${p}`} name="name" defaultValue={area?.name} required minLength={2} maxLength={80} />
       </Field>
       <Field label="Descrição" htmlFor={`desc-${p}`} hint="Opcional. Até 300 caracteres.">
-        <Textarea id={`desc-${p}`} name="description" defaultValue={area?.description ?? ""} maxLength={300} />
+        <RichTextarea id={`desc-${p}`} name="description" defaultValue={area?.description ?? ""} maxLength={600} />
       </Field>
     </>
   );
@@ -64,7 +66,7 @@ export default async function AreasPage() {
                         </p>
                         <p className="text-[12.5px] tabular-nums text-muted">
                           {positions} {positions === 1 ? "cargo" : "cargos"} · {people} {people === 1 ? "colaborador" : "colaboradores"}
-                          {a.description ? ` · ${a.description}` : ""}
+                          {a.description ? ` · ${plainText(a.description)}` : ""}
                         </p>
                       </div>
                     }

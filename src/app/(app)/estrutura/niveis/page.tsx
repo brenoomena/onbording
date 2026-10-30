@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { plainText } from "@/components/markdown";
 import { ActionButton, ActionForm, SubmitButton } from "@/components/forms";
-import { Badge, Card, EmptyState, Field, Input, PageHeader, Textarea } from "@/components/ui";
+import { Badge, Card, EmptyState, Field, Input, PageHeader } from "@/components/ui";
+import { RichTextarea } from "@/components/rich-textarea";
 import { requirePermission } from "@/lib/auth";
 import { P } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
@@ -28,7 +30,7 @@ function LevelFields({ level }: { level?: LevelRow }) {
         <Input id={`name-${p}`} name="name" defaultValue={level?.name} required minLength={2} maxLength={60} />
       </Field>
       <Field label="Descrição" htmlFor={`desc-${p}`} hint="Opcional. O que se espera de quem está neste nível.">
-        <Textarea id={`desc-${p}`} name="description" defaultValue={level?.description ?? ""} maxLength={300} />
+        <RichTextarea id={`desc-${p}`} name="description" defaultValue={level?.description ?? ""} maxLength={600} />
       </Field>
     </>
   );
@@ -82,7 +84,7 @@ export default async function NiveisPage() {
                         <p className="text-[12.5px] tabular-nums text-muted">
                           Usado em {positions} {positions === 1 ? "cargo" : "cargos"} · {people} {people === 1 ? "colaborador" : "colaboradores"}
                         </p>
-                        {l.description && <p className="mt-1 text-[13px] text-muted">{l.description}</p>}
+                        {l.description && <p className="mt-1 text-[13px] text-muted">{plainText(l.description)}</p>}
                       </div>
                     }
                   >

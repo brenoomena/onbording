@@ -100,8 +100,19 @@ await step("cria conteúdo em texto com Markdown e publica", async () => {
   await A.fill("#category", "Institucional");
   await A.locator("label", { hasText: /^Texto$/ }).click();
   await A.fill("#body", "## Seja bem-vindo\n\nEste é o seu **primeiro passo**.\n\n- Conheça o time\n- Leia o material de apoio\n\n> Dúvidas? Fale com o seu supervisor.");
-  await A.getByRole("button", { name: "Pré-visualizar" }).click();
-  await A.locator(".prose-onb h2", { hasText: "Seja bem-vindo" }).waitFor();
+  await A.fill("#description", "Primeiro contato com o time.\nLeia com atenção.");
+  const bodyBox = A.locator("div:has(> textarea#body)");
+  await bodyBox.getByRole("button", { name: "Pré-visualizar" }).click();
+  await bodyBox.locator(".prose-onb h2", { hasText: "Seja bem-vindo" }).waitFor();
+  await bodyBox.getByRole("button", { name: "Editar" }).click();
+  // Barra de formatação: objetivo com login e senha
+  await A.click("#objective");
+  await A.keyboard.type("Depois de ler, acesse o portal do cliente.");
+  await A.locator("div:has(> textarea#objective)").getByRole("button", { name: "Login e senha" }).click();
+  await A.keyboard.type("https://portal.exemplo.com");
+  const obj = await A.inputValue("#objective");
+  assert.match(obj, /portal do cliente\.\n\n\*\*Acesso:\*\* https:\/\/portal\.exemplo\.com\n\*\*Login:\*\* `seu\.email@implantta\.com\.br`/);
+  await A.locator("div:has(> textarea#objective)").screenshot({ path: `${SHOTS}/03b-editor-objetivo.png` });
   await A.fill("#estimated_minutes", "5");
   await A.selectOption("#status", "publicado");
   await A.getByRole("button", { name: "Criar conteúdo" }).click();
@@ -167,6 +178,11 @@ await step("estuda o texto com tempo ativo registrado e conclui", async () => {
   await V.getByRole("link", { name: "Começar" }).click();
   await V.waitForURL(/estudar\//);
   await V.locator(".prose-onb h2", { hasText: "Seja bem-vindo" }).waitFor();
+  // Objetivo fica abaixo do conteúdo central, formatado, com login copiável
+  const objetivo = V.locator('article ~ section[aria-label="Objetivo e orientações"]');
+  await objetivo.waitFor();
+  assert.equal(await objetivo.locator("code.copy-code").count(), 2);
+  assert.ok((await V.locator(".prose-onb br").count()) >= 1, "quebra de linha na descrição");
   for (let i = 0; i < 34; i++) {
     await V.mouse.move(200 + (i % 10) * 20, 300 + (i % 5) * 10);
     await V.waitForTimeout(1000);

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Markdown } from "@/components/markdown";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProgressBar } from "@/components/progress-bar";
@@ -40,7 +41,6 @@ export default async function MinhaTrilhaPage({ params }: { params: Promise<{ id
       <PageHeader
         eyebrow="Minhas trilhas"
         title={track.name}
-        description={track.description}
         actions={
           next && (
             <Link href={`/estudar/${next.content.id}?trilha=${id}`} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-on-brand hover:bg-brand/85">
@@ -49,6 +49,7 @@ export default async function MinhaTrilhaPage({ params }: { params: Promise<{ id
           )
         }
       />
+      {track.description && <Markdown size="sm">{track.description}</Markdown>}
       {enrollment ? (
         <div className="grid gap-3 rounded-xl border border-line bg-surface p-4 sm:grid-cols-[1fr_auto] sm:items-center">
           <ProgressBar value={Number(enrollment.progress_percent)} label="Seu progresso" />
@@ -63,7 +64,10 @@ export default async function MinhaTrilhaPage({ params }: { params: Promise<{ id
         <p className="rounded-lg border border-line bg-sunken px-4 py-2.5 text-[13px] text-muted">Você não está matriculado nesta trilha. O progresso não é registrado.</p>
       )}
       {track.objective && (
-        <p className="text-[14px]"><span className="font-semibold">Objetivo:</span> {track.objective}</p>
+        <section className="rounded-xl border border-accent/30 bg-accent-soft/50 px-4 py-3">
+          <h2 className="mb-1 text-[13px] font-semibold">Objetivo</h2>
+          <Markdown size="sm">{track.objective}</Markdown>
+        </section>
       )}
 
       {modules.length === 0 ? (
@@ -79,7 +83,7 @@ export default async function MinhaTrilhaPage({ params }: { params: Promise<{ id
                   <div>
                     <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-accent">Módulo {mi + 1}</p>
                     <p className="font-semibold">{m.title}</p>
-                    {m.description && <p className="text-[13px] text-muted">{m.description}</p>}
+                    {m.description && <Markdown size="sm" className="text-muted">{m.description}</Markdown>}
                   </div>
                   {req.length > 0 && <span className="text-[12.5px] tabular-nums text-muted">{doneReq} de {req.length} obrigatórios</span>}
                 </div>

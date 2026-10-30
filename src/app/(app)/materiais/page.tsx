@@ -15,7 +15,7 @@ export default async function MateriaisPage() {
   const [{ data }, progress] = await Promise.all([
     supabase
       .from("contents")
-      .select("id, title, description, category, kind, body, url, storage_path, mime_type, file_name, file_size, external_platform, access_note, estimated_minutes")
+      .select("id, title, description, category, kind, body, url, storage_path, mime_type, file_name, file_size, external_platform, access_note, objective, estimated_minutes")
       .eq("is_library", true)
       .eq("status", "publicado")
       .order("title"),

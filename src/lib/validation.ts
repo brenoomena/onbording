@@ -20,23 +20,23 @@ const optionalDate = z
 
 export const areaSchema = z.object({
   name: z.string({ error: "Informe o nome." }).min(2, "O nome precisa de pelo menos 2 caracteres.").max(80),
-  description: optionalText(300),
+  description: optionalText(600),
 });
 
 export const levelSchema = z.object({
   name: z.string({ error: "Informe o nome." }).min(2, "O nome precisa de pelo menos 2 caracteres.").max(60),
-  description: optionalText(300),
+  description: optionalText(600),
 });
 
 export const positionSchema = z.object({
   name: z.string({ error: "Informe o nome." }).min(2, "O nome precisa de pelo menos 2 caracteres.").max(80),
   area_id: z.uuid("Selecione a área."),
-  description: optionalText(300),
+  description: optionalText(600),
 });
 
 export const roleSchema = z.object({
   name: z.string({ error: "Informe o nome." }).min(2, "O nome precisa de pelo menos 2 caracteres.").max(60),
-  description: optionalText(300),
+  description: optionalText(600),
 });
 
 export const STATUS_VALUES = ["onboarding", "ativo", "inativo"] as const;
@@ -112,7 +112,7 @@ const nullableText = (max: number) =>
 export const contentSchema = z
   .object({
     title: z.string({ error: "Informe o título." }).min(3, "O título precisa de pelo menos 3 caracteres.").max(160),
-    description: nullableText(600),
+    description: nullableText(1000),
     category: nullableText(60),
     kind: z.enum(["texto", "link", "video", "arquivo"], { error: "Escolha o formato." }),
     body: nullableText(100_000),
@@ -125,8 +125,8 @@ export const contentSchema = z
     file_size: z.coerce.number().int().positive().optional().transform((v) => v ?? null),
     mime_type: nullableText(150),
     external_platform: nullableText(80),
-    access_note: nullableText(500),
-    objective: nullableText(600),
+    access_note: nullableText(1000),
+    objective: nullableText(4000),
     estimated_minutes: z.coerce
       .number({ error: "Tempo estimado inválido." })
       .int("Use minutos inteiros.")
@@ -147,8 +147,8 @@ export const contentSchema = z
 
 export const trackSchema = z.object({
   name: z.string({ error: "Informe o nome." }).min(3, "O nome precisa de pelo menos 3 caracteres.").max(120),
-  description: nullableText(1000),
-  objective: nullableText(600),
+  description: nullableText(2000),
+  objective: nullableText(2000),
   audience_note: nullableText(300),
   recommended_level_id: z.uuid().optional().transform((v) => v ?? null),
   is_mandatory: z.coerce.boolean(),
@@ -164,7 +164,7 @@ export const trackSchema = z.object({
 
 export const moduleSchema = z.object({
   title: z.string({ error: "Informe o nome do módulo." }).min(2, "O nome precisa de pelo menos 2 caracteres.").max(120),
-  description: nullableText(400),
+  description: nullableText(1000),
 });
 
 /** Lê as regras de público do formulário (campos rule_area, rule_position, rule_level repetidos). */

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { plainText } from "@/components/markdown";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ContentViewer, externalHref, type ViewerContent } from "@/components/content-viewer";
+import { ContentViewer, ObjectiveNote, externalHref, type ViewerContent } from "@/components/content-viewer";
 import { StudyTracker } from "@/components/study-tracker";
 import { Badge, EmptyState, Input, buttonVariants, cx } from "@/components/ui";
 import { KIND_LABEL } from "@/lib/learning";
@@ -11,6 +12,7 @@ export interface Material extends ViewerContent {
   description: string | null;
   category: string | null;
   estimated_minutes: number | null;
+  objective: string | null;
   fileUrl: string | null;
 }
 
@@ -151,7 +153,7 @@ export function MaterialsBrowser({ items, viewed }: { items: Material[]; viewed:
                   >
                     <span className="min-w-0">
                       <span className="block font-medium">{c.title}</span>
-                      {c.description && <span className="block text-[12.5px] text-muted">{c.description}</span>}
+                      {c.description && <span className="block text-[12.5px] text-muted">{plainText(c.description)}</span>}
                     </span>
                     <span className="flex items-center gap-1.5">
                       {seen.has(c.id) && <Badge tone="ok">Visto</Badge>}
@@ -183,7 +185,7 @@ export function MaterialsBrowser({ items, viewed }: { items: Material[]; viewed:
                   {index >= 0 && <span className="text-muted"> · {index + 1} de {ordered.length}</span>}
                 </p>
                 <h2 id="material-title" className="truncate text-[17px] font-semibold">{current.title}</h2>
-                {current.description && <p className="line-clamp-2 text-[13px] text-muted">{current.description}</p>}
+                {current.description && <p className="line-clamp-2 text-[13px] text-muted">{plainText(current.description)}</p>}
               </div>
               <button
                 type="button"
@@ -196,7 +198,10 @@ export function MaterialsBrowser({ items, viewed }: { items: Material[]; viewed:
             </header>
 
             <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
-              <ContentViewer key={current.id} content={current} fileUrl={current.fileUrl} fill />
+              <div className="flex min-h-full flex-col gap-4">
+                <ContentViewer key={current.id} content={current} fileUrl={current.fileUrl} fill />
+                {current.objective && <ObjectiveNote text={current.objective} />}
+              </div>
             </div>
 
             <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-3 sm:px-5">

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { plainText } from "@/components/markdown";
 import Link from "next/link";
 import { ActionButton } from "@/components/forms";
 import { ProgressBar } from "@/components/progress-bar";
@@ -41,7 +42,7 @@ export default async function MinhasTrilhasPage() {
             <Badge tone={overdue ? "danger" : e.status === "concluida" ? "ok" : "neutral"}>{overdue ? "Em atraso" : ENROLLMENT_LABEL[e.status]}</Badge>
           </div>
         </div>
-        {e.track.description && <p className="line-clamp-2 text-[13px] text-muted">{e.track.description}</p>}
+        {e.track.description && <p className="line-clamp-2 text-[13px] text-muted">{plainText(e.track.description)}</p>}
         <ProgressBar value={Number(e.progress_percent)} label={e.due_date ? `Prazo ${formatDate(e.due_date)}` : "Sem prazo"} />
       </Link>
     );
@@ -63,7 +64,7 @@ export default async function MinhasTrilhasPage() {
                   <div key={t.id} className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-dashed border-line bg-surface p-5">
                     <div className="min-w-0">
                       <p className="font-semibold">{t.name}</p>
-                      {t.description && <p className="line-clamp-2 text-[13px] text-muted">{t.description}</p>}
+                      {t.description && <p className="line-clamp-2 text-[13px] text-muted">{plainText(t.description)}</p>}
                     </div>
                     <ActionButton action={enrollMe} hidden={{ track_id: t.id }} label="Começar" variant="primary" />
                   </div>
