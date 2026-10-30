@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState, type ComponentProps, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { Markdown } from "@/components/markdown";
 import { cx } from "@/components/ui";
+import { normalizeUrl } from "@/lib/text";
 
 type Props = Omit<ComponentProps<"textarea">, "value" | "onChange" | "defaultValue"> & {
   defaultValue?: string | null;
@@ -34,6 +35,22 @@ interface Edit {
 export function RichTextarea({ defaultValue, showHelp = true, className, rows = 4, ...props }: Props) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  // Caixa de link: guarda o trecho selecionado enquanto a pessoa digita o endereço.
+  const [linkBox, setLinkBox] = useState<{ start: number; end: number; selected: string } | null>(null);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkText, setLinkText] = useState("");
+  const box = useRef<HTMLDivElement>(null);
+  const urlInput = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!linkBox) return;
+    urlInput.current?.focus();
+    const onDown = (e: MouseEvent) => {
+      if (box.current && !box.current.contains(e.target as Node)) setLinkBox(null);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [linkBox]);
 
   function apply(edit: Edit) {
     const ta = ref.current;
@@ -80,10 +97,36 @@ export function RichTextarea({ defaultValue, showHelp = true, className, rows = 
 
   const link = () => {
     const ta = ref.current;
-    const sel = ta ? ta.value.slice(ta.selectionStart, ta.selectionEnd) : "";
-    if (/^https?:\/\/\S+$/.test(sel)) apply({ before: "[texto do link](", after: ")" });
-    else apply({ before: "[", after: "](https://)", placeholder: "texto do link" });
+    if (!ta) return;
+    const selected = ta.value.slice(ta.selectionStart, ta.selectionEnd);
+    const isUrl = /^(https?:\/\/|www\.)\S+$/i.test(selected.trim());
+    setLinkUrl(isUrl ? selected.trim() : "");
+    setLinkText("");
+    setLinkBox({ start: ta.selectionStart, end: ta.selectionEnd, selected: isUrl ? "" : selected });
   };
+
+  const closeLink = () => {
+    const at = linkBox;
+    setLinkBox(null);
+    requestAnimationFrame(() => {
+      ref.current?.focus();
+      if (at) ref.current?.setSelectionRange(at.start, at.end);
+    });
+  };
+
+  const applyLink = () => {
+    const ta = ref.current;
+    const href = normalizeUrl(linkUrl);
+    if (!ta || !linkBox || !href) return;
+    const label = (linkBox.selected || linkText || linkUrl).trim().replace(/[[\]]/g, "");
+    const md = `[${label}](${href})`;
+    ta.focus();
+    ta.setRangeText(md, linkBox.start, linkBox.end, "end");
+    ta.dispatchEvent(new Event("input", { bubbles: true }));
+    setLinkBox(null);
+  };
+
+  const validUrl = !!normalizeUrl(linkUrl);
 
   const tools: { label: string; title: string; icon: ReactNode; run: () => void }[] = [
     { label: "Negrito", title: "Negrito (Ctrl+B)", icon: <b>B</b>, run: () => apply({ before: "**", after: "**", placeholder: "texto em negrito" }) },
@@ -108,8 +151,8 @@ export function RichTextarea({ defaultValue, showHelp = true, className, rows = 
   ];
 
   return (
-    <div className={cx("overflow-hidden rounded-lg border border-line bg-surface focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/25", className)}>
-      <div role="toolbar" aria-label="Formatação do texto" className="flex flex-wrap items-center gap-0.5 border-b border-line bg-sunken/60 px-1.5 py-1">
+    <div className={cx("relative rounded-lg border border-line bg-surface focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/25", className)}>
+      <div role="toolbar" aria-label="Formatação do texto" className="flex flex-wrap items-center gap-0.5 rounded-t-lg border-b border-line bg-sunken/60 px-1.5 py-1">
         {tools.map((t) => (
           <button
             key={t.label}
@@ -119,7 +162,11 @@ export function RichTextarea({ defaultValue, showHelp = true, className, rows = 
             disabled={preview !== null}
             onMouseDown={(e) => e.preventDefault()}
             onClick={t.run}
-            className="grid h-7 min-w-7 place-items-center rounded-md px-1.5 text-[13px] text-ink/80 hover:bg-surface hover:text-ink disabled:opacity-40"
+            aria-pressed={t.label === "Link" ? !!linkBox : undefined}
+            className={cx(
+              "grid h-7 min-w-7 place-items-center rounded-md px-1.5 text-[13px] text-ink/80 hover:bg-surface hover:text-ink disabled:opacity-40",
+              t.label === "Link" && linkBox && "bg-surface text-accent",
+            )}
           >
             {t.icon}
           </button>
@@ -134,6 +181,57 @@ export function RichTextarea({ defaultValue, showHelp = true, className, rows = 
           {preview !== null ? "Editar" : "Pré-visualizar"}
         </button>
       </div>
+      {linkBox && (
+        <div
+          ref={box}
+          role="dialog"
+          aria-label="Inserir link"
+          className="absolute left-2 top-10 z-20 grid w-[min(420px,calc(100%-1rem))] gap-2 rounded-xl border border-line bg-surface p-3 shadow-[0_8px_28px_rgba(0,0,0,0.16)]"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") (e.preventDefault(), e.stopPropagation(), closeLink());
+            if (e.key === "Enter") (e.preventDefault(), applyLink());
+          }}
+        >
+          {linkBox.selected && (
+            <p className="truncate text-[12px] text-muted">
+              Link em: <span className="font-medium text-accent underline">{linkBox.selected}</span>
+            </p>
+          )}
+          <div className="flex items-center gap-2">
+            <label className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border-2 border-brand/70 px-2.5 py-1.5 focus-within:border-brand">
+              <LinkIcon />
+              <input
+                ref={urlInput}
+                type="text"
+                inputMode="url"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                placeholder="Digite ou cole um link"
+                aria-label="Endereço do link"
+                className="min-w-0 flex-1 bg-transparent text-[14px] !outline-none placeholder:text-muted"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={applyLink}
+              disabled={!validUrl}
+              className="rounded-lg px-3 py-1.5 text-[14px] font-semibold text-accent hover:bg-accent-soft disabled:text-muted disabled:hover:bg-transparent"
+            >
+              Aplicar
+            </button>
+          </div>
+          {!linkBox.selected && (
+            <input
+              type="text"
+              value={linkText}
+              onChange={(e) => setLinkText(e.target.value)}
+              placeholder="Texto que aparece (opcional)"
+              aria-label="Texto do link"
+              className="rounded-lg border border-line px-2.5 py-1.5 text-[13px] outline-none placeholder:text-muted focus:border-brand"
+            />
+          )}
+        </div>
+      )}
       <textarea
         ref={ref}
         rows={rows}
@@ -156,7 +254,7 @@ export function RichTextarea({ defaultValue, showHelp = true, className, rows = 
         </div>
       )}
       {showHelp && (
-        <p className="border-t border-line px-3 py-1.5 text-[11.5px] text-muted">
+        <p className="rounded-b-lg border-t border-line px-3 py-1.5 text-[11.5px] text-muted">
           Enter quebra a linha · linha em branco separa parágrafos · trechos <code className="font-mono">copiáveis</code> viram botão de copiar
         </p>
       )}

@@ -112,6 +112,20 @@ await step("cria conteúdo em texto com Markdown e publica", async () => {
   await A.keyboard.type("https://portal.exemplo.com");
   const obj = await A.inputValue("#objective");
   assert.match(obj, /portal do cliente\.\n\n\*\*Acesso:\*\* https:\/\/portal\.exemplo\.com\n\*\*Login:\*\* `seu\.email@implantta\.com\.br`/);
+  // Caixa de link: seleciona o texto, cola o endereço e aplica
+  await A.keyboard.press("Control+End");
+  await A.keyboard.type("\nGuia completo");
+  await A.keyboard.press("Shift+Home");
+  const objBox = A.locator("div:has(> textarea#objective)");
+  await objBox.getByRole("button", { name: "Link" }).click();
+  const linkDlg = objBox.getByRole("dialog", { name: "Inserir link" });
+  await linkDlg.getByText("Guia completo").waitFor();
+  await A.keyboard.type("implantta.com.br/guia");
+  await objBox.screenshot({ path: `${SHOTS}/03c-caixa-link.png` });
+  await A.keyboard.press("Enter");
+  await linkDlg.waitFor({ state: "detached" });
+  assert.match(await A.inputValue("#objective"), /\[Guia completo\]\(https:\/\/implantta\.com\.br\/guia\)$/);
+  assert.match(A.url(), /conteudos\/novo/, "Enter na caixa de link não envia o formulário");
   await A.locator("div:has(> textarea#objective)").screenshot({ path: `${SHOTS}/03b-editor-objetivo.png` });
   await A.fill("#estimated_minutes", "5");
   await A.selectOption("#status", "publicado");

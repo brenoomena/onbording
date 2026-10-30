@@ -1,16 +1,23 @@
+"use client";
+
 import { Markdown } from "@/components/markdown";
 import { Alert, buttonVariants, cx } from "@/components/ui";
-import { embedUrl, formatBytes, isVideoEmbed, type ContentRow } from "@/lib/learning";
+import { embedUrl, isVideoEmbed, type ContentRow } from "@/lib/learning";
 
 export type ViewerContent = Pick<
   ContentRow,
   "id" | "title" | "kind" | "body" | "url" | "mime_type" | "file_name" | "file_size" | "external_platform" | "access_note"
 >;
 
-/** Link que abre o material fora da plataforma (nova aba), quando existir. */
-export function externalHref(content: ViewerContent, fileUrl: string | null): string | null {
-  return content.kind === "arquivo" ? fileUrl : content.url;
+/**
+ * Link que abre o material fora da plataforma (nova aba), quando existir.
+ * Arquivos enviados à plataforma não têm: ficam só para ver aqui, sem baixar.
+ */
+export function externalHref(content: ViewerContent): string | null {
+  return content.kind === "arquivo" ? null : content.url;
 }
+
+const noMenu = (e: { preventDefault: () => void }) => e.preventDefault();
 
 /**
  * Mostra o conteúdo no próprio lugar: texto, vídeo, prévia de arquivos do
@@ -83,26 +90,23 @@ export function ContentViewer({
     );
   }
 
-  // Arquivo enviado
+  // Arquivo enviado: só visualização, sem botão de baixar.
   if (!fileUrl) return <Alert>Não foi possível carregar o arquivo. Atualize a página.</Alert>;
   const mime = content.mime_type ?? "";
   return (
-    <div className={cx("flex flex-col gap-3", fill && "h-full")}>
+    <div className={cx("flex flex-col gap-3", fill && "h-full")} onContextMenu={noMenu}>
       {mime === "application/pdf" ? (
-        <iframe src={fileUrl} title={content.title} className={cx("w-full rounded-lg border border-line", tall)} />
+        <iframe src={`${fileUrl}#toolbar=0&navpanes=0`} title={content.title} className={cx("w-full rounded-lg border border-line", tall)} />
       ) : mime.startsWith("image/") ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={fileUrl} alt={content.title} className="mx-auto max-h-[75vh] max-w-full rounded-lg object-contain" />
+        <img src={fileUrl} alt={content.title} draggable={false} className="mx-auto max-h-[75vh] max-w-full select-none rounded-lg object-contain" />
       ) : mime.startsWith("video/") ? (
-        <video src={fileUrl} controls className="mx-auto max-h-[75vh] w-full max-w-full rounded-lg" />
+        <video src={fileUrl} controls controlsList="nodownload noremoteplayback" disablePictureInPicture className="mx-auto max-h-[75vh] w-full max-w-full rounded-lg" />
       ) : mime.startsWith("audio/") ? (
-        <audio src={fileUrl} controls className="w-full" />
+        <audio src={fileUrl} controls controlsList="nodownload" className="w-full" />
       ) : (
-        <p className="text-[14px] text-muted">Este tipo de arquivo não tem pré-visualização. Baixe para abrir.</p>
+        <Alert>Este tipo de arquivo não pode ser exibido na plataforma. Peça ao responsável para enviá-lo em PDF, imagem ou vídeo.</Alert>
       )}
-      <a href={fileUrl} target="_blank" rel="noopener noreferrer" className={buttonVariants.secondary + " w-fit"}>
-        Baixar {content.file_name} {content.file_size ? `(${formatBytes(content.file_size)})` : ""}
-      </a>
     </div>
   );
 }

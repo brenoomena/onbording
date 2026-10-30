@@ -138,10 +138,11 @@ export function ContentForm({
                   <input type="hidden" name="file_name" value={file.name} />
                   <input type="hidden" name="file_size" value={file.size || ""} />
                   <input type="hidden" name="mime_type" value={file.mime} />
-                  <label htmlFor="file" className="text-[13px] font-medium">Arquivo (até 50 MB)</label>
+                  <label htmlFor="file" className="text-[13px] font-medium">Arquivo (até 50 MB) · PDF, imagem, vídeo ou áudio</label>
                   <input
                     id="file"
                     type="file"
+                    accept="application/pdf,image/*,video/*,audio/*"
                     onChange={(ev) => onFile(ev.target.files?.[0])}
                     className="text-[13px] file:mr-3 file:rounded-md file:border file:border-line file:bg-surface file:px-3 file:py-1.5 file:text-[13px] file:font-medium"
                   />

@@ -47,12 +47,23 @@ describe("tempo", () => {
   });
 });
 
-import { plainText } from "@/lib/text";
+import { normalizeUrl, plainText } from "@/lib/text";
 
 describe("plainText", () => {
   it("tira as marcações e junta as linhas", () => {
     expect(plainText("**Login:** `ana@x.com`\n**Senha:** `123`")).toBe("Login: ana@x.com · Senha: 123");
     expect(plainText("### Título\n- item [site](https://a.b)")).toBe("Título · item site");
     expect(plainText(null)).toBe("");
+  });
+});
+
+describe("normalizeUrl", () => {
+  it("completa endereços digitados sem https", () => {
+    expect(normalizeUrl("implantta.com.br")).toBe("https://implantta.com.br");
+    expect(normalizeUrl("www.site.com/a?b=1")).toBe("https://www.site.com/a?b=1");
+    expect(normalizeUrl("https://x.com/a(b)")).toBe("https://x.com/a%28b%29");
+    expect(normalizeUrl("ana@implantta.com.br")).toBe("mailto:ana@implantta.com.br");
+    expect(normalizeUrl("abvcsaas")).toBeNull();
+    expect(normalizeUrl("dois termos.com")).toBeNull();
   });
 });

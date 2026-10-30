@@ -117,7 +117,7 @@ export function MaterialsBrowser({ items, viewed }: { items: Material[]; viewed:
     return () => window.removeEventListener("keydown", onKey);
   }, [openId, go]);
 
-  const href = current ? externalHref(current, current.fileUrl) : null;
+  const href = current ? externalHref(current) : null;
 
   return (
     <>
