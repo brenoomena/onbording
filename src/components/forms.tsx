@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, startTransition, useActionState, useContext, useEffect, useRef, type ReactNode } from "react";
+import { createContext, startTransition, useActionState, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { Alert, Button, buttonVariants, cx } from "@/components/ui";
 import type { ActionState } from "@/lib/action-state";
@@ -12,18 +12,38 @@ export function SubmitButton({
   pendingLabel = "Salvando…",
   variant = "primary",
   className,
+  name,
+  value,
 }: {
   children: ReactNode;
   pendingLabel?: string;
   variant?: keyof typeof buttonVariants;
   className?: string;
+  /** Com name/value, o botão clicado vai junto no envio (ex.: status=publicado). */
+  name?: string;
+  value?: string;
 }) {
   const ctx = useContext(PendingContext);
   const { pending: formPending } = useFormStatus();
   const pending = ctx ?? formPending;
+  // Com vários botões no mesmo formulário, só o clicado mostra "Salvando…".
+  const [clicked, setClicked] = useState(false);
+  useEffect(() => {
+    if (!pending) setClicked(false);
+  }, [pending]);
+  const showPending = pending && (clicked || !name);
   return (
-    <Button type="submit" variant={variant} disabled={pending} aria-disabled={pending} className={className}>
-      {pending ? pendingLabel : children}
+    <Button
+      type="submit"
+      name={name}
+      value={value}
+      variant={variant}
+      disabled={pending}
+      aria-disabled={pending}
+      className={className}
+      onClick={() => setClicked(true)}
+    >
+      {showPending ? pendingLabel : children}
     </Button>
   );
 }
@@ -58,7 +78,9 @@ export function ActionForm({
         className={cx("grid gap-4", className)}
         onSubmit={(event) => {
           event.preventDefault();
-          const data = new FormData(event.currentTarget);
+          // Inclui o botão clicado (name/value), como num envio normal do navegador.
+          const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+          const data = new FormData(event.currentTarget, submitter?.name ? submitter : undefined);
           startTransition(() => formAction(data));
         }}
       >

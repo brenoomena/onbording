@@ -60,9 +60,11 @@ export async function saveContent(_: ActionState, fd: FormData): Promise<ActionS
   }
 
   revalidatePath("/conteudos");
+  revalidatePath(`/conteudos/${contentId}`);
   revalidatePath("/materiais");
   if (!id) redirect(`/conteudos/${contentId}?aviso=criado`);
-  return { ok: "Conteúdo salvo." };
+  const msg = { publicado: "Conteúdo publicado. Já aparece para o público dele.", rascunho: "Salvo como rascunho. Ainda não aparece para os colaboradores.", arquivado: "Conteúdo arquivado." };
+  return { ok: msg[d.status] };
 }
 
 export async function deleteContent(_: ActionState, fd: FormData): Promise<ActionState> {

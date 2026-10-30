@@ -128,15 +128,38 @@ await step("cria conteúdo em texto com Markdown e publica", async () => {
   assert.match(A.url(), /conteudos\/novo/, "Enter na caixa de link não envia o formulário");
   await A.locator("div:has(> textarea#objective)").screenshot({ path: `${SHOTS}/03b-editor-objetivo.png` });
   await A.fill("#estimated_minutes", "5");
-  await A.selectOption("#status", "publicado");
-  await A.getByRole("button", { name: "Criar conteúdo" }).click();
+  await A.getByRole("button", { name: "Criar e publicar" }).click();
   await A.waitForURL(/conteudos\/[0-9a-f-]{36}\?aviso=criado/);
+});
+
+await step("rascunho é publicado pelo botão Publicar", async () => {
+  await A.goto(`${BASE}/conteudos/novo`);
+  await A.fill("#title", "Rascunho para publicar");
+  await A.locator("label", { hasText: /^Link externo$/ }).click();
+  await A.fill("#url", "exemplo.com");
+  await A.fill("#url", "https://exemplo.com");
+  await A.press("#title", "Enter"); // Enter guarda como rascunho, não publica
+  await A.waitForURL(/conteudos\/[0-9a-f-]{36}\?aviso=criado/);
+  const id = A.url().split("/conteudos/")[1].split("?")[0];
+  assert.equal((await rest(`contents?select=status&id=eq.${id}`))[0].status, "rascunho");
+  await A.getByText("criado como rascunho").waitFor();
+  await A.getByRole("button", { name: "Publicar", exact: true }).click();
+  await A.getByText("Conteúdo publicado.").waitFor();
+  assert.equal((await rest(`contents?select=status&id=eq.${id}`))[0].status, "publicado");
+  await A.getByRole("button", { name: "Salvar alterações" }).waitFor();
+  await A.getByRole("button", { name: "Salvar alterações" }).click();
+  await A.getByText("Conteúdo publicado.").waitFor();
+  assert.equal((await rest(`contents?select=status&id=eq.${id}`))[0].status, "publicado");
+  await A.locator("form").filter({ has: A.locator("#title") }).screenshot({ path: `${SHOTS}/03d-publicar.png` });
+  await A.getByRole("button", { name: "Arquivar" }).click();
+  await A.getByText("Conteúdo arquivado.").waitFor();
+  assert.equal((await rest(`contents?select=status&id=eq.${id}`))[0].status, "arquivado");
 });
 
 await step("validação: link sem endereço é recusado", async () => {
   await A.goto(`${BASE}/conteudos/novo`);
   await A.fill("#title", "Link sem endereço");
-  await A.getByRole("button", { name: "Criar conteúdo" }).click();
+  await A.getByRole("button", { name: "Salvar rascunho" }).click();
   await A.getByText("Informe o endereço do conteúdo.").first().waitFor();
 });
 

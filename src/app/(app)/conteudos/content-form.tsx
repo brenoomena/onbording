@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { AudienceEditor } from "@/components/audience-editor";
 import { ActionForm, SubmitButton } from "@/components/forms";
-import { Alert, Field, Input, Select, cx } from "@/components/ui";
+import { Alert, Badge, Field, Input, Select, cx } from "@/components/ui";
 import { RichTextarea } from "@/components/rich-textarea";
 import type { ActionState } from "@/lib/action-state";
 import { KIND_LABEL, PUBLISH_LABEL, formatBytes, type AudienceRule, type ContentKind, type ContentRow, type PublishStatus } from "@/lib/learning";
@@ -158,7 +158,7 @@ export function ContentForm({
               )}
             </fieldset>
 
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Tempo estimado (min)" htmlFor="estimated_minutes" error={e.estimated_minutes}>
                 <Input id="estimated_minutes" name="estimated_minutes" type="number" min={1} max={1440} defaultValue={content?.estimated_minutes ?? ""} />
               </Field>
@@ -166,11 +166,6 @@ export function ContentForm({
                 <Select id="owner_id" name="owner_id" defaultValue={content?.owner_id ?? ""}>
                   <option value="">Sem responsável</option>
                   {owners.map((o) => <option key={o.id} value={o.id}>{o.full_name}</option>)}
-                </Select>
-              </Field>
-              <Field label="Status" htmlFor="status">
-                <Select id="status" name="status" defaultValue={content?.status ?? "rascunho"}>
-                  {(Object.keys(PUBLISH_LABEL) as PublishStatus[]).map((s) => <option key={s} value={s}>{PUBLISH_LABEL[s]}</option>)}
                 </Select>
               </Field>
             </div>
@@ -201,12 +196,45 @@ export function ContentForm({
               )}
             </fieldset>
 
-            <div className="border-t border-line pt-4">
-              <SubmitButton>{content ? "Salvar conteúdo" : "Criar conteúdo"}</SubmitButton>
-            </div>
+            <PublishBar status={content?.status} isNew={!content} />
           </>
         );
       }}
     </ActionForm>
+  );
+}
+
+/**
+ * Botões de envio que já dizem o que acontece com o conteúdo: publicar ou
+ * guardar como rascunho. O primeiro botão é o que o Enter aciona, então ele
+ * nunca muda a situação atual do conteúdo.
+ */
+function PublishBar({ status = "rascunho", isNew }: { status?: PublishStatus; isNew: boolean }) {
+  const tone = status === "publicado" ? "ok" : status === "arquivado" ? "neutral" : "warn";
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+      <p className="flex items-center gap-2 text-[13px] text-muted">
+        Situação {isNew ? "ao criar" : "atual"}: <Badge tone={tone}>{PUBLISH_LABEL[status]}</Badge>
+        {status !== "publicado" && <span>· só quem gerencia conteúdos vê.</span>}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {status === "publicado" ? (
+          <>
+            <SubmitButton name="status" value="publicado">Salvar alterações</SubmitButton>
+            <SubmitButton name="status" value="rascunho" variant="secondary" pendingLabel="Salvando…">Voltar para rascunho</SubmitButton>
+            {!isNew && <SubmitButton name="status" value="arquivado" variant="ghost" pendingLabel="Salvando…">Arquivar</SubmitButton>}
+          </>
+        ) : (
+          <>
+            <SubmitButton name="status" value={status} variant="secondary">
+              {status === "arquivado" ? "Salvar (continua arquivado)" : "Salvar rascunho"}
+            </SubmitButton>
+            <SubmitButton name="status" value="publicado" pendingLabel="Publicando…">
+              {isNew ? "Criar e publicar" : "Publicar"}
+            </SubmitButton>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

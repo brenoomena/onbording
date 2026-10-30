@@ -48,7 +48,13 @@ export default async function ConteudoPage({ params, searchParams }: { params: P
           </div>
         }
       />
-      {aviso === "criado" && <Alert tone="ok">Conteúdo criado. Para os colaboradores verem, publique e inclua em uma trilha ou na biblioteca.</Alert>}
+      {aviso === "criado" && (
+        <Alert tone="ok">
+          {c.status === "publicado"
+            ? "Conteúdo criado e publicado. Para os colaboradores verem, inclua em uma trilha ou marque para a biblioteca."
+            : "Conteúdo criado como rascunho. Quando estiver pronto, clique em Publicar."}
+        </Alert>
+      )}
       {usedIn.length > 0 && (
         <Alert tone="brand">
           Usado em:{" "}
