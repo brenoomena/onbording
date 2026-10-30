@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Onboarding Domínio", template: "%s · Onboarding Domínio" },
+  title: { default: "Onboarding Implantta", template: "%s · Onboarding Implantta" },
   description: "Plataforma de onboarding e desenvolvimento dos colaboradores Implantta.",
   robots: { index: false, follow: false },
 };

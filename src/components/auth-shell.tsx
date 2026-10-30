@@ -19,10 +19,10 @@ export function Wordmark({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex items-center gap-2">
       <span aria-hidden className="grid h-7 w-7 place-items-center rounded-md bg-brand font-mono text-[13px] font-bold text-on-brand">
-        D
+        I
       </span>
       <span className={compact ? "text-[15px] font-semibold" : "text-base font-semibold"}>
-        Onboarding <span className="text-accent">Domínio</span>
+        Onboarding <span className="text-accent">Implantta</span>
       </span>
     </div>
   );
