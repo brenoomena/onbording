@@ -36,7 +36,9 @@ export default async function ColaboradoresPage({ searchParams }: { searchParams
   const page = Math.max(1, Number(sp.pagina) || 1);
 
   const supabase = await createClient();
-  let query = supabase.from("profiles").select(PROFILE_SELECT, { count: "exact" });
+  // Na lista de pendências, o perfil entra como !inner para permitir excluir administradores.
+  const select = sp.pendente === "1" ? PROFILE_SELECT.replace("role:roles(", "role:roles!inner(") : PROFILE_SELECT;
+  let query = supabase.from("profiles").select(select, { count: "exact" });
   if (teamOnly) query = query.eq("supervisor_id", me.userId);
 
   const q = (sp.q ?? "").replace(/[%,()*]/g, " ").trim();
@@ -49,7 +51,9 @@ export default async function ColaboradoresPage({ searchParams }: { searchParams
   if (sp.status && sp.status in STATUS_LABEL) query = query.eq("status", sp.status as UserStatus);
   if (isDate(sp.admissao_de)) query = query.gte("admission_date", sp.admissao_de!);
   if (isDate(sp.admissao_ate)) query = query.lte("admission_date", sp.admissao_ate!);
-  if (sp.pendente === "1") query = query.neq("status", "inativo").or("position_id.is.null,level_id.is.null");
+  if (sp.pendente === "1") {
+    query = query.neq("role.key", "admin").neq("status", "inativo").or("position_id.is.null,level_id.is.null");
+  }
 
   const [{ data, count, error }, structure, supervisors] = await Promise.all([
     query.order("full_name").range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),

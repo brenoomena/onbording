@@ -63,7 +63,14 @@ export default async function PainelPage() {
     base().eq("status", "onboarding"),
     base().eq("status", "ativo"),
     base().eq("status", "inativo"),
-    base().neq("status", "inativo").or("position_id.is.null,level_id.is.null"),
+    // Administradores não precisam de cargo ou nível, então ficam fora deste aviso.
+    (scope
+      ? supabase.from("profiles").select("id, role:roles!inner(key)", { count: "exact", head: true }).eq("supervisor_id", scope)
+      : supabase.from("profiles").select("id, role:roles!inner(key)", { count: "exact", head: true })
+    )
+      .neq("role.key", "admin")
+      .neq("status", "inativo")
+      .or("position_id.is.null,level_id.is.null"),
     (scope
       ? supabase.from("profiles").select(PROFILE_SELECT).eq("supervisor_id", scope)
       : supabase.from("profiles").select(PROFILE_SELECT)
