@@ -99,3 +99,90 @@ export function roleKeyFromName(name: string): string {
     .slice(0, 40);
   return /^[a-z]/.test(key) ? key : `perfil_${key}`.slice(0, 40);
 }
+
+// ---------------------------------------------------------------- Etapa 2
+
+const nullableText = (max: number) =>
+  z
+    .string()
+    .max(max, `Use no máximo ${max} caracteres.`)
+    .optional()
+    .transform((v) => v ?? null);
+
+export const contentSchema = z
+  .object({
+    title: z.string({ error: "Informe o título." }).min(3, "O título precisa de pelo menos 3 caracteres.").max(160),
+    description: nullableText(600),
+    category: nullableText(60),
+    kind: z.enum(["texto", "link", "video", "arquivo"], { error: "Escolha o formato." }),
+    body: nullableText(100_000),
+    url: z
+      .url({ protocol: /^https?$/, error: "Informe um endereço que comece com https://" })
+      .optional()
+      .transform((v) => v ?? null),
+    storage_path: nullableText(500),
+    file_name: nullableText(300),
+    file_size: z.coerce.number().int().positive().optional().transform((v) => v ?? null),
+    mime_type: nullableText(150),
+    external_platform: nullableText(80),
+    access_note: nullableText(500),
+    objective: nullableText(600),
+    estimated_minutes: z.coerce
+      .number({ error: "Tempo estimado inválido." })
+      .int("Use minutos inteiros.")
+      .min(1, "Use pelo menos 1 minuto.")
+      .max(1440, "Use no máximo 1440 minutos.")
+      .optional()
+      .transform((v) => v ?? null),
+    owner_id: z.uuid().optional().transform((v) => v ?? null),
+    status: z.enum(["rascunho", "publicado", "arquivado"]),
+  })
+  .superRefine((v, ctx) => {
+    if (v.kind === "texto" && !v.body) ctx.addIssue({ code: "custom", path: ["body"], message: "Escreva o texto do conteúdo." });
+    if ((v.kind === "link" || v.kind === "video") && !v.url)
+      ctx.addIssue({ code: "custom", path: ["url"], message: "Informe o endereço do conteúdo." });
+    if (v.kind === "arquivo" && !v.storage_path)
+      ctx.addIssue({ code: "custom", path: ["storage_path"], message: "Envie o arquivo." });
+  });
+
+export const trackSchema = z.object({
+  name: z.string({ error: "Informe o nome." }).min(3, "O nome precisa de pelo menos 3 caracteres.").max(120),
+  description: nullableText(1000),
+  objective: nullableText(600),
+  audience_note: nullableText(300),
+  recommended_level_id: z.uuid().optional().transform((v) => v ?? null),
+  is_mandatory: z.coerce.boolean(),
+  is_sequential: z.coerce.boolean(),
+  deadline_days: z.coerce
+    .number({ error: "Prazo inválido." })
+    .int("Use dias inteiros.")
+    .min(1, "Use pelo menos 1 dia.")
+    .max(365, "Use no máximo 365 dias.")
+    .optional()
+    .transform((v) => v ?? null),
+});
+
+export const moduleSchema = z.object({
+  title: z.string({ error: "Informe o nome do módulo." }).min(2, "O nome precisa de pelo menos 2 caracteres.").max(120),
+  description: nullableText(400),
+});
+
+/** Lê as regras de público do formulário (campos rule_area, rule_position, rule_level repetidos). */
+export function parseAudience(fd: FormData): { area_id: string | null; position_id: string | null; level_id: string | null }[] {
+  const areas = fd.getAll("rule_area").map(String);
+  const positions = fd.getAll("rule_position").map(String);
+  const levels = fd.getAll("rule_level").map(String);
+  const isId = (v: string | undefined) => (v && /^[0-9a-f-]{36}$/i.test(v) ? v : null);
+  const rules = areas.map((_, i) => ({
+    area_id: isId(areas[i]),
+    position_id: isId(positions[i]),
+    level_id: isId(levels[i]),
+  }));
+  const seen = new Set<string>();
+  return rules.filter((r) => {
+    const k = `${r.area_id}|${r.position_id}|${r.level_id}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}

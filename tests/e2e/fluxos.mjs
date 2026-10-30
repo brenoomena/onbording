@@ -84,7 +84,7 @@ await step("senha curta é recusada no login inicial", async () => {
 });
 
 await step("admin vê todos os menus", async () => {
-  assert.deepEqual(await menu(A), ["Painel", "Colaboradores", "Áreas", "Cargos", "Níveis", "Perfis de acesso", "Auditoria", "Meu perfil"]);
+  assert.deepEqual(await menu(A), ["Painel", "Minhas trilhas", "Materiais", "Trilhas", "Conteúdos", "Colaboradores", "Áreas", "Cargos", "Níveis", "Perfis de acesso", "Auditoria", "Meu perfil"]);
   await A.screenshot({ path: `${SHOTS}/01-painel-admin.png`, fullPage: true });
 });
 
@@ -205,14 +205,14 @@ await step("lista filtra por área e por status", async () => {
 const carla = await newUser();
 await step("colaboradora aceita convite e vê só o próprio painel", async () => {
   await acceptInvite(carla.page, "carla@implantta.com.br", PASS);
-  assert.deepEqual(await menu(carla.page), ["Painel", "Meu perfil"]);
+  assert.deepEqual(await menu(carla.page), ["Painel", "Minhas trilhas", "Materiais", "Meu perfil"]);
   await carla.page.getByText("Consultor Comercial").waitFor();
   await carla.page.getByText("Sérgio Supervisor").waitFor();
   await carla.page.screenshot({ path: `${SHOTS}/06-painel-colaboradora.png`, fullPage: true });
 });
 
 await step("colaboradora não abre páginas administrativas", async () => {
-  for (const path of ["/colaboradores", "/estrutura/areas", "/perfis", "/auditoria", "/colaboradores/novo"]) {
+  for (const path of ["/colaboradores", "/estrutura/areas", "/perfis", "/auditoria", "/colaboradores/novo", "/trilhas", "/conteudos"]) {
     await carla.page.goto(`${BASE}${path}`);
     assert.match(carla.page.url(), /sem-acesso/, path);
   }
@@ -229,7 +229,7 @@ await step("colaboradora troca o próprio nome", async () => {
 const sergio = await newUser();
 await step("supervisor aceita convite e vê apenas a própria equipe", async () => {
   await acceptInvite(sergio.page, "sergio@implantta.com.br", PASS);
-  assert.deepEqual(await menu(sergio.page), ["Painel", "Minha equipe", "Meu perfil"]);
+  assert.deepEqual(await menu(sergio.page), ["Painel", "Minhas trilhas", "Materiais", "Minha equipe", "Meu perfil"]);
   await sergio.page.goto(`${BASE}/colaboradores`);
   assert.deepEqual(await sergio.page.locator("tbody tr td:first-child a").allInnerTexts(), ["Carla C. Souza"]);
   await sergio.page.screenshot({ path: `${SHOTS}/07-minha-equipe.png`, fullPage: true });
@@ -270,7 +270,7 @@ await step("admin muda o perfil do supervisor e o menu dele muda", async () => {
   await A.getByRole("button", { name: "Salvar alterações" }).click();
   await A.getByText("Alterações salvas.").waitFor();
   await sergio.page.goto(`${BASE}/painel`);
-  assert.deepEqual(await menu(sergio.page), ["Painel", "Colaboradores", "Meu perfil"]);
+  assert.deepEqual(await menu(sergio.page), ["Painel", "Minhas trilhas", "Materiais", "Colaboradores", "Meu perfil"]);
 });
 
 await step("perfil RH cadastra só como Colaborador e não muda perfis", async () => {

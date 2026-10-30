@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Card, EmptyState, PageHeader, StatusBadge, formatDate } from "@/components/ui";
+import { ProgressBar } from "@/components/progress-bar";
+import { Badge, Card, EmptyState, PageHeader, StatusBadge, formatDate } from "@/components/ui";
 import { requirePermission } from "@/lib/auth";
+import { ENROLLMENT_LABEL, isOverdue, todayBR } from "@/lib/learning";
+import { loadEnrollmentsOf, type MyEnrollment } from "@/lib/my-learning";
 import { P } from "@/lib/permissions";
 import { PROFILE_SELECT, type ProfileRow } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
@@ -18,6 +21,35 @@ function Stat({ label, value, hint }: { label: string; value: number; hint?: str
   );
 }
 
+function MyTracks({ enrollments }: { enrollments: MyEnrollment[] }) {
+  const pending = enrollments.filter((e) => e.status !== "concluida");
+  if (enrollments.length === 0) return null;
+  return (
+    <Card
+      title="Minhas trilhas"
+      description={pending.length ? `${pending.length} em andamento ou a iniciar` : "Todas concluídas"}
+      actions={<Link href="/minhas-trilhas" className="text-[13px] font-semibold text-accent hover:underline">Ver todas</Link>}
+    >
+      <ul className="grid gap-4">
+        {(pending.length ? pending : enrollments).slice(0, 4).map((e) => {
+          const overdue = isOverdue(e.due_date, e.status);
+          return (
+            <li key={e.id} className="grid gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Link href={`/minhas-trilhas/${e.track.id}`} className="font-medium hover:text-accent">{e.track.name}</Link>
+                <Badge tone={overdue ? "danger" : e.status === "concluida" ? "ok" : "neutral"}>
+                  {overdue ? "Em atraso" : ENROLLMENT_LABEL[e.status]}
+                </Badge>
+              </div>
+              <ProgressBar value={Number(e.progress_percent)} label={e.due_date ? `Prazo ${formatDate(e.due_date)}` : "Sem prazo"} />
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
+}
+
 export default async function PainelPage() {
   const me = await requirePermission(P.painelVer);
   const supabase = await createClient();
@@ -27,10 +59,13 @@ export default async function PainelPage() {
   const { data: self } = await supabase.from("profiles").select(PROFILE_SELECT).eq("id", me.userId).single();
   const profile = self as unknown as ProfileRow;
 
+  const myEnrollments = await loadEnrollmentsOf(me.userId);
+
   if (!seesOthers) {
     return (
       <>
-        <PageHeader eyebrow="Meu painel" title={`Olá, ${firstName}`} description="Estes são os dados do seu cadastro na plataforma." />
+        <PageHeader eyebrow="Meu painel" title={`Olá, ${firstName}`} description="Suas trilhas e os dados do seu cadastro na plataforma." />
+        <MyTracks enrollments={myEnrollments} />
         <Card title="Meu cadastro">
           <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
             {[
@@ -82,6 +117,15 @@ export default async function PainelPage() {
 
   const people = (recentes.data ?? []) as unknown as ProfileRow[];
 
+  // Aprendizagem no alcance do usuário (o banco limita à equipe ou a todos).
+  const { data: enr } = await supabase
+    .from("enrollments")
+    .select("status, due_date, profile_id")
+    .neq("profile_id", me.userId);
+  const learning = (enr ?? []) as { status: "nao_iniciada" | "em_andamento" | "concluida"; due_date: string | null; profile_id: string }[];
+  const today = todayBR();
+  const late = learning.filter((e) => e.status !== "concluida" && e.due_date && e.due_date < today).length;
+
   return (
     <>
       <PageHeader
@@ -95,6 +139,25 @@ export default async function PainelPage() {
         <Stat label="Ativos" value={ativos.count ?? 0} />
         <Stat label="Inativos" value={inativos.count ?? 0} />
       </div>
+
+      {learning.length > 0 && (
+        <section className="grid gap-2">
+          <div className="flex items-baseline justify-between gap-2">
+            <h2 className="text-[13px] font-semibold uppercase tracking-[0.05em] text-muted">Trilhas {scope ? "da equipe" : ""}</h2>
+            {me.permissions.has(P.trilhasGerenciar) && (
+              <Link href="/trilhas" className="text-[13px] font-semibold text-accent hover:underline">Gerenciar trilhas</Link>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Stat label="Matrículas" value={learning.length} />
+            <Stat label="Não iniciadas" value={learning.filter((e) => e.status === "nao_iniciada").length} />
+            <Stat label="Concluídas" value={learning.filter((e) => e.status === "concluida").length} />
+            <Stat label="Em atraso" value={late} hint={late ? "Prazo vencido sem conclusão" : undefined} />
+          </div>
+        </section>
+      )}
+
+      <MyTracks enrollments={myEnrollments} />
 
       {(semCargo.count ?? 0) > 0 && (
         <p className="rounded-lg border border-warn/30 bg-warn-soft px-4 py-2.5 text-[13px] text-warn">

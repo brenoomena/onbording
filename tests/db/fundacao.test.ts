@@ -108,7 +108,7 @@ run("Etapa 1 · banco, permissões e RLS", () => {
   it("my_permissions devolve todas as permissões ao administrador e só as do perfil aos demais", async () => {
     const a = await asUser(db.pool, admin, (q) => q("select count(*)::int n from public.my_permissions()"));
     const s = await asUser(db.pool, sup, (q) => q("select array_agg(k order by k) ks from public.my_permissions() k"));
-    expect(a.rows[0].n).toBe(7);
+    expect(a.rows[0].n).toBe(10);
     expect(s.rows[0].ks).toEqual(["equipe.ver", "painel.ver"]);
   });
 

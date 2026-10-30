@@ -59,17 +59,17 @@ describe("chave de perfil", () => {
 describe("menu por permissão", () => {
   it("colaborador vê só painel e meu perfil", () => {
     const items = visibleMenu(new Set([P.painelVer])).flatMap((g) => g.items.map((i) => i.label));
-    expect(items).toEqual(["Painel", "Meu perfil"]);
+    expect(items).toEqual(["Painel", "Minhas trilhas", "Materiais", "Meu perfil"]);
   });
 
   it("supervisor vê 'Minha equipe'", () => {
     const items = visibleMenu(new Set([P.painelVer, P.equipeVer])).flatMap((g) => g.items.map((i) => i.label));
-    expect(items).toEqual(["Painel", "Minha equipe", "Meu perfil"]);
+    expect(items).toEqual(["Painel", "Minhas trilhas", "Materiais", "Minha equipe", "Meu perfil"]);
   });
 
-  it("administrador vê todos os menus da Etapa 1", () => {
+  it("administrador vê todos os menus", () => {
     const items = visibleMenu(new Set(Object.values(P))).flatMap((g) => g.items.map((i) => i.label));
-    expect(items).toEqual(["Painel", "Colaboradores", "Áreas", "Cargos", "Níveis", "Perfis de acesso", "Auditoria", "Meu perfil"]);
+    expect(items).toEqual(["Painel", "Minhas trilhas", "Materiais", "Trilhas", "Conteúdos", "Colaboradores", "Áreas", "Cargos", "Níveis", "Perfis de acesso", "Auditoria", "Meu perfil"]);
   });
 });
 

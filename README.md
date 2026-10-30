@@ -1,4 +1,4 @@
-# Plataforma de Onboarding e Desenvolvimento · Etapa 1 (Fundação)
+# Onboarding Implantta · Etapas 1 e 2
 
 Aplicação Next.js + Supabase da plataforma corporativa de onboarding da Implantta.
 Esta entrega cobre a **Etapa 1** do plano aprovado: login, perfis e permissões,
@@ -31,6 +31,22 @@ Estas regras valem mesmo que alguém chame a API diretamente, sem passar pelas t
 - A plataforma nunca fica sem um administrador ativo.
 - Cargo precisa ser da área do colaborador, e o nível precisa estar liberado para o cargo.
 - Nada é excluído quando está em uso; o caminho é desativar.
+
+## Etapa 2 · Gestão de aprendizagem
+
+| Módulo | O que faz |
+| --- | --- |
+| Conteúdos | Texto (Markdown com pré-visualização), link externo com instruções de acesso, vídeo (YouTube, Vimeo e Google Drive aparecem dentro da plataforma) e arquivo enviado (até 50 MB no plano Free). Categoria, objetivo, tempo estimado, responsável e status (rascunho, publicado, arquivado). |
+| Biblioteca | Conteúdos marcados como biblioteca aparecem em **Materiais** para o público definido (área, cargo e nível). |
+| Trilhas | Módulos e conteúdos em ordem, obrigatórios ou opcionais, nível recomendado, prazo em dias, sequência obrigatória e público-alvo. Publicar, despublicar e arquivar. |
+| Matrículas | Trilhas obrigatórias matriculam automaticamente quem é do público, inclusive quem entra depois. Matrícula manual com prazo, inscrição própria em trilhas opcionais, remoção só antes do início. |
+| Estudo | Minhas trilhas com progresso e prazo, etapas liberadas em sequência (opcionais sempre liberados), leitor de cada formato, conclusão confirmada ou declarada (cursos externos), navegação anterior/próximo. |
+| Tempo de estudo | Tempo com a página aberta e tempo ativo (página visível e interação no último minuto) separados. O banco limita o que o navegador informa ao tempo real decorrido. |
+| Acompanhamento | Painel com matrículas, concluídas e em atraso; página de matrículas por trilha com progresso, tempo ativo e prazo; seção "Trilhas e estudo" no cadastro de cada colaborador. Supervisor vê só a equipe. |
+
+A carga inicial cria a trilha **Onboarding Comercial** (a antiga página de links) com os 10 cursos externos como etapas obrigatórias e os 11 materiais do Drive como opcionais e na biblioteca, para as áreas Contábil e Serviços Financeiros.
+
+Novas permissões: `trilhas.gerenciar`, `conteudos.gerenciar` e `progresso.ver`.
 
 ## Estrutura
 
@@ -118,7 +134,7 @@ npm run dev                  # http://localhost:3000
 ```bash
 npm run typecheck
 npm test                     # testes de validação e menus
-TEST_DATABASE_URL=postgres://postgres@localhost:5432/postgres npm test   # inclui os 25 testes das regras do banco
+TEST_DATABASE_URL=postgres://postgres@localhost:5432/postgres npm test   # inclui os 45 testes das regras do banco
 ```
 
 Os testes de banco criam um banco temporário, aplicam todas as migrações e conferem cada regra de acesso. Precisam de um Postgres 15 ou mais novo onde o usuário possa criar bancos.

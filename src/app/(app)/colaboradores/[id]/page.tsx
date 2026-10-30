@@ -9,6 +9,7 @@ import { PROFILE_SELECT, loadStructure, loadSupervisorOptions, type ProfileRow }
 import { createClient } from "@/lib/supabase/server";
 import { resendInvite, setProfileStatus, updateProfile } from "../actions";
 import { ProfileForm } from "../profile-form";
+import { LearningCard } from "./learning-card";
 
 export const metadata: Metadata = { title: "Colaborador" };
 
@@ -92,6 +93,7 @@ export default async function ColaboradorPage({
             ))}
           </dl>
         </Card>
+        <LearningCard profileId={person.id} canManageTracks={me.permissions.has(P.trilhasGerenciar)} />
         <Link href="/colaboradores" className="text-[13px] font-medium text-accent hover:underline">← Voltar para a lista</Link>
       </>
     );
@@ -118,6 +120,7 @@ export default async function ColaboradorPage({
           values={person}
         />
       </Card>
+      <LearningCard profileId={person.id} canManageTracks={me.permissions.has(P.trilhasGerenciar)} />
       <Link href="/colaboradores" className="text-[13px] font-medium text-accent hover:underline">← Voltar para a lista</Link>
     </>
   );

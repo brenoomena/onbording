@@ -1,4 +1,4 @@
-/** Chaves de permissão da Etapa 1. Devem existir na tabela public.permissions. */
+/** Chaves de permissão. Devem existir na tabela public.permissions. */
 export const P = {
   painelVer: "painel.ver",
   colaboradoresVer: "colaboradores.ver",
@@ -7,6 +7,9 @@ export const P = {
   estruturaGerenciar: "estrutura.gerenciar",
   perfisGerenciar: "perfis.gerenciar",
   auditoriaVer: "auditoria.ver",
+  trilhasGerenciar: "trilhas.gerenciar",
+  conteudosGerenciar: "conteudos.gerenciar",
+  progressoVer: "progresso.ver",
 } as const;
 
 export type PermissionKey = (typeof P)[keyof typeof P];
@@ -27,6 +30,15 @@ export const MENU: MenuGroup[] = [
   {
     label: null,
     items: [{ href: "/painel", label: "Painel", anyOf: [P.painelVer] }],
+  },
+  {
+    label: "Aprendizagem",
+    items: [
+      { href: "/minhas-trilhas", label: "Minhas trilhas", anyOf: [] },
+      { href: "/materiais", label: "Materiais", anyOf: [] },
+      { href: "/trilhas", label: "Trilhas", anyOf: [P.trilhasGerenciar] },
+      { href: "/conteudos", label: "Conteúdos", anyOf: [P.conteudosGerenciar] },
+    ],
   },
   {
     label: "Pessoas",
