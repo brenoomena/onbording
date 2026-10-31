@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requirePermission } from "@/lib/auth";
+import { denyUnless, denyUnlessAdmin, requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/errors";
 import { P } from "@/lib/permissions";
@@ -23,7 +23,8 @@ function refresh(trackId?: string) {
 // ------------------------------------------------------------------ trilha
 
 export async function saveTrack(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.trilhasGerenciar);
+  const denied = await denyUnless(fd.get("id") ? P.trilhasEditar : P.trilhasCriar);
+  if (denied) return denied;
   const raw = formObject(fd);
   const parsed = trackSchema.safeParse({ ...raw, is_mandatory: fd.get("is_mandatory") === "on", is_sequential: fd.get("is_sequential") === "on" });
   if (!parsed.success) return fromZod(parsed.error);
@@ -54,7 +55,8 @@ export async function saveTrack(_: ActionState, fd: FormData): Promise<ActionSta
 }
 
 export async function setTrackStatus(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.trilhasGerenciar);
+  const denied = await denyUnless(P.trilhasEditar);
+  if (denied) return denied;
   const id = String(fd.get("id"));
   const status = String(fd.get("status"));
   if (!["rascunho", "publicado", "arquivado"].includes(status)) return { error: "Status inválido." };
@@ -73,22 +75,33 @@ export async function setTrackStatus(_: ActionState, fd: FormData): Promise<Acti
 }
 
 export async function deleteTrack(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.trilhasGerenciar);
+  const denied = await denyUnless(P.trilhasExcluir);
+  if (denied) return denied;
   const id = String(fd.get("id"));
   const supabase = await createClient();
   const { data, error } = await supabase.from("tracks").delete().eq("id", id).select("id");
   if (error) {
-    return { error: error.code === "23503" ? "Esta trilha tem matrículas. Arquive em vez de excluir." : friendlyError(error) };
+    if (error.code === "23503") {
+      return {
+        error: error.message.includes("contents")
+          ? "Esta trilha tem conteúdos vinculados. Exclua ou mova os conteúdos para outra trilha antes, ou arquive a trilha."
+          : "Esta trilha tem matrículas. Arquive em vez de excluir.",
+      };
+    }
+    return { error: friendlyError(error) };
   }
   if (!data?.length) return { error: "Trilha não encontrada." };
   refresh();
-  redirect("/trilhas");
+  // Excluída na própria página da trilha: volta para a lista.
+  if (fd.get("voltar") === "1") redirect("/trilhas");
+  return { ok: "Trilha excluída." };
 }
 
 // ------------------------------------------------------------------ módulos
 
 export async function addModule(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.trilhasGerenciar);
+  const denied = await denyUnless(P.trilhasEditar);
+  if (denied) return denied;
   const trackId = String(fd.get("track_id"));
   const parsed = moduleSchema.safeParse(formObject(fd));
   if (!parsed.success) return fromZod(parsed.error);
@@ -101,7 +114,8 @@ export async function addModule(_: ActionState, fd: FormData): Promise<ActionSta
 }
 
 export async function updateModule(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.trilhasGerenciar);
+  const denied = await denyUnless(P.trilhasEditar);
+  if (denied) return denied;
   const id = String(fd.get("id"));
   const parsed = moduleSchema.safeParse(formObject(fd));
   if (!parsed.success) return fromZod(parsed.error);
@@ -113,7 +127,8 @@ export async function updateModule(_: ActionState, fd: FormData): Promise<Action
 }
 
 export async function deleteModule(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.trilhasGerenciar);
+  const denied = await denyUnless(P.trilhasEditar);
+  if (denied) return denied;
   const id = String(fd.get("id"));
   const supabase = await createClient();
   const { data, error } = await supabase.from("modules").delete().eq("id", id).select("track_id");
@@ -123,7 +138,8 @@ export async function deleteModule(_: ActionState, fd: FormData): Promise<Action
 }
 
 export async function moveModule(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.trilhasGerenciar);
+  const denied = await denyUnless(P.trilhasEditar);
+  if (denied) return denied;
   const supabase = await createClient();
   const { error } = await supabase.rpc("move_module", { p_module: String(fd.get("id")), p_direction: Number(fd.get("direction")) });
   if (error) return { error: friendlyError(error) };
@@ -134,7 +150,8 @@ export async function moveModule(_: ActionState, fd: FormData): Promise<ActionSt
 // ------------------------------------------------------------------ itens
 
 export async function addItem(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.trilhasGerenciar);
+  const denied = await denyUnless(P.trilhasEditar);
+  if (denied) return denied;
   const moduleId = String(fd.get("module_id"));
   const contentId = fd.get("content_id");
   if (!isId(contentId)) return { error: "Escolha um conteúdo." };
@@ -152,7 +169,8 @@ export async function addItem(_: ActionState, fd: FormData): Promise<ActionState
 }
 
 export async function toggleRequired(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.trilhasGerenciar);
+  const denied = await denyUnless(P.trilhasEditar);
+  if (denied) return denied;
   const supabase = await createClient();
   const { error } = await supabase.from("module_items").update({ is_required: fd.get("value") === "true" }).eq("id", String(fd.get("id")));
   if (error) return { error: friendlyError(error) };
@@ -161,7 +179,8 @@ export async function toggleRequired(_: ActionState, fd: FormData): Promise<Acti
 }
 
 export async function moveItem(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.trilhasGerenciar);
+  const denied = await denyUnless(P.trilhasEditar);
+  if (denied) return denied;
   const supabase = await createClient();
   const { error } = await supabase.rpc("move_module_item", { p_item: String(fd.get("id")), p_direction: Number(fd.get("direction")) });
   if (error) return { error: friendlyError(error) };
@@ -170,7 +189,8 @@ export async function moveItem(_: ActionState, fd: FormData): Promise<ActionStat
 }
 
 export async function removeItem(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.trilhasGerenciar);
+  const denied = await denyUnless(P.trilhasEditar);
+  if (denied) return denied;
   const supabase = await createClient();
   const { error } = await supabase.from("module_items").delete().eq("id", String(fd.get("id")));
   if (error) return { error: friendlyError(error) };
@@ -181,7 +201,9 @@ export async function removeItem(_: ActionState, fd: FormData): Promise<ActionSt
 // ------------------------------------------------------------------ matrículas
 
 export async function enrollPeople(_: ActionState, fd: FormData): Promise<ActionState> {
-  const me = await requirePermission(P.trilhasGerenciar);
+  const denied = await denyUnless(P.trilhasMatricular);
+  if (denied) return denied;
+  const me = await requireUser();
   const trackId = String(fd.get("track_id"));
   const people = fd.getAll("profile_id").map(String).filter(isId);
   if (!people.length) return { error: "Escolha pelo menos uma pessoa." };
@@ -203,7 +225,8 @@ export async function enrollPeople(_: ActionState, fd: FormData): Promise<Action
 }
 
 export async function updateDueDate(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.trilhasGerenciar);
+  const denied = await denyUnless(P.trilhasMatricular);
+  if (denied) return denied;
   const due = String(fd.get("due_date") ?? "");
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -218,7 +241,8 @@ export async function updateDueDate(_: ActionState, fd: FormData): Promise<Actio
 }
 
 export async function removeEnrollment(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.trilhasGerenciar);
+  const denied = await denyUnless(P.trilhasMatricular);
+  if (denied) return denied;
   const supabase = await createClient();
   const { data: e } = await supabase.from("enrollments").select("track_id, status").eq("id", String(fd.get("id"))).maybeSingle();
   if (!e) return { error: "Matrícula não encontrada." };

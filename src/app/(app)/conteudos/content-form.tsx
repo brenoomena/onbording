@@ -9,6 +9,7 @@ import type { ActionState } from "@/lib/action-state";
 import { KIND_LABEL, PUBLISH_LABEL, formatBytes, type AudienceRule, type ContentKind, type ContentRow, type PublishStatus } from "@/lib/learning";
 import type { PersonOption, Structure } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
+import type { TrackOption } from "./form-data";
 
 const MAX_BYTES = 50 * 1024 * 1024;
 
@@ -19,6 +20,9 @@ export function ContentForm({
   structure,
   owners,
   categories,
+  tracks,
+  defaultTrackId,
+  readOnly = false,
 }: {
   action: (s: ActionState, fd: FormData) => Promise<ActionState>;
   content?: ContentRow;
@@ -26,9 +30,16 @@ export function ContentForm({
   structure: Structure;
   owners: PersonOption[];
   categories: string[];
+  tracks: TrackOption[];
+  /** Trilha já escolhida ao criar a partir de uma trilha (?trilha=…). */
+  defaultTrackId?: string;
+  /** Sem permissão de editar: mostra os dados sem permitir salvar. */
+  readOnly?: boolean;
 }) {
   const [kind, setKind] = useState<ContentKind>(content?.kind ?? "link");
   const [library, setLibrary] = useState(content?.is_library ?? false);
+  const [track, setTrack] = useState<string>(content ? content.track_id ?? "biblioteca" : defaultTrackId ?? "");
+  const libraryOnly = track === "biblioteca";
   const [file, setFile] = useState({
     path: content?.storage_path ?? "",
     name: content?.file_name ?? "",
@@ -61,8 +72,38 @@ export function ContentForm({
         const e = state.fieldErrors ?? {};
         return (
           <>
-            <PublishBar status={content?.status} isNew={!content} />
+            {!readOnly && <PublishBar status={content?.status} isNew={!content} />}
+            <fieldset disabled={readOnly} className="grid gap-4 disabled:opacity-80">
             {content && <input type="hidden" name="id" value={content.id} />}
+            <input type="hidden" name="track_id" value={libraryOnly ? "" : track} />
+            <Field
+              label="Trilha"
+              htmlFor="track"
+              hint={libraryOnly ? "Material só de consulta: aparece na página Materiais para o público escolhido abaixo." : "O conteúdo só pode ser incluído nos módulos desta trilha."}
+              error={e.track_id}
+            >
+              <Select
+                id="track"
+                value={track}
+                required
+                onChange={(ev) => {
+                  setTrack(ev.target.value);
+                  if (ev.target.value === "biblioteca") setLibrary(true);
+                }}
+              >
+                <option value="" disabled>Escolha a trilha</option>
+                {tracks.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                    {t.status !== "publicado" ? " (rascunho)" : ""}
+                  </option>
+                ))}
+                {content?.track_id && !tracks.some((t) => t.id === content.track_id) && (
+                  <option value={content.track_id}>Trilha arquivada</option>
+                )}
+                <option value="biblioteca">Biblioteca (sem trilha)</option>
+              </Select>
+            </Field>
 
             <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
               <Field label="Título" htmlFor="title" error={e.title}>
@@ -182,13 +223,23 @@ export function ContentForm({
             <fieldset className="grid gap-3 rounded-xl border border-line p-4">
               <legend className="px-1 text-[13px] font-semibold">Biblioteca de materiais</legend>
               <label className="flex items-start gap-3 text-[14px]">
-                <input type="checkbox" name="is_library" checked={library} onChange={(ev) => setLibrary(ev.target.checked)} className="mt-1 h-4 w-4 accent-[rgb(var(--brand))]" />
+                <input
+                  type="checkbox"
+                  name="is_library"
+                  checked={library || libraryOnly}
+                  disabled={libraryOnly}
+                  onChange={(ev) => setLibrary(ev.target.checked)}
+                  className="mt-1 h-4 w-4 accent-[rgb(var(--brand))]"
+                />
+                {libraryOnly && <input type="hidden" name="is_library" value="on" />}
                 <span>
-                  Mostrar na biblioteca para consulta, fora das trilhas
-                  <span className="block text-[12.5px] text-muted">Conteúdos de trilha já aparecem para quem está matriculado nela.</span>
+                  Mostrar também na página Materiais, para consulta
+                  <span className="block text-[12.5px] text-muted">
+                    {libraryOnly ? "Obrigatório para conteúdos sem trilha." : "Conteúdos da trilha já aparecem para quem está matriculado nela."}
+                  </span>
                 </span>
               </label>
-              {library && (
+              {(library || libraryOnly) && (
                 <AudienceEditor
                   structure={structure}
                   initial={rules}
@@ -196,7 +247,7 @@ export function ContentForm({
                 />
               )}
             </fieldset>
-
+            </fieldset>
           </>
         );
       }}

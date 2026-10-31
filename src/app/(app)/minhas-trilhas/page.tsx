@@ -1,3 +1,4 @@
+import { BookOpenCheck } from "lucide-react";
 import type { Metadata } from "next";
 import { plainText } from "@/components/markdown";
 import Link from "next/link";
@@ -50,7 +51,7 @@ export default async function MinhasTrilhasPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Aprendizagem" title="Minhas trilhas" description="Trilhas em que você está matriculado. Siga as etapas em ordem e marque cada conteúdo ao concluir." />
+      <PageHeader eyebrow="Aprendizagem" icon={BookOpenCheck} title="Minhas trilhas" description="Trilhas em que você está matriculado. Siga as etapas em ordem e marque cada conteúdo ao concluir." />
       {enrollments.length === 0 && available.length === 0 ? (
         <EmptyState title="Você ainda não tem trilhas">Quando o seu gestor liberar uma trilha para você, ela aparece aqui.</EmptyState>
       ) : (

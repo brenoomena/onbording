@@ -1,3 +1,4 @@
+import { Route } from "lucide-react";
 import type { Metadata } from "next";
 import { Markdown } from "@/components/markdown";
 import Link from "next/link";
@@ -40,6 +41,7 @@ export default async function MinhaTrilhaPage({ params }: { params: Promise<{ id
     <>
       <PageHeader
         eyebrow="Minhas trilhas"
+        icon={Route}
         title={track.name}
         actions={
           next && (

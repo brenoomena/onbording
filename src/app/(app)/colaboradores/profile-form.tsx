@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { BadgeCheck, IdCard, ShieldCheck } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
 import { ActionForm, SubmitButton, FormBar } from "@/components/forms";
 import { Field, Input, Select } from "@/components/ui";
 import type { ActionState } from "@/lib/action-state";
@@ -27,6 +28,7 @@ export function ProfileForm({
   supervisors,
   values,
   canChangeRole,
+  canDeactivate = true,
   mode,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
@@ -34,6 +36,8 @@ export function ProfileForm({
   supervisors: PersonOption[];
   values: ProfileFormValues;
   canChangeRole: boolean;
+  /** Sem a permissão de desativar, a opção "Inativo" não aparece. */
+  canDeactivate?: boolean;
   mode: "create" | "edit";
 }) {
   const [areaId, setAreaId] = useState(values.area_id ?? "");
@@ -69,8 +73,9 @@ export function ProfileForm({
             </FormBar>
             {values.id && <input type="hidden" name="id" value={values.id} />}
 
+            <Block icon={<IdCard size={18} />} title="Dados pessoais e profissionais" hint="Identificação, posição na empresa, supervisor e datas.">
             <fieldset className="grid gap-4 sm:grid-cols-2">
-              <legend className="mb-3 text-[13px] font-semibold uppercase tracking-[0.05em] text-muted">Identificação</legend>
+              <legend className="sr-only">Identificação</legend>
               <Field label="Nome completo" htmlFor="full_name" error={e.full_name}>
                 <Input id="full_name" name="full_name" defaultValue={values.full_name} required minLength={3} maxLength={120} />
               </Field>
@@ -93,7 +98,7 @@ export function ProfileForm({
             </fieldset>
 
             <fieldset className="grid gap-4 sm:grid-cols-3">
-              <legend className="mb-3 text-[13px] font-semibold uppercase tracking-[0.05em] text-muted">Posição na empresa</legend>
+              <legend className="sr-only">Posição na empresa</legend>
               <Field label="Área de atuação" htmlFor="area_id" error={e.area_id}>
                 <Select
                   id="area_id"
@@ -165,38 +170,8 @@ export function ProfileForm({
               </Field>
             </fieldset>
 
-            <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <legend className="mb-3 text-[13px] font-semibold uppercase tracking-[0.05em] text-muted">Acesso e datas</legend>
-              <Field
-                label="Perfil de acesso"
-                htmlFor="role_id"
-                error={e.role_id}
-                hint={canChangeRole ? undefined : "Só quem gerencia perfis pode alterar."}
-              >
-                {canChangeRole ? (
-                  <Select id="role_id" name="role_id" defaultValue={roleId} required>
-                    {structure.roles.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name}
-                      </option>
-                    ))}
-                  </Select>
-                ) : (
-                  <>
-                    <input type="hidden" name="role_id" value={roleId} />
-                    <Input id="role_id" value={structure.roles.find((r) => r.id === roleId)?.name ?? ""} disabled />
-                  </>
-                )}
-              </Field>
-              <Field label="Status" htmlFor="status" error={e.status}>
-                <Select id="status" name="status" defaultValue={values.status ?? "onboarding"}>
-                  {(Object.keys(STATUS_LABEL) as UserStatus[]).map((s) => (
-                    <option key={s} value={s}>
-                      {STATUS_LABEL[s]}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
+            <fieldset className="grid gap-4 sm:grid-cols-2">
+              <legend className="sr-only">Datas</legend>
               <Field label="Data de admissão" htmlFor="admission_date" error={e.admission_date}>
                 <Input id="admission_date" name="admission_date" type="date" defaultValue={values.admission_date ?? ""} />
               </Field>
@@ -204,10 +179,65 @@ export function ProfileForm({
                 <Input id="onboarding_start_date" name="onboarding_start_date" type="date" defaultValue={values.onboarding_start_date ?? ""} />
               </Field>
             </fieldset>
+            </Block>
 
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Block icon={<ShieldCheck size={18} />} title="Perfil de acesso" hint="Define as permissões padrão. Ajustes individuais ficam no bloco de permissões.">
+                <Field
+                  label="Perfil"
+                  htmlFor="role_id"
+                  error={e.role_id}
+                  hint={canChangeRole ? undefined : "Somente administradores alteram o perfil de acesso."}
+                >
+                  {canChangeRole ? (
+                    <Select id="role_id" name="role_id" defaultValue={roleId} required>
+                      {structure.roles.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name}
+                        </option>
+                      ))}
+                    </Select>
+                  ) : (
+                    <>
+                      <input type="hidden" name="role_id" value={roleId} />
+                      <Input id="role_id" value={structure.roles.find((r) => r.id === roleId)?.name ?? ""} disabled />
+                    </>
+                  )}
+                </Field>
+              </Block>
+              <Block icon={<BadgeCheck size={18} />} title="Status do usuário" hint="Inativo bloqueia o acesso na hora e mantém o histórico.">
+                <Field label="Status" htmlFor="status" error={e.status}>
+                  <Select id="status" name="status" defaultValue={values.status ?? "onboarding"}>
+                    {(Object.keys(STATUS_LABEL) as UserStatus[])
+                      .filter((st) => canDeactivate || st !== "inativo" || values.status === "inativo")
+                      .map((st) => (
+                        <option key={st} value={st} disabled={st === "inativo" && !canDeactivate}>
+                          {STATUS_LABEL[st]}
+                        </option>
+                      ))}
+                  </Select>
+                </Field>
+              </Block>
+            </div>
           </>
         );
       }}
     </ActionForm>
+  );
+}
+
+/** Bloco do formulário com ícone, título e explicação. */
+function Block({ icon, title, hint, children }: { icon: ReactNode; title: string; hint?: string; children: ReactNode }) {
+  return (
+    <section className="grid gap-4 rounded-xl border border-line p-4 sm:p-5">
+      <header className="flex items-start gap-3">
+        <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-icon">{icon}</span>
+        <div>
+          <h2 className="text-[15px] font-semibold">{title}</h2>
+          {hint && <p className="text-[12.5px] text-muted">{hint}</p>}
+        </div>
+      </header>
+      {children}
+    </section>
   );
 }

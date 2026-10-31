@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requirePermission } from "@/lib/auth";
+import { denyUnless, denyUnlessAdmin, requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { publicEnv } from "@/lib/env";
@@ -27,7 +27,8 @@ async function findAuthUserId(email: string): Promise<string | null> {
 }
 
 export async function createProfile(_: ActionState, formData: FormData): Promise<ActionState> {
-  await requirePermission(P.colaboradoresGerenciar);
+  const denied = await denyUnless(P.colaboradoresCriar);
+  if (denied) return denied;
   const parsed = profileCreateSchema.safeParse(formObject(formData));
   if (!parsed.success) return fromZod(parsed.error);
   const { email, ...fields } = parsed.data;
@@ -71,7 +72,8 @@ export async function createProfile(_: ActionState, formData: FormData): Promise
 }
 
 export async function updateProfile(_: ActionState, formData: FormData): Promise<ActionState> {
-  await requirePermission(P.colaboradoresGerenciar);
+  const denied = await denyUnless(P.colaboradoresEditar);
+  if (denied) return denied;
   const id = String(formData.get("id") ?? "");
   const parsed = profileUpdateSchema.safeParse(formObject(formData));
   if (!parsed.success) return fromZod(parsed.error);
@@ -83,11 +85,13 @@ export async function updateProfile(_: ActionState, formData: FormData): Promise
 
   revalidatePath("/colaboradores");
   revalidatePath(`/colaboradores/${id}`);
+  revalidatePath(`/colaboradores/${id}/editar`);
   return { ok: "Alterações salvas." };
 }
 
 export async function setProfileStatus(_: ActionState, formData: FormData): Promise<ActionState> {
-  await requirePermission(P.colaboradoresGerenciar);
+  const denied = await denyUnless(P.colaboradoresDesativar);
+  if (denied) return denied;
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "");
   if (!["onboarding", "ativo", "inativo"].includes(status)) return { error: "Status inválido." };
@@ -103,7 +107,8 @@ export async function setProfileStatus(_: ActionState, formData: FormData): Prom
 }
 
 export async function resendInvite(_: ActionState, formData: FormData): Promise<ActionState> {
-  await requirePermission(P.colaboradoresGerenciar);
+  const denied = await denyUnless(P.colaboradoresCriar, P.colaboradoresEditar);
+  if (denied) return denied;
   const id = String(formData.get("id") ?? "");
   const supabase = await createClient();
   const { data: person } = await supabase.from("profiles").select("email, status").eq("id", id).maybeSingle();
@@ -119,4 +124,49 @@ export async function resendInvite(_: ActionState, formData: FormData): Promise<
     return { ok: `Enviamos para ${person.email} um link para criar uma nova senha.` };
   }
   return { ok: `Convite reenviado para ${person.email}.` };
+}
+
+/**
+ * Ajustes individuais de permissão (somente Administrador). O banco também
+ * confere: só admin grava, ninguém ajusta as próprias permissões, e a
+ * auditoria registra cada mudança.
+ */
+export async function saveUserPermissions(_: ActionState, formData: FormData): Promise<ActionState> {
+  const denied = await denyUnlessAdmin();
+  if (denied) return denied;
+  const profileId = String(formData.get("profile_id") ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(profileId)) return { error: "Colaborador inválido." };
+
+  const supabase = await createClient();
+  const { data: catalog } = await supabase.from("permissions").select("key");
+  const keys = new Set((catalog ?? []).map((p) => p.key as string));
+
+  const wanted = new Map<string, boolean>();
+  for (const [name, value] of formData.entries()) {
+    if (!name.startsWith("perm:")) continue;
+    const key = name.slice(5);
+    if (!keys.has(key)) continue;
+    if (value === "liberar") wanted.set(key, true);
+    else if (value === "bloquear") wanted.set(key, false);
+  }
+
+  const { data: current, error: readError } = await supabase.from("user_permissions").select("permission_key, allowed").eq("profile_id", profileId);
+  if (readError) return { error: friendlyError(readError) };
+  const toDelete = (current ?? []).filter((c) => !wanted.has(c.permission_key)).map((c) => c.permission_key as string);
+  const toUpsert = [...wanted.entries()]
+    .filter(([k, v]) => !(current ?? []).some((c) => c.permission_key === k && c.allowed === v))
+    .map(([permission_key, allowed]) => ({ profile_id: profileId, permission_key, allowed }));
+
+  if (toDelete.length) {
+    const { error } = await supabase.from("user_permissions").delete().eq("profile_id", profileId).in("permission_key", toDelete);
+    if (error) return { error: friendlyError(error) };
+  }
+  if (toUpsert.length) {
+    const { error } = await supabase.from("user_permissions").upsert(toUpsert, { onConflict: "profile_id,permission_key" });
+    if (error) return { error: friendlyError(error) };
+  }
+
+  revalidatePath(`/colaboradores/${profileId}`);
+  revalidatePath(`/colaboradores/${profileId}/editar`);
+  return { ok: toDelete.length + toUpsert.length ? "Permissões salvas. Valem a partir da próxima tela que a pessoa abrir." : "Nenhuma alteração." };
 }

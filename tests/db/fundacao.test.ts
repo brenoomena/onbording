@@ -108,7 +108,8 @@ run("Etapa 1 · banco, permissões e RLS", () => {
   it("my_permissions devolve todas as permissões ao administrador e só as do perfil aos demais", async () => {
     const a = await asUser(db.pool, admin, (q) => q("select count(*)::int n from public.my_permissions()"));
     const s = await asUser(db.pool, sup, (q) => q("select array_agg(k order by k) ks from public.my_permissions() k"));
-    expect(a.rows[0].n).toBe(10);
+    const total = await asSystem(db.pool, (q) => q("select count(*)::int n from permissions"));
+    expect(a.rows[0].n).toBe(total.rows[0].n);
     expect(s.rows[0].ks).toEqual(["equipe.ver", "painel.ver"]);
   });
 
@@ -224,63 +225,101 @@ run("Etapa 1 · banco, permissões e RLS", () => {
     ).rejects.toThrow(/própria conta/);
   });
 
-  it("recusa rebaixar o último administrador ativo", async () => {
+  it("protege os administradores: só admin altera o cadastro de um admin, e nunca fica sem admin ativo", async () => {
     await asSystem(db.pool, (q) => q("update profiles set status='inativo' where id=$1", [admin2]));
-    // Só Ana está ativa como admin. Damos a um supervisor a gestão de perfis para tentar rebaixá-la.
+    // Um supervisor com todas as permissões de colaboradores tenta desativar a única administradora.
     await asSystem(db.pool, (q) =>
       q(
-        "insert into role_permissions (role_id, permission_key) select id, k from roles, unnest(array['perfis.gerenciar','colaboradores.gerenciar','colaboradores.ver']) k where key='supervisor' on conflict do nothing",
+        "insert into role_permissions (role_id, permission_key) select id, k from roles, unnest(array['colaboradores.ver','colaboradores.editar','colaboradores.desativar']) k where key='supervisor' on conflict do nothing",
       ),
     );
     await expect(
-      asUser(db.pool, sup, (q) =>
-        q("update profiles set role_id=(select id from roles where key='colaborador') where id=$1", [admin]),
-      ),
-    ).rejects.toThrow(/pelo menos um administrador ativo/);
+      asUser(db.pool, sup, (q) => q("update profiles set status='inativo' where id=$1", [admin])),
+    ).rejects.toThrow(/Somente administradores alteram o cadastro de um administrador/);
+    // A própria administradora não se rebaixa nem se desativa.
+    await expect(
+      asUser(db.pool, admin, (q) => q("update profiles set role_id=(select id from roles where key='colaborador') where id=$1", [admin])),
+    ).rejects.toThrow(/próprio perfil/);
+    await expect(
+      asUser(db.pool, admin, (q) => q("update profiles set status='inativo' where id=$1", [admin])),
+    ).rejects.toThrow(/própria conta/);
     await asSystem(db.pool, async (q) => {
       await q(
-        "delete from role_permissions where permission_key in ('perfis.gerenciar','colaboradores.gerenciar','colaboradores.ver') and role_id=(select id from roles where key='supervisor')",
+        "delete from role_permissions where permission_key in ('colaboradores.ver','colaboradores.editar','colaboradores.desativar') and role_id=(select id from roles where key='supervisor')",
       );
       await q("update profiles set status='ativo' where id=$1", [admin2]);
     });
   });
 
-  it("perfil com gestão de perfis não altera as próprias permissões nem cria administradores", async () => {
-    await asUser(db.pool, admin, async (q) => {
-      const r = await q("insert into roles (key, name) values ('rh', 'Recursos Humanos') returning id");
-      await q(
-        "insert into role_permissions (role_id, permission_key) values ($1,'perfis.gerenciar'),($1,'colaboradores.gerenciar'),($1,'colaboradores.ver')",
-        [r.rows[0].id],
-      );
-      await q("update profiles set role_id = $1 where id = $2", [r.rows[0].id, sup]);
-    });
+  it("perfis e permissões são exclusivos do Administrador, mesmo para quem tem todas as outras permissões", async () => {
+    const all = (await asSystem(db.pool, (q) => q("select array_agg(key) ks from permissions"))).rows[0].ks as string[];
+    await asSystem(db.pool, (q) =>
+      q("insert into role_permissions (role_id, permission_key) select id, unnest($1::text[]) from roles where key='supervisor' on conflict do nothing", [all]),
+    );
+    await expect(asUser(db.pool, sup, (q) => q("insert into roles (key, name) values ('rh', 'RH')"))).rejects.toThrow(
+      /row-level security/,
+    );
+    // Tentar tirar permissões do próprio perfil não afeta nada (as linhas nem ficam visíveis para escrita)
+    const del = await asUser(db.pool, sup, (q) =>
+      q("delete from role_permissions where role_id=(select id from roles where key='supervisor') and permission_key='painel.ver' returning role_id"),
+    );
+    expect(del.rowCount).toBe(0);
     await expect(
       asUser(db.pool, sup, (q) =>
-        q("insert into role_permissions (role_id, permission_key) select id, 'auditoria.ver' from roles where key='rh'"),
-      ),
-    ).rejects.toThrow(/próprio perfil/);
-    await expect(
-      asUser(db.pool, sup, (q) =>
-        q("update profiles set role_id=(select id from roles where key='admin') where id=$1", [colabTime]),
-      ),
-    ).rejects.toThrow(/Somente administradores/);
-    await expect(
-      asUser(db.pool, sup, (q) =>
-        q("insert into role_permissions (role_id, permission_key) select id, 'perfis.gerenciar' from roles where key='colaborador'"),
+        q("insert into role_permissions (role_id, permission_key) select id, 'painel.ver' from roles where key='colaborador' on conflict do nothing"),
       ),
     ).rejects.toThrow(/Somente administradores/);
+    await expect(
+      asUser(db.pool, sup, (q) => q("update profiles set role_id=(select id from roles where key='admin') where id=$1", [colabTime])),
+    ).rejects.toThrow(/Somente administradores alteram o perfil/);
+    await expect(
+      asUser(db.pool, sup, (q) => q("insert into user_permissions (profile_id, permission_key, allowed) values ($1,'auditoria.ver',true)", [sup])),
+    ).rejects.toThrow(/Somente administradores/);
+    await expect(
+      asUser(db.pool, sup, (q) => q("insert into user_permissions (profile_id, permission_key, allowed) values ($1,'auditoria.ver',true)", [colabTime])),
+    ).rejects.toThrow(/Somente administradores/);
+    await asSystem(db.pool, (q) =>
+      q("delete from role_permissions where role_id=(select id from roles where key='supervisor') and permission_key <> all(array['painel.ver','equipe.ver'])"),
+    );
   });
 
-  it("perfis padrão não podem ser excluídos", async () => {
-    await expect(asUser(db.pool, admin, (q) => q("delete from roles where key='supervisor'"))).rejects.toThrow(
-      /não podem ser excluídos/,
+  it("ajuste por usuário libera ou bloqueia uma permissão sem mudar o perfil, e o admin não ajusta a si mesmo", async () => {
+    const has = async (uid: string, k: string) =>
+      (await asUser(db.pool, uid, (q) => q("select public.has_permission($1) ok", [k]))).rows[0].ok as boolean;
+    expect(await has(colabTime, "auditoria.ver")).toBe(false);
+    expect(await has(colabTime, "painel.ver")).toBe(true);
+    await asUser(db.pool, admin, async (q) => {
+      await q("insert into user_permissions (profile_id, permission_key, allowed) values ($1,'auditoria.ver',true),($1,'painel.ver',false)", [colabTime]);
+    });
+    expect(await has(colabTime, "auditoria.ver")).toBe(true);
+    expect(await has(colabTime, "painel.ver")).toBe(false);
+    const mine = await asUser(db.pool, colabTime, (q) => q("select array_agg(k order by k) ks from public.my_permissions() k"));
+    expect(mine.rows[0].ks).toEqual(["auditoria.ver"]);
+    // A pessoa vê os próprios ajustes, mas não altera
+    const r = await asUser(db.pool, colabTime, (q) => q("select count(*)::int n from user_permissions"));
+    expect(r.rows[0].n).toBe(2);
+    const del = await asUser(db.pool, colabTime, (q) => q("delete from user_permissions where profile_id=$1 returning profile_id", [colabTime]));
+    expect(del.rowCount).toBe(0);
+    await expect(
+      asUser(db.pool, colabTime, (q) => q("update user_permissions set allowed = true where profile_id=$1", [colabTime])),
+    ).resolves.toBeDefined();
+    expect((await has(colabTime, "painel.ver"))).toBe(false);
+    await expect(
+      asUser(db.pool, admin, (q) => q("insert into user_permissions (profile_id, permission_key, allowed) values ($1,'painel.ver',false)", [admin])),
+    ).rejects.toThrow(/suas próprias permissões/);
+    // Fica registrado na auditoria
+    const log = await asSystem(db.pool, (q) =>
+      q("select count(*)::int n from audit_log where table_name='user_permissions' and actor_id=$1", [admin]),
     );
+    expect(log.rows[0].n).toBe(2);
+    await asUser(db.pool, admin, (q) => q("delete from user_permissions where profile_id=$1", [colabTime]));
+    expect(await has(colabTime, "auditoria.ver")).toBe(false);
   });
 
   it("quem só gerencia colaboradores cadastra apenas com o perfil Colaborador", async () => {
     await asUser(db.pool, admin, async (q) => {
       const r = await q("insert into roles (key, name) values ('cadastro', 'Cadastro') returning id");
-      await q("insert into role_permissions (role_id, permission_key) values ($1,'colaboradores.gerenciar')", [
+      await q("insert into role_permissions (role_id, permission_key) values ($1,'colaboradores.criar')", [
         r.rows[0].id,
       ]);
       await q("update profiles set role_id=$1 where id=$2", [r.rows[0].id, colabFora]);
@@ -293,7 +332,7 @@ run("Etapa 1 · banco, permissões e RLS", () => {
           [novo.rows[0].id],
         ),
       ),
-    ).rejects.toThrow(/somente pode|só pode/);
+    ).rejects.toThrow(/Somente administradores cadastram/);
     await asUser(db.pool, colabFora, (q) =>
       q(
         "insert into profiles (id, full_name, email, role_id) values ($1,'Nova Pessoa','nova@x.com',(select id from roles where key='colaborador'))",

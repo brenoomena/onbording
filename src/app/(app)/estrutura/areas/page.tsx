@@ -1,10 +1,11 @@
+import { Building2, Plus, Trash2 } from "lucide-react";
 import type { Metadata } from "next";
 import { plainText } from "@/components/markdown";
 import { ActionButton, ActionForm, SubmitButton } from "@/components/forms";
 import { Badge, Card, EmptyState, Field, Input, PageHeader } from "@/components/ui";
 import { RichTextarea } from "@/components/rich-textarea";
-import { requirePermission } from "@/lib/auth";
-import { P } from "@/lib/permissions";
+import { can, requirePermission } from "@/lib/auth";
+import { ESTRUTURA_ANY, P } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { removeItem, saveArea, toggleActive } from "../actions";
 import { InlineEditor } from "../item-editor";
@@ -36,7 +37,10 @@ function AreaFields({ area }: { area?: AreaRow }) {
 }
 
 export default async function AreasPage() {
-  await requirePermission(P.estruturaGerenciar);
+  const me = await requirePermission(...ESTRUTURA_ANY);
+  const canCreate = can(me, P.estruturaCriar);
+  const canEdit = can(me, P.estruturaEditar);
+  const canDelete = can(me, P.estruturaExcluir);
   const supabase = await createClient();
   const { data } = await supabase.from("areas").select("id, name, description, active, positions(count), profiles(count)").order("name");
   const areas = (data ?? []) as AreaRow[];
@@ -45,10 +49,11 @@ export default async function AreasPage() {
     <>
       <PageHeader
         eyebrow="Estrutura"
+        icon={Building2}
         title="Áreas de atuação"
         description="Cada colaborador pertence a uma área. Nas próximas etapas, trilhas e conteúdos serão liberados por área."
       />
-      <div className="grid items-start gap-6 lg:grid-cols-[1fr_320px]">
+      <div className={canCreate ? "grid items-start gap-6 lg:grid-cols-[1fr_320px]" : "grid items-start gap-6"}>
         <div className="grid gap-3">
           {areas.length === 0 ? (
             <EmptyState title="Nenhuma área cadastrada">Crie a primeira área ao lado.</EmptyState>
@@ -59,6 +64,22 @@ export default async function AreasPage() {
               return (
                 <div key={a.id} className="rounded-xl border border-line bg-surface p-4">
                   <InlineEditor
+                    canEdit={canEdit}
+                    actions={
+                      canDelete && positions === 0 && people === 0 && (
+                        <ActionButton
+                          action={removeItem}
+                          hidden={{ kind: "areas", id: a.id }}
+                          label="Excluir"
+                          variant="danger"
+                          icon={<Trash2 size={16} aria-hidden />}
+                          iconOnly
+                          confirm
+                          confirmLabel="Excluir área"
+                          confirmText="O registro será apagado definitivamente. Só é possível porque não está em uso."
+                        />
+                      )
+                    }
                     summary={
                       <div className="min-w-0">
                         <p className="flex flex-wrap items-center gap-2 font-semibold">
@@ -82,9 +103,6 @@ export default async function AreasPage() {
                           hidden={{ kind: "areas", id: a.id, active: String(!a.active) }}
                           label={a.active ? "Desativar" : "Reativar"}
                         />
-                        {positions === 0 && people === 0 && (
-                          <ActionButton action={removeItem} hidden={{ kind: "areas", id: a.id }} label="Excluir" variant="danger" confirm confirmLabel="Excluir área" />
-                        )}
                       </div>
                       {(positions > 0 || people > 0) && (
                         <p className="text-[12px] text-muted">Áreas com cargos ou colaboradores não podem ser excluídas. Desative para impedir novos vínculos.</p>
@@ -96,12 +114,14 @@ export default async function AreasPage() {
             })
           )}
         </div>
-        <Card title="Nova área">
+        {canCreate && (
+        <Card icon={Plus} title="Nova área">
           <ActionForm action={saveArea} resetOnSuccess>
             <AreaFields />
             <div><SubmitButton>Criar área</SubmitButton></div>
           </ActionForm>
         </Card>
+        )}
       </div>
     </>
   );

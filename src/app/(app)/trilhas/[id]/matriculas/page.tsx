@@ -1,3 +1,4 @@
+import { Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -28,7 +29,7 @@ const ORIGIN = { automatica: "Automática", manual: "Manual", propria: "Própria
 const tone = { nao_iniciada: "neutral", em_andamento: "brand", concluida: "ok" } as const;
 
 export default async function MatriculasPage({ params }: { params: Promise<{ id: string }> }) {
-  await requirePermission(P.trilhasGerenciar);
+  await requirePermission(P.trilhasMatricular);
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const loaded = await loadTrack(id);
@@ -64,6 +65,7 @@ export default async function MatriculasPage({ params }: { params: Promise<{ id:
     <>
       <PageHeader
         eyebrow={track.name}
+        icon={Users}
         title="Matrículas e progresso"
         description={`${rows.length} matrículas · ${done} concluídas · ${notStarted} não iniciadas${late ? ` · ${late} em atraso` : ""}`}
         actions={<Link href={`/trilhas/${id}`} className="text-[13px] font-medium text-accent hover:underline">← Voltar à trilha</Link>}

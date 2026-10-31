@@ -26,6 +26,13 @@ const config: Config = {
         "warn-soft": token("warn-soft"),
         danger: token("danger"),
         "danger-soft": token("danger-soft"),
+        heading: token("heading"),
+        icon: token("icon"),
+        "sidebar-bg": token("sidebar-bg"),
+        "sidebar-text": token("sidebar-text"),
+        "sidebar-muted": token("sidebar-muted"),
+        "sidebar-active-bg": token("sidebar-active-bg"),
+        "sidebar-active-text": token("sidebar-active-text"),
       },
       fontFamily: {
         sans: ["var(--font-sans)"],

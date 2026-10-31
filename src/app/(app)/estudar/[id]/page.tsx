@@ -1,3 +1,4 @@
+import { FileText, Lock } from "lucide-react";
 import type { Metadata } from "next";
 import { Markdown } from "@/components/markdown";
 import Link from "next/link";
@@ -68,7 +69,7 @@ export default async function EstudarPage({
   if (nav.locked && !preview) {
     return (
       <>
-        <PageHeader eyebrow={nav.trackName} title={content.title} />
+        <PageHeader eyebrow={nav.trackName} icon={Lock} title={content.title} />
         <Alert tone="warn">Esta etapa é liberada quando você concluir as etapas obrigatórias anteriores da trilha.</Alert>
         <Link href={`/minhas-trilhas/${nav.trackId}`} className={buttonVariants.secondary + " w-fit"}>Voltar à trilha</Link>
       </>
@@ -80,6 +81,7 @@ export default async function EstudarPage({
       {!preview && <StudyTracker contentId={id} />}
       <PageHeader
         eyebrow={nav.trackName ?? content.category ?? "Conteúdo"}
+        icon={FileText}
         title={content.title}
         description={
           <span className="flex flex-wrap items-center gap-2">

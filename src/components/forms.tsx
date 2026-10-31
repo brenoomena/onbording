@@ -2,7 +2,7 @@
 
 import { createContext, startTransition, useActionState, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
-import { Button, buttonVariants, cx } from "@/components/ui";
+import { Button, buttonVariants, cx, iconButtonClass } from "@/components/ui";
 import type { ActionState } from "@/lib/action-state";
 
 const PendingContext = createContext<boolean | null>(null);
@@ -101,6 +101,8 @@ export function ActionButton({
   confirm = false,
   confirmLabel = "Confirmar",
   confirmText,
+  icon,
+  iconOnly = false,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   label: string;
@@ -111,6 +113,10 @@ export function ActionButton({
   confirmLabel?: string;
   /** Texto explicativo da janela de confirmação. */
   confirmText?: string;
+  /** Ícone do botão (elemento, ex.: <Trash2 size={16} />). */
+  icon?: ReactNode;
+  /** Mostra só o ícone (ações nas linhas das listagens). */
+  iconOnly?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, {} as ActionState);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -131,9 +137,11 @@ export function ActionButton({
             <button
               type="button"
               onClick={() => dialog.current?.showModal()}
-              className={cx(buttonVariants[variant], "py-1.5 text-[13px]")}
+              title={iconOnly ? label : undefined}
+              aria-label={iconOnly ? label : undefined}
+              className={iconOnly ? iconButtonClass(variant === "danger" ? "danger" : "neutral") : cx(buttonVariants[variant], "py-1.5 text-[13px]")}
             >
-              {label}
+              {iconOnly ? icon : <>{icon}{label}</>}
             </button>
             <dialog
               ref={dialog}
@@ -160,8 +168,13 @@ export function ActionButton({
               </div>
             </dialog>
           </>
+        ) : iconOnly ? (
+          <button type="submit" disabled={pending} title={label} aria-label={label} className={iconButtonClass(variant === "danger" ? "danger" : "neutral")}>
+            {icon}
+          </button>
         ) : (
           <SubmitButton variant={variant} pendingLabel={pendingLabel} className="py-1.5 text-[13px]">
+            {icon}
             {label}
           </SubmitButton>
         )}

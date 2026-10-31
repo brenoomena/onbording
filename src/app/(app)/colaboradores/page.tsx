@@ -1,11 +1,15 @@
+import { Eye, Filter, Pencil, Search, UserCheck, UserPlus, UserX, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { EmptyState, Input, LinkButton, PageHeader, Select, StatusBadge, Table, buttonVariants, formatDate, formatDateTime } from "@/components/ui";
-import { requirePermission } from "@/lib/auth";
+import { Avatar } from "@/components/avatar";
+import { ActionButton } from "@/components/forms";
+import { Card, EmptyState, IconLink, Input, LinkButton, PageHeader, RowActions, Select, StatusBadge, Table, buttonVariants, formatDate, formatDateTime } from "@/components/ui";
+import { can, isAdmin, requirePermission } from "@/lib/auth";
 import { P } from "@/lib/permissions";
 import { PROFILE_SELECT, loadStructure, loadSupervisorOptions, type ProfileRow } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { STATUS_LABEL, type UserStatus } from "@/lib/types";
+import { setProfileStatus } from "./actions";
 
 export const metadata: Metadata = { title: "Colaboradores" };
 
@@ -32,7 +36,10 @@ export default async function ColaboradoresPage({ searchParams }: { searchParams
   const me = await requirePermission(P.colaboradoresVer, P.equipeVer);
   const sp = await searchParams;
   const teamOnly = !me.permissions.has(P.colaboradoresVer);
-  const canManage = me.permissions.has(P.colaboradoresGerenciar);
+  const canManage = can(me, P.colaboradoresCriar);
+  const canEdit = can(me, P.colaboradoresEditar);
+  const canDeactivate = can(me, P.colaboradoresDesativar);
+  const admin = isAdmin(me);
   const page = Math.max(1, Number(sp.pagina) || 1);
 
   const supabase = await createClient();
@@ -74,16 +81,27 @@ export default async function ColaboradoresPage({ searchParams }: { searchParams
   return (
     <>
       <PageHeader
-        eyebrow="Pessoas"
+        eyebrow="Gestão"
+        icon={Users}
         title={teamOnly ? "Minha equipe" : "Colaboradores"}
         description={teamOnly ? "Colaboradores dos quais você é supervisor." : "Cadastro de todos os colaboradores da plataforma."}
-        actions={canManage && <LinkButton href="/colaboradores/novo">Cadastrar colaborador</LinkButton>}
+        actions={
+          canManage && (
+            <LinkButton href="/colaboradores/novo">
+              <UserPlus size={16} aria-hidden /> Cadastrar colaborador
+            </LinkButton>
+          )
+        }
       />
 
-      <form className="grid gap-3 rounded-xl border border-line bg-surface p-4 sm:grid-cols-2 lg:grid-cols-4" method="get">
+      <Card title="Filtros" description="Refine por área, cargo, status e período de admissão" icon={Filter}>
+      <form className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" method="get">
         <div className="grid gap-1 sm:col-span-2">
           <label htmlFor="q" className="text-[12px] font-medium text-muted">Buscar</label>
-          <Input id="q" name="q" defaultValue={sp.q} placeholder="Nome ou e-mail" />
+          <div className="relative">
+            <Search size={16} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+            <Input id="q" name="q" defaultValue={sp.q} placeholder="Nome ou e-mail" className="pl-9" />
+          </div>
         </div>
         <div className="grid gap-1">
           <label htmlFor="f-area" className="text-[12px] font-medium text-muted">Área</label>
@@ -151,12 +169,14 @@ export default async function ColaboradoresPage({ searchParams }: { searchParams
           </span>
         </div>
       </form>
+      </Card>
 
       {error ? (
         <EmptyState title="Não foi possível carregar a lista">Atualize a página. Se o erro continuar, avise o administrador.</EmptyState>
       ) : rows.length === 0 ? (
         <EmptyState
           title={filtered ? "Nenhum colaborador com esses filtros" : teamOnly ? "Sua equipe ainda não tem colaboradores" : "Nenhum colaborador cadastrado"}
+          icon={Users}
           action={!filtered && canManage ? <LinkButton href="/colaboradores/novo">Cadastrar o primeiro</LinkButton> : undefined}
         >
           {teamOnly && !filtered ? "Quando um administrador indicar você como supervisor de alguém, a pessoa aparece aqui." : undefined}
@@ -171,14 +191,20 @@ export default async function ColaboradoresPage({ searchParams }: { searchParams
               <th>Admissão</th>
               <th>Último acesso</th>
               <th>Status</th>
+              <th className="text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((p) => (
-              <tr key={p.id} className="hover:bg-accent-soft/40">
+              <tr key={p.id}>
                 <td>
-                  <Link href={`/colaboradores/${p.id}`} className="font-medium hover:text-accent">{p.full_name}</Link>
-                  <p className="text-[12px] text-muted">{p.email}</p>
+                  <div className="flex items-center gap-3">
+                    <Avatar name={p.full_name} path={p.avatar_path} size={34} />
+                    <div className="min-w-0">
+                      <Link href={`/colaboradores/${p.id}`} className="font-medium text-heading hover:text-accent">{p.full_name}</Link>
+                      <p className="text-[12px] text-muted">{p.email}</p>
+                    </div>
+                  </div>
                 </td>
                 <td className="text-[13px]">
                   {[p.area?.name, p.position?.name, p.level?.name].filter(Boolean).join(" · ") || <span className="text-muted">Não definido</span>}
@@ -187,6 +213,30 @@ export default async function ColaboradoresPage({ searchParams }: { searchParams
                 <td className="text-[13px] tabular-nums">{formatDate(p.admission_date)}</td>
                 <td className="text-[13px] tabular-nums">{p.last_access_at ? formatDateTime(p.last_access_at) : <span className="text-muted">Nunca acessou</span>}</td>
                 <td><StatusBadge status={p.status} /></td>
+                <td>
+                  <RowActions>
+                    <IconLink href={`/colaboradores/${p.id}`} label="Ver cadastro" icon={Eye} />
+                    {(canEdit || admin) && (p.role?.key !== "admin" || admin) && (
+                      <IconLink href={`/colaboradores/${p.id}/editar`} label="Editar" icon={Pencil} />
+                    )}
+                    {canDeactivate && p.id !== me.userId && (p.role?.key !== "admin" || admin) &&
+                      (p.status === "inativo" ? (
+                        <ActionButton action={setProfileStatus} hidden={{ id: p.id, status: "ativo" }} label="Reativar acesso" icon={<UserCheck size={16} aria-hidden />} iconOnly />
+                      ) : (
+                        <ActionButton
+                          action={setProfileStatus}
+                          hidden={{ id: p.id, status: "inativo" }}
+                          label="Desativar acesso"
+                          variant="danger"
+                          icon={<UserX size={16} aria-hidden />}
+                          iconOnly
+                          confirm
+                          confirmLabel="Desativar acesso"
+                          confirmText={`${p.full_name} perde o acesso na hora. O histórico de estudo e o cadastro ficam guardados e o acesso pode ser reativado.`}
+                        />
+                      ))}
+                  </RowActions>
+                </td>
               </tr>
             ))}
           </tbody>

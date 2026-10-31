@@ -220,4 +220,98 @@ run("Etapa 2 · trilhas, conteúdos, matrículas e progresso", () => {
     );
     expect(r.rows[0].n).toBeGreaterThanOrEqual(2);
   });
+
+  // ------------------------------------------------- conteúdo por trilha
+
+  it("conteúdos existentes ficam vinculados à trilha onde já estavam", async () => {
+    const r = await asSystem(db.pool, (q) =>
+      q("select count(*) filter (where track_id = $1)::int dentro, count(*) filter (where track_id is null)::int sem from contents", [track]),
+    );
+    expect(r.rows[0]).toEqual({ dentro: 21, sem: 0 });
+  });
+
+  it("conteúdo sem trilha só pode existir como material da Biblioteca", async () => {
+    await expect(
+      asUser(db.pool, admin, (q) => q("insert into contents (title, kind, url) values ('Solto', 'link', 'https://x.com')")),
+    ).rejects.toThrow(/contents_track_or_library/);
+    await asUser(db.pool, admin, (q) =>
+      q("insert into contents (title, kind, url, is_library) values ('Só biblioteca', 'link', 'https://x.com', true)"),
+    );
+  });
+
+  it("trilha só aceita conteúdos que pertencem a ela, e conteúdo em uso não muda de trilha", async () => {
+    const { other, mod, c } = await asUser(db.pool, admin, async (q) => {
+      const o = (await q("insert into tracks (name) values ('Trilha Isolada') returning id")).rows[0].id as string;
+      const m = (await q("insert into modules (track_id, title, position) values ($1, 'Único', 1) returning id", [o])).rows[0].id as string;
+      const cc = (await q("insert into contents (title, kind, url, track_id) values ('Da isolada', 'link', 'https://x.com', $1) returning id", [o])).rows[0].id as string;
+      return { other: o, mod: m, c: cc };
+    });
+    const [ted] = await itemsOf("Técnicas de Vendas");
+    await expect(
+      asUser(db.pool, admin, (q) => q("insert into module_items (module_id, content_id, position) values ($1, $2, 1)", [mod, ted])),
+    ).rejects.toThrow(/pertence a outra trilha/);
+    await asUser(db.pool, admin, (q) => q("insert into module_items (module_id, content_id, position) values ($1, $2, 1)", [mod, c]));
+    await expect(
+      asUser(db.pool, admin, (q) => q("update contents set track_id = $1 where id = $2", [track, c])),
+    ).rejects.toThrow(/Remova-o de lá/);
+    // A trilha com conteúdos vinculados não é excluída por engano
+    await asUser(db.pool, admin, (q) => q("delete from module_items where content_id = $1", [c]));
+    await expect(asUser(db.pool, admin, (q) => q("delete from tracks where id = $1", [other]))).rejects.toThrow(/foreign key/);
+  });
+
+  // ------------------------------------------------- permissões por ação
+
+  it("quem pode criar conteúdo não exclui sem a permissão de excluir", async () => {
+    await asSystem(db.pool, (q) =>
+      q("insert into role_permissions (role_id, permission_key) select id, unnest(array['conteudos.ver','conteudos.criar']) from roles where key='supervisor' on conflict do nothing"),
+    );
+    const id = await asUser(db.pool, sup, async (q) =>
+      (await q("insert into contents (title, kind, url, track_id) values ('Do supervisor', 'link', 'https://x.com', $1) returning id", [track])).rows[0].id as string,
+    );
+    const upd = await asUser(db.pool, sup, (q) => q("update contents set title = 'Editado' where id = $1 returning id", [id]));
+    expect(upd.rowCount).toBe(0);
+    const del = await asUser(db.pool, sup, (q) => q("delete from contents where id = $1 returning id", [id]));
+    expect(del.rowCount).toBe(0);
+    await asUser(db.pool, admin, (q) => q("insert into user_permissions (profile_id, permission_key, allowed) values ($1, 'conteudos.excluir', true)", [sup]));
+    const del2 = await asUser(db.pool, sup, (q) => q("delete from contents where id = $1 returning id", [id]));
+    expect(del2.rowCount).toBe(1);
+    await asSystem(db.pool, async (q) => {
+      await q("delete from user_permissions where profile_id = $1", [sup]);
+      await q("delete from role_permissions where role_id=(select id from roles where key='supervisor') and permission_key like 'conteudos.%'");
+    });
+  });
+
+  it("bloqueio individual tira o acesso à gestão mesmo com o perfil permitindo", async () => {
+    await asUser(db.pool, admin, (q) => q("insert into user_permissions (profile_id, permission_key, allowed) values ($1, 'equipe.ver', false)", [sup]));
+    const r = await asUser(db.pool, sup, (q) => q("select count(*)::int n from enrollments where profile_id = $1", [vendedor]));
+    expect(r.rows[0].n).toBe(0);
+    await asUser(db.pool, admin, (q) => q("delete from user_permissions where profile_id = $1", [sup]));
+    const r2 = await asUser(db.pool, sup, (q) => q("select count(*)::int n from enrollments where profile_id = $1", [vendedor]));
+    expect(r2.rows[0].n).toBeGreaterThan(0);
+  });
+
+  // ------------------------------------------------- identidade visual
+
+  it("configurações visuais: só o admin lê e altera; cores inválidas são recusadas; tema público via função", async () => {
+    const sel = await asUser(db.pool, sup, (q) => q("select count(*)::int n from app_settings"));
+    expect(sel.rows[0].n).toBe(0);
+    const upd = await asUser(db.pool, sup, (q) => q("update app_settings set theme = '{}'::jsonb returning id"));
+    expect(upd.rowCount).toBe(0);
+    await asUser(db.pool, admin, (q) =>
+      q(`update app_settings set theme = '{"light":{"brand":"#ff6600","sidebar-bg":"#0f172a"},"dark":{"brand":"#ffaa00"}}'::jsonb`),
+    );
+    await expect(
+      asUser(db.pool, admin, (q) => q(`update app_settings set theme = '{"light":{"brand":"red;}body{display:none"}}'::jsonb`)),
+    ).rejects.toThrow(/check constraint/);
+    await expect(
+      asUser(db.pool, admin, (q) => q(`update app_settings set theme = '{"light":{"position":"#000000"}}'::jsonb`)),
+    ).rejects.toThrow(/check constraint/);
+    await expect(
+      asUser(db.pool, admin, (q) => q("update app_settings set logo_path = '../../segredo.png'")),
+    ).rejects.toThrow(/check constraint/);
+    const b = await asUser(db.pool, null, (q) => q("select public.get_branding() b"));
+    expect(b.rows[0].b.theme.light.brand).toBe("#ff6600");
+    const log = await asSystem(db.pool, (q) => q("select count(*)::int n from audit_log where table_name = 'app_settings' and actor_id = $1", [admin]));
+    expect(log.rows[0].n).toBe(1);
+  });
 });

@@ -1,3 +1,4 @@
+import { ArrowDown, ArrowUp, Eye, FilePlus2, Layers3, Plus, Route, Settings2, Trash2, Users, X } from "lucide-react";
 import type { Metadata } from "next";
 import { Markdown } from "@/components/markdown";
 import Link from "next/link";
@@ -5,7 +6,7 @@ import { notFound } from "next/navigation";
 import { ActionButton, ActionForm, SubmitButton, PageNotice } from "@/components/forms";
 import { Alert, Badge, Card, Field, Input, PageHeader, Select, buttonVariants } from "@/components/ui";
 import { RichTextarea } from "@/components/rich-textarea";
-import { requirePermission } from "@/lib/auth";
+import { can, requirePermission } from "@/lib/auth";
 import { KIND_LABEL, PUBLISH_LABEL, type AudienceRule } from "@/lib/learning";
 import { P } from "@/lib/permissions";
 import { loadStructure } from "@/lib/queries";
@@ -31,7 +32,8 @@ export const metadata: Metadata = { title: "Trilha" };
 const tone = { rascunho: "warn", publicado: "ok", arquivado: "neutral" } as const;
 
 export default async function TrilhaPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ aviso?: string }> }) {
-  await requirePermission(P.trilhasGerenciar);
+  const me = await requirePermission(P.trilhasVer);
+  const canEdit = can(me, P.trilhasEditar);
   const { id } = await params;
   const { aviso } = await searchParams;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
@@ -43,18 +45,22 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
   const supabase = await createClient();
   const [{ data: rules }, { data: contents }, { count: enrolled }, structure] = await Promise.all([
     supabase.from("audience_rules").select("area_id, position_id, level_id").eq("track_id", id),
-    supabase.from("contents").select("id, title, status, kind").neq("status", "arquivado").order("title"),
+    // Só os conteúdos que pertencem a esta trilha podem entrar nos módulos dela.
+    supabase.from("contents").select("id, title, status, kind").eq("track_id", id).neq("status", "arquivado").order("title"),
     supabase.from("enrollments").select("id", { count: "exact", head: true }).eq("track_id", id),
     loadStructure(),
   ]);
   const options = (contents ?? []) as { id: string; title: string; status: string; kind: keyof typeof KIND_LABEL }[];
   const totalItems = modules.reduce((s, m) => s + m.items.length, 0);
   const drafts = modules.flatMap((m) => m.items).filter((i) => i.content.status !== "publicado");
+  const placed = new Set(modules.flatMap((m) => m.items.map((i) => i.content.id)));
+  const outside = options.filter((o) => !placed.has(o.id));
 
   return (
     <>
       <PageHeader
         eyebrow="Trilhas"
+        icon={Route}
         title={track.name}
         description={
           <span className="flex flex-wrap items-center gap-2">
@@ -67,17 +73,26 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
         }
         actions={
           <div className="flex flex-wrap items-start gap-2">
-            <Link href={`/trilhas/${id}/matriculas`} className={buttonVariants.secondary}>Matrículas e progresso</Link>
-            {track.status !== "publicado" && (
+            <Link href={`/minhas-trilhas/${id}`} className={buttonVariants.secondary}>
+              <Eye size={16} aria-hidden /> Ver como colaborador
+            </Link>
+            {can(me, P.trilhasMatricular) && (
+              <Link href={`/trilhas/${id}/matriculas`} className={buttonVariants.secondary}>
+                <Users size={16} aria-hidden /> Matrículas e progresso
+              </Link>
+            )}
+            {canEdit && track.status !== "publicado" && (
               <ActionButton action={setTrackStatus} hidden={{ id, status: "publicado" }} label="Publicar" variant="primary" />
             )}
-            {track.status === "publicado" && (
+            {canEdit && track.status === "publicado" && (
               <ActionButton action={setTrackStatus} hidden={{ id, status: "rascunho" }} label="Voltar para rascunho" confirm confirmLabel="Despublicar" confirmText="A trilha some para os colaboradores até ser publicada de novo." />
             )}
-            {track.status !== "arquivado" && (
+            {canEdit && track.status !== "arquivado" && (
               <ActionButton action={setTrackStatus} hidden={{ id, status: "arquivado" }} label="Arquivar" confirm confirmLabel="Arquivar trilha" confirmText="A trilha sai das listas e para de receber matrículas automáticas." />
             )}
-            {!enrolled && <ActionButton action={deleteTrack} hidden={{ id }} label="Excluir" variant="danger" confirm confirmLabel="Excluir trilha" confirmText="A trilha e os módulos serão apagados definitivamente. Os conteúdos continuam cadastrados." />}
+            {can(me, P.trilhasExcluir) && !enrolled && (
+              <ActionButton action={deleteTrack} hidden={{ id, voltar: "1" }} label="Excluir" variant="danger" icon={<Trash2 size={15} aria-hidden />} confirm confirmLabel="Excluir trilha" confirmText="A trilha e os módulos serão apagados definitivamente. Só é possível sem conteúdos vinculados." />
+            )}
           </div>
         }
       />
@@ -89,8 +104,10 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
         </Alert>
       )}
 
+      {!canEdit && <Alert tone="brand">Você pode consultar esta trilha. Para alterar, é preciso a permissão de editar trilhas.</Alert>}
+
       <section className="grid gap-4">
-        <h2 className="text-lg font-semibold">Estrutura</h2>
+        <h2 className="flex items-center gap-2 text-lg font-semibold"><Layers3 size={19} className="text-icon" aria-hidden /> Estrutura</h2>
         {modules.length === 0 && <p className="text-[13px] text-muted">Nenhum módulo ainda. Crie o primeiro abaixo.</p>}
         {modules.map((m, mi) => (
           <div key={m.id} className="rounded-xl border border-line bg-surface">
@@ -100,13 +117,13 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
                 <p className="font-semibold">{m.title}</p>
                 {m.description && <Markdown size="sm" className="text-muted">{m.description}</Markdown>}
               </div>
-              <div className="flex flex-wrap items-start gap-1">
-                {mi > 0 && <ActionButton action={moveModule} hidden={{ id: m.id, direction: "-1", track_id: id }} label="↑" variant="ghost" pendingLabel="…" />}
+              {canEdit && <div className="flex flex-wrap items-start gap-1">
+                {mi > 0 && <ActionButton action={moveModule} hidden={{ id: m.id, direction: "-1", track_id: id }} label="Subir módulo" icon={<ArrowUp size={16} aria-hidden />} iconOnly />}
                 {mi < modules.length - 1 && (
-                  <ActionButton action={moveModule} hidden={{ id: m.id, direction: "1", track_id: id }} label="↓" variant="ghost" pendingLabel="…" />
+                  <ActionButton action={moveModule} hidden={{ id: m.id, direction: "1", track_id: id }} label="Descer módulo" icon={<ArrowDown size={16} aria-hidden />} iconOnly />
                 )}
                 <details className="relative">
-                  <summary className={`${buttonVariants.ghost} cursor-pointer list-none py-1.5 text-[13px] [&::-webkit-details-marker]:hidden`}>Editar</summary>
+                  <summary className={`${buttonVariants.ghost} cursor-pointer list-none py-1.5 text-[13px] [&::-webkit-details-marker]:hidden`}><Settings2 size={15} aria-hidden /> Editar</summary>
                   <div className="absolute right-0 z-10 mt-1 w-[min(90vw,360px)] rounded-xl border border-line bg-surface p-4 shadow-lg">
                     <ActionForm action={updateModule}>
                       <input type="hidden" name="id" value={m.id} />
@@ -121,11 +138,11 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
                       </div>
                     </ActionForm>
                     <div className="mt-3 border-t border-line pt-3">
-                      <ActionButton action={deleteModule} hidden={{ id: m.id }} label="Excluir módulo" variant="danger" confirm confirmLabel="Excluir" />
+                      <ActionButton action={deleteModule} hidden={{ id: m.id }} label="Excluir módulo" variant="danger" icon={<Trash2 size={15} aria-hidden />} confirm confirmLabel="Excluir" confirmText="O módulo sai da trilha. Os conteúdos continuam cadastrados nesta trilha." />
                     </div>
                   </div>
                 </details>
-              </div>
+              </div>}
             </div>
 
             <ol className="divide-y divide-line">
@@ -142,7 +159,7 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
                       </p>
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-start gap-1">
+                  {canEdit ? <div className="flex flex-wrap items-center gap-1">
                     <ActionButton
                       action={toggleRequired}
                       hidden={{ id: it.id, value: String(!it.is_required), track_id: id }}
@@ -150,24 +167,24 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
                       variant={it.is_required ? "secondary" : "ghost"}
                       pendingLabel="…"
                     />
-                    {ii > 0 && <ActionButton action={moveItem} hidden={{ id: it.id, direction: "-1", track_id: id }} label="↑" variant="ghost" pendingLabel="…" />}
+                    {ii > 0 && <ActionButton action={moveItem} hidden={{ id: it.id, direction: "-1", track_id: id }} label="Subir" icon={<ArrowUp size={16} aria-hidden />} iconOnly />}
                     {ii < m.items.length - 1 && (
-                      <ActionButton action={moveItem} hidden={{ id: it.id, direction: "1", track_id: id }} label="↓" variant="ghost" pendingLabel="…" />
+                      <ActionButton action={moveItem} hidden={{ id: it.id, direction: "1", track_id: id }} label="Descer" icon={<ArrowDown size={16} aria-hidden />} iconOnly />
                     )}
-                    <ActionButton action={removeItem} hidden={{ id: it.id, track_id: id }} label="Remover" variant="ghost" confirm confirmLabel="Remover" />
-                  </div>
+                    <ActionButton action={removeItem} hidden={{ id: it.id, track_id: id }} label="Remover do módulo" variant="danger" icon={<X size={16} aria-hidden />} iconOnly confirm confirmLabel="Remover" confirmText="O conteúdo sai deste módulo, mas continua cadastrado nesta trilha." />
+                  </div> : <Badge>{it.is_required ? "Obrigatório" : "Opcional"}</Badge>}
                 </li>
               ))}
             </ol>
 
-            <div className="border-t border-line bg-bg/60 px-4 py-3">
+            {canEdit && <div className="border-t border-line bg-bg/60 px-4 py-3">
               <ActionForm action={addItem} className="sm:grid-cols-[1fr_auto_auto] sm:items-end">
                 <input type="hidden" name="module_id" value={m.id} />
                 <input type="hidden" name="track_id" value={id} />
                 <div className="grid gap-1">
-                  <label htmlFor={`add-${m.id}`} className="text-[12px] font-medium text-muted">Incluir conteúdo</label>
+                  <label htmlFor={`add-${m.id}`} className="text-[12px] font-medium text-muted">Incluir conteúdo desta trilha</label>
                   <Select id={`add-${m.id}`} name="content_id" defaultValue="">
-                    <option value="" disabled>Escolha um conteúdo</option>
+                    <option value="" disabled>{options.some((o) => !m.items.some((i) => i.content.id === o.id)) ? "Escolha um conteúdo" : "Todos os conteúdos da trilha já estão neste módulo"}</option>
                     {options
                       .filter((o) => !m.items.some((i) => i.content.id === o.id))
                       .map((o) => (
@@ -181,35 +198,47 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
                 <label className="flex items-center gap-2 pb-2 text-[13px]">
                   <input type="checkbox" name="is_required" defaultChecked className="h-4 w-4 accent-[rgb(var(--brand))]" /> Obrigatório
                 </label>
-                <SubmitButton variant="secondary" className="py-2 text-[13px]">Incluir</SubmitButton>
+                <SubmitButton variant="secondary" className="py-2 text-[13px]"><Plus size={15} aria-hidden /> Incluir</SubmitButton>
               </ActionForm>
-              <p className="mt-2 text-[12px] text-muted">
-                Não encontrou? <Link href="/conteudos/novo" className="font-medium text-accent hover:underline">Cadastre um conteúdo novo</Link>.
-              </p>
-            </div>
+              {can(me, P.conteudosCriar) && (
+                <p className="mt-2 flex items-center gap-1 text-[12px] text-muted">
+                  <FilePlus2 size={13} aria-hidden /> Não encontrou?{" "}
+                  <Link href={`/conteudos/novo?trilha=${id}`} className="font-medium text-accent hover:underline">Cadastre um conteúdo nesta trilha</Link>.
+                </p>
+              )}
+            </div>}
           </div>
         ))}
 
-        <Card title="Novo módulo">
+        {outside.length > 0 && (
+          <Alert tone="brand">
+            {outside.length === 1 ? "1 conteúdo desta trilha ainda não está" : `${outside.length} conteúdos desta trilha ainda não estão`} em nenhum módulo:{" "}
+            {outside.map((o) => o.title).join(", ")}.
+          </Alert>
+        )}
+
+        {canEdit && <Card title="Novo módulo" icon={Plus}>
           <ActionForm action={addModule} resetOnSuccess className="sm:grid-cols-[1fr_2fr_auto] sm:items-end">
             <input type="hidden" name="track_id" value={id} />
             <Field label="Nome" htmlFor="new-mod-title">
               <Input id="new-mod-title" name="title" required minLength={2} maxLength={120} />
             </Field>
             <Field label="Descrição (opcional)" htmlFor="new-mod-desc">
-              <Input id="new-mod-desc" name="description" maxLength={400} />
+              <Input id="new-mod-desc" name="description" maxLength={1000} />
             </Field>
             <SubmitButton variant="secondary">Criar módulo</SubmitButton>
           </ActionForm>
-        </Card>
+        </Card>}
       </section>
 
-      <section className="grid gap-4">
-        <h2 className="text-lg font-semibold">Dados e público</h2>
-        <Card>
-          <TrackForm action={saveTrack} track={track} rules={(rules ?? []) as AudienceRule[]} structure={structure} />
-        </Card>
-      </section>
+      {canEdit && (
+        <section className="grid gap-4">
+          <h2 className="flex items-center gap-2 text-lg font-semibold"><Settings2 size={19} className="text-icon" aria-hidden /> Dados e público</h2>
+          <Card>
+            <TrackForm action={saveTrack} track={track} rules={(rules ?? []) as AudienceRule[]} structure={structure} />
+          </Card>
+        </section>
+      )}
     </>
   );
 }

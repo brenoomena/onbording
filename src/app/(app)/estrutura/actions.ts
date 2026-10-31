@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePermission } from "@/lib/auth";
+import { denyUnless, denyUnlessAdmin, requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/errors";
 import { P } from "@/lib/permissions";
@@ -25,7 +25,8 @@ function refresh(kind: Kind) {
 // ------------------------------------------------------------------ áreas
 
 export async function saveArea(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.estruturaGerenciar);
+  const denied = await denyUnless(fd.get("id") ? P.estruturaEditar : P.estruturaCriar);
+  if (denied) return denied;
   const parsed = areaSchema.safeParse(formObject(fd));
   if (!parsed.success) return fromZod(parsed.error);
   const id = String(fd.get("id") ?? "");
@@ -41,7 +42,8 @@ export async function saveArea(_: ActionState, fd: FormData): Promise<ActionStat
 // ------------------------------------------------------------------ níveis
 
 export async function saveLevel(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.estruturaGerenciar);
+  const denied = await denyUnless(fd.get("id") ? P.estruturaEditar : P.estruturaCriar);
+  if (denied) return denied;
   const parsed = levelSchema.safeParse(formObject(fd));
   if (!parsed.success) return fromZod(parsed.error);
   const id = String(fd.get("id") ?? "");
@@ -59,7 +61,8 @@ export async function saveLevel(_: ActionState, fd: FormData): Promise<ActionSta
 }
 
 export async function moveLevel(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.estruturaGerenciar);
+  const denied = await denyUnless(P.estruturaEditar);
+  if (denied) return denied;
   const supabase = await createClient();
   const { error } = await supabase.rpc("move_level", {
     p_level_id: String(fd.get("id")),
@@ -73,7 +76,8 @@ export async function moveLevel(_: ActionState, fd: FormData): Promise<ActionSta
 // ------------------------------------------------------------------ cargos
 
 export async function savePosition(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.estruturaGerenciar);
+  const denied = await denyUnless(fd.get("id") ? P.estruturaEditar : P.estruturaCriar);
+  if (denied) return denied;
   const parsed = positionSchema.safeParse(formObject(fd));
   if (!parsed.success) return fromZod(parsed.error);
   const id = String(fd.get("id") ?? "");
@@ -128,7 +132,8 @@ export async function savePosition(_: ActionState, fd: FormData): Promise<Action
 // ------------------------------------------------------------------ comuns
 
 export async function toggleActive(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.estruturaGerenciar);
+  const denied = await denyUnless(P.estruturaEditar);
+  if (denied) return denied;
   const kind = kindOf(fd);
   const active = fd.get("active") === "true";
   const supabase = await createClient();
@@ -139,7 +144,8 @@ export async function toggleActive(_: ActionState, fd: FormData): Promise<Action
 }
 
 export async function removeItem(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.estruturaGerenciar);
+  const denied = await denyUnless(P.estruturaExcluir);
+  if (denied) return denied;
   const kind = kindOf(fd);
   const supabase = await createClient();
   const { data, error } = await supabase.from(TABLES[kind]).delete().eq("id", String(fd.get("id"))).select("id");

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requirePermission } from "@/lib/auth";
+import { denyUnless, denyUnlessAdmin, requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/errors";
 import { P } from "@/lib/permissions";
@@ -10,7 +10,8 @@ import { fromZod, formObject, type ActionState } from "@/lib/action-state";
 import { roleKeyFromName, roleSchema } from "@/lib/validation";
 
 export async function createRole(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.perfisGerenciar);
+  const denied = await denyUnlessAdmin();
+  if (denied) return denied;
   const parsed = roleSchema.safeParse(formObject(fd));
   if (!parsed.success) return fromZod(parsed.error);
   const supabase = await createClient();
@@ -25,7 +26,8 @@ export async function createRole(_: ActionState, fd: FormData): Promise<ActionSt
 }
 
 export async function saveRole(_: ActionState, fd: FormData): Promise<ActionState> {
-  const me = await requirePermission(P.perfisGerenciar);
+  const denied = await denyUnlessAdmin();
+  if (denied) return denied;
   const id = String(fd.get("id") ?? "");
   const parsed = roleSchema.safeParse(formObject(fd));
   if (!parsed.success) return fromZod(parsed.error);
@@ -38,9 +40,8 @@ export async function saveRole(_: ActionState, fd: FormData): Promise<ActionStat
   const { error: upErr } = await supabase.from("roles").update(parsed.data).eq("id", id);
   if (upErr) return { error: friendlyError(upErr) };
 
-  // O perfil Administrador é fixo, e quem não é administrador não altera o próprio perfil.
-  const ownRole = me.profile.role_id === id && me.profile.role.key !== "admin";
-  if (role.key !== "admin" && !ownRole) {
+  // O perfil Administrador é fixo (sempre tem todas as permissões).
+  if (role.key !== "admin") {
     const { data: links } = await supabase.from("role_permissions").select("permission_key").eq("role_id", id);
     const current = new Set((links ?? []).map((l) => l.permission_key as string));
     const toAdd = [...wanted].filter((k) => !current.has(k));
@@ -61,7 +62,8 @@ export async function saveRole(_: ActionState, fd: FormData): Promise<ActionStat
 }
 
 export async function deleteRole(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.perfisGerenciar);
+  const denied = await denyUnlessAdmin();
+  if (denied) return denied;
   const supabase = await createClient();
   const { data, error } = await supabase.from("roles").delete().eq("id", String(fd.get("id"))).select("id");
   if (error) {
@@ -71,5 +73,6 @@ export async function deleteRole(_: ActionState, fd: FormData): Promise<ActionSt
   }
   if (!data?.length) return { error: "Perfil não encontrado." };
   revalidatePath("/perfis");
-  redirect("/perfis");
+  if (fd.get("voltar") === "1") redirect("/perfis");
+  return { ok: "Perfil excluído." };
 }

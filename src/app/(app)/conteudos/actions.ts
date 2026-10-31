@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requirePermission } from "@/lib/auth";
+import { denyUnless, denyUnlessAdmin, requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/errors";
 import { P } from "@/lib/permissions";
@@ -10,12 +10,19 @@ import { fromZod, formObject, type ActionState } from "@/lib/action-state";
 import { contentSchema, parseAudience } from "@/lib/validation";
 
 export async function saveContent(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.conteudosGerenciar);
+  const denied = await denyUnless(fd.get("id") ? P.conteudosEditar : P.conteudosCriar);
+  if (denied) return denied;
   const raw = formObject(fd);
   const parsed = contentSchema.safeParse(raw);
   if (!parsed.success) return fromZod(parsed.error);
   const id = String(fd.get("id") ?? "");
   const isLibrary = fd.get("is_library") === "on";
+  // Trilha a que o conteúdo pertence; sem trilha, só como material da Biblioteca.
+  const trackRaw = String(fd.get("track_id") ?? "");
+  const trackId = /^[0-9a-f-]{36}$/i.test(trackRaw) ? trackRaw : null;
+  if (!trackId && !isLibrary) {
+    return { error: "Escolha a trilha do conteúdo.", fieldErrors: { track_id: "Escolha a trilha ou marque como material da Biblioteca." } };
+  }
   const rules = isLibrary ? parseAudience(fd) : [];
 
   // Limpa campos que não pertencem ao formato escolhido.
@@ -31,6 +38,7 @@ export async function saveContent(_: ActionState, fd: FormData): Promise<ActionS
     file_size: d.kind === "arquivo" ? d.file_size : null,
     mime_type: d.kind === "arquivo" ? d.mime_type : null,
     is_library: isLibrary,
+    track_id: trackId,
   };
 
   const supabase = await createClient();
@@ -61,6 +69,7 @@ export async function saveContent(_: ActionState, fd: FormData): Promise<ActionS
 
   revalidatePath("/conteudos");
   revalidatePath(`/conteudos/${contentId}`);
+  if (trackId) revalidatePath(`/trilhas/${trackId}`);
   revalidatePath("/materiais");
   if (!id) redirect(`/conteudos/${contentId}?aviso=criado`);
   const msg = { publicado: "Conteúdo publicado. Já aparece para o público dele.", rascunho: "Salvo como rascunho. Ainda não aparece para os colaboradores.", arquivado: "Conteúdo arquivado." };
@@ -68,7 +77,8 @@ export async function saveContent(_: ActionState, fd: FormData): Promise<ActionS
 }
 
 export async function deleteContent(_: ActionState, fd: FormData): Promise<ActionState> {
-  await requirePermission(P.conteudosGerenciar);
+  const denied = await denyUnless(P.conteudosExcluir);
+  if (denied) return denied;
   const id = String(fd.get("id") ?? "");
   const supabase = await createClient();
   const { data: c } = await supabase.from("contents").select("storage_path").eq("id", id).maybeSingle();
@@ -84,5 +94,8 @@ export async function deleteContent(_: ActionState, fd: FormData): Promise<Actio
   if (!data?.length) return { error: "Conteúdo não encontrado." };
   if (c?.storage_path) await supabase.storage.from("conteudos").remove([c.storage_path]);
   revalidatePath("/conteudos");
-  redirect("/conteudos");
+  revalidatePath("/trilhas", "layout");
+  // Excluído na própria página do conteúdo: volta para a lista.
+  if (fd.get("voltar") === "1") redirect("/conteudos");
+  return { ok: "Conteúdo excluído." };
 }

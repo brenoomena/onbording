@@ -60,9 +60,10 @@ await step("admin entra e vê o menu de aprendizagem", async () => {
 await step("lista de trilhas mostra a trilha comercial publicada", async () => {
   await A.goto(`${BASE}/trilhas`);
   await A.getByRole("link", { name: /Onboarding Comercial/ }).waitFor();
-  const card = await A.getByRole("link", { name: /Onboarding Comercial/ }).innerText();
-  assert.match(card, /Publicado/);
-  assert.match(card, /4 módulos · 21 conteúdos/);
+  const row = await A.locator("tbody tr", { hasText: "Onboarding Comercial" }).innerText();
+  assert.match(row, /Publicado/);
+  assert.match(row, /4 módulos · 21 itens/);
+  assert.match(row, /21 conteúdos vinculados/);
   await A.screenshot({ path: `${SHOTS}/01-trilhas.png`, fullPage: true });
 });
 
@@ -97,6 +98,7 @@ await step("convida vendedora da área Contábil", async () => {
 await step("cria conteúdo em texto com Markdown e publica", async () => {
   await A.goto(`${BASE}/conteudos/novo`);
   await A.fill("#title", "Boas-vindas ao time comercial");
+  await A.selectOption("#track", { label: "Onboarding Comercial" });
   await A.fill("#category", "Institucional");
   await A.locator("label", { hasText: /^Texto$/ }).click();
   await A.fill("#body", "## Seja bem-vindo\n\nEste é o seu **primeiro passo**.\n\n- Conheça o time\n- Leia o material de apoio\n\n> Dúvidas? Fale com o seu supervisor.");
@@ -135,6 +137,7 @@ await step("cria conteúdo em texto com Markdown e publica", async () => {
 await step("rascunho é publicado pelo botão Publicar", async () => {
   await A.goto(`${BASE}/conteudos/novo`);
   await A.fill("#title", "Rascunho para publicar");
+  await A.selectOption("#track", { label: "Onboarding Comercial" });
   await A.locator("label", { hasText: /^Link externo$/ }).click();
   await A.fill("#url", "exemplo.com");
   await A.fill("#url", "https://exemplo.com");
@@ -160,6 +163,7 @@ await step("rascunho é publicado pelo botão Publicar", async () => {
 await step("validação: link sem endereço é recusado", async () => {
   await A.goto(`${BASE}/conteudos/novo`);
   await A.fill("#title", "Link sem endereço");
+  await A.selectOption("#track", { label: "Biblioteca (sem trilha)" });
   await A.getByRole("button", { name: "Salvar rascunho" }).click();
   await A.getByText("Informe o endereço do conteúdo.").first().waitFor();
 });
@@ -177,7 +181,7 @@ await step("inclui o texto em um novo módulo e coloca no início da trilha", as
   for (let i = 0; i < 4; i++) {
     await A.reload();
     const m = A.locator("div.rounded-xl", { has: A.locator("p.font-semibold", { hasText: /^Boas-vindas$/ }) }).first();
-    const up = m.getByRole("button", { name: "↑" }).first();
+    const up = m.getByRole("button", { name: "Subir módulo" }).first();
     if (!(await up.count())) break;
     await up.click();
     await A.waitForTimeout(700);
@@ -290,9 +294,9 @@ await step("busca filtra materiais na hora", async () => {
 });
 
 await step("vendedora não abre gestão de trilhas e conteúdos", async () => {
-  for (const p of ["/trilhas", "/conteudos", `/trilhas/${trackId}/matriculas`]) {
-    await V.goto(BASE + p);
-    assert.match(V.url(), /sem-acesso/, p);
+  for (const p of ["/trilhas", "/conteudos", `/trilhas/${trackId}/matriculas`, `/trilhas/${trackId}`, "/conteudos/novo", "/configuracoes"]) {
+    const r = await V.goto(BASE + p);
+    assert.equal(r.status(), 403, p);
   }
 });
 
@@ -332,17 +336,29 @@ await step("trilha opcional aparece como disponível e a vendedora se inscreve",
   await A.getByRole("button", { name: "Criar módulo" }).click();
   await A.getByText('Módulo "Módulo único" criado.').waitFor();
   await A.reload();
-  await A.locator("select[name=content_id]").first().selectOption({ label: "Boas-vindas ao time comercial" });
+  // Conteúdos de outra trilha não aparecem para inclusão
+  const opts = await A.locator("select[name=content_id]").first().locator("option").allInnerTexts();
+  assert.ok(!opts.some((o) => o.includes("Boas-vindas ao time comercial")), "não oferece conteúdo de outra trilha");
+  const newTrack = A.url().split("/trilhas/")[1].split("?")[0];
+  await A.getByRole("link", { name: "Cadastre um conteúdo nesta trilha" }).first().click();
+  await A.waitForURL(/conteudos\/novo\?trilha=/);
+  assert.equal(await A.inputValue("#track"), newTrack);
+  await A.fill("#title", "Técnicas de negociação");
+  await A.locator("label", { hasText: /^Texto$/ }).click();
+  await A.fill("#body", "Ouça mais do que fala.");
+  await A.getByRole("button", { name: "Criar e publicar" }).click();
+  await A.waitForURL(/conteudos\/[0-9a-f-]{36}\?aviso=criado/);
+  await A.goto(`${BASE}/trilhas/${newTrack}`);
+  await A.locator("select[name=content_id]").first().selectOption({ label: "Técnicas de negociação" });
   await A.getByRole("button", { name: "Incluir" }).first().click();
   await A.getByText("Conteúdo incluído.").waitFor();
-  await A.getByRole("button", { name: "Publicar" }).click();
+  await A.getByRole("button", { name: "Publicar", exact: true }).click();
   await A.locator("header span.rounded-full", { hasText: "Publicado" }).waitFor();
   await V.goto(`${BASE}/minhas-trilhas`);
   await V.getByText("Disponíveis para você").waitFor();
   await V.getByRole("button", { name: "Começar" }).click();
   await V.getByRole("link", { name: /Negociação avançada/ }).waitFor();
-  // O texto já concluído conta para a nova trilha também.
-  assert.match(await V.getByRole("link", { name: /Negociação avançada/ }).innerText(), /100%|Concluída/);
+  assert.match(await V.getByRole("link", { name: /Negociação avançada/ }).innerText(), /Não iniciada|0%/);
 });
 
 await step("meu perfil: tema escolhido fica salvo e menu mostra as iniciais", async () => {
@@ -371,6 +387,28 @@ await step("confirmação de exclusão abre em janela e pode ser cancelada", asy
   await dlg.getByRole("button", { name: "Cancelar" }).click();
   await A.getByRole("heading", { name: "Rascunho para publicar" }).waitFor();
   await A.locator("form").filter({ has: A.locator("#title") }).locator("> div").first().screenshot({ path: `${SHOTS}/15-barra-acoes.png` });
+});
+
+await step("admin personaliza a cor primária e ela vale para todos; volta ao padrão", async () => {
+  await A.goto(`${BASE}/configuracoes`);
+  await A.getByRole("heading", { name: "Configurações" }).waitFor();
+  await A.screenshot({ path: `${SHOTS}/16-configuracoes.png`, fullPage: true });
+  await A.getByLabel("Código da cor: Primária (botões)").fill("#ff6600");
+  await A.getByRole("button", { name: "Salvar cores" }).click();
+  await A.getByText("Cores salvas e aplicadas").waitFor();
+  const brandOf = (p) => p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--brand").trim());
+  await V.goto(`${BASE}/painel`);
+  assert.equal(await brandOf(V), "255 102 0");
+  const saved = await rest("app_settings?select=theme");
+  assert.deepEqual(saved[0].theme, { light: { brand: "#ff6600" } });
+  await A.getByRole("dialog").getByRole("button", { name: "OK" }).click().catch(() => {});
+  await A.getByRole("tab", { name: /Modo escuro/ }).click();
+  await A.getByRole("tab", { name: /Modo claro/ }).click();
+  await A.getByRole("button", { name: /Restaurar padrão do modo claro/ }).click();
+  await A.getByRole("button", { name: "Salvar cores" }).click();
+  await A.getByText("Cores salvas e aplicadas").waitFor();
+  await V.reload();
+  assert.equal(await brandOf(V), "20 175 252");
 });
 
 await step("telas novas cabem no celular", async () => {

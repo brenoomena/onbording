@@ -1,3 +1,4 @@
+import { UserRound } from "lucide-react";
 import type { Metadata } from "next";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { Card, Field, Input, PageHeader, StatusBadge, formatDate } from "@/components/ui";
@@ -21,7 +22,7 @@ export default async function MeuPerfilPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Conta" title="Meu perfil" description="Seus dados na plataforma. Área, cargo, nível e supervisor são definidos pelo administrador." />
+      <PageHeader eyebrow="Conta" icon={UserRound} title="Meu perfil" description="Seus dados na plataforma. Área, cargo, nível e supervisor são definidos pelo administrador." />
       <div className="grid items-start gap-6 lg:grid-cols-[1fr_360px]">
         <Card title="Dados do cadastro">
           <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">

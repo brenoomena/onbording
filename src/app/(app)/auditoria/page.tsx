@@ -1,3 +1,4 @@
+import { History } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState, PageHeader, Select, Table, buttonVariants, formatDateTime } from "@/components/ui";
@@ -15,6 +16,13 @@ const TABLE_LABEL: Record<string, string> = {
   levels: "Nível",
   roles: "Perfil de acesso",
   role_permissions: "Permissão do perfil",
+  user_permissions: "Permissão individual",
+  app_settings: "Configurações visuais",
+  tracks: "Trilha",
+  contents: "Conteúdo",
+  modules: "Módulo",
+  module_items: "Item de módulo",
+  enrollments: "Matrícula",
 };
 const ACTION_LABEL: Record<string, string> = { insert: "Criou", update: "Alterou", delete: "Excluiu" };
 const FIELD_LABEL: Record<string, string> = {
@@ -31,8 +39,15 @@ const FIELD_LABEL: Record<string, string> = {
   admission_date: "admissão",
   onboarding_start_date: "início do onboarding",
   rank: "ordem",
+  allowed: "permitido",
+  permission_key: "permissão",
+  theme: "cores",
+  logo_path: "logomarca",
+  logo_dark_path: "logomarca (fundo escuro)",
+  track_id: "trilha",
+  avatar_path: "foto",
 };
-const IGNORED = new Set(["updated_at", "created_at", "last_access_at", "id"]);
+const IGNORED = new Set(["updated_at", "created_at", "last_access_at", "id", "updated_by"]);
 const PAGE_SIZE = 50;
 
 interface LogRow {
@@ -82,6 +97,7 @@ export default async function AuditoriaPage({ searchParams }: { searchParams: Pr
     <>
       <PageHeader
         eyebrow="Administração"
+        icon={History}
         title="Auditoria"
         description="Toda alteração em colaboradores, estrutura e perfis fica registrada aqui com autor e horário. O registro não pode ser editado nem apagado pela plataforma."
       />

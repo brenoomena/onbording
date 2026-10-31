@@ -1,7 +1,9 @@
+import { AlarmClock, AlertTriangle, BookOpenCheck, CheckCircle2, CircleDashed, GraduationCap, IdCard, LayoutDashboard, Rocket, UserCheck, UserMinus, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ProgressBar } from "@/components/progress-bar";
-import { Badge, Card, EmptyState, PageHeader, StatusBadge, formatDate } from "@/components/ui";
+import { Avatar } from "@/components/avatar";
+import { Badge, Card, EmptyState, PageHeader, StatCard, StatusBadge, formatDate } from "@/components/ui";
 import { requirePermission } from "@/lib/auth";
 import { ENROLLMENT_LABEL, isOverdue, todayBR } from "@/lib/learning";
 import { loadEnrollmentsOf, type MyEnrollment } from "@/lib/my-learning";
@@ -11,21 +13,12 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Painel" };
 
-function Stat({ label, value, hint }: { label: string; value: number; hint?: string }) {
-  return (
-    <div className="grid gap-1 rounded-xl border border-line bg-surface p-4">
-      <p className="text-[12.5px] text-muted">{label}</p>
-      <p className="text-3xl font-semibold tabular-nums tracking-tight">{value}</p>
-      {hint && <p className="text-[12px] text-muted">{hint}</p>}
-    </div>
-  );
-}
-
 function MyTracks({ enrollments }: { enrollments: MyEnrollment[] }) {
   const pending = enrollments.filter((e) => e.status !== "concluida");
   if (enrollments.length === 0) return null;
   return (
     <Card
+      icon={BookOpenCheck}
       title="Minhas trilhas"
       description={pending.length ? `${pending.length} em andamento ou a iniciar` : "Todas concluídas"}
       actions={<Link href="/minhas-trilhas" className="text-[13px] font-semibold text-accent hover:underline">Ver todas</Link>}
@@ -64,9 +57,16 @@ export default async function PainelPage() {
   if (!seesOthers) {
     return (
       <>
-        <PageHeader eyebrow="Meu painel" title={`Olá, ${firstName}`} description="Suas trilhas e os dados do seu cadastro na plataforma." />
+        <PageHeader eyebrow="Meu painel" icon={LayoutDashboard} title={`Olá, ${firstName}`} description="Suas trilhas e os dados do seu cadastro na plataforma." />
+        {myEnrollments.length > 0 && (
+          <div className="grid gap-4 sm:grid-cols-3">
+            <StatCard label="Minhas trilhas" value={myEnrollments.length} icon={BookOpenCheck} />
+            <StatCard label="Em andamento" value={myEnrollments.filter((e) => e.status === "em_andamento").length} icon={Rocket} tone="neutral" />
+            <StatCard label="Concluídas" value={myEnrollments.filter((e) => e.status === "concluida").length} icon={CheckCircle2} tone="ok" />
+          </div>
+        )}
         <MyTracks enrollments={myEnrollments} />
-        <Card title="Meu cadastro">
+        <Card title="Meu cadastro" icon={IdCard}>
           <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
             {[
               ["Área", profile.area?.name],
@@ -130,29 +130,30 @@ export default async function PainelPage() {
     <>
       <PageHeader
         eyebrow={scope ? "Minha equipe" : "Visão geral"}
+        icon={LayoutDashboard}
         title={`Olá, ${firstName}`}
         description={scope ? "Números da sua equipe direta." : "Números de todos os colaboradores cadastrados."}
       />
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Colaboradores" value={total.count ?? 0} />
-        <Stat label="Em onboarding" value={onboarding.count ?? 0} />
-        <Stat label="Ativos" value={ativos.count ?? 0} />
-        <Stat label="Inativos" value={inativos.count ?? 0} />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Colaboradores" value={total.count ?? 0} hint="Cadastrados no seu alcance" icon={Users} href="/colaboradores" />
+        <StatCard label="Em onboarding" value={onboarding.count ?? 0} hint="Jornada de integração" icon={Rocket} tone="brand" href="/colaboradores?status=onboarding" />
+        <StatCard label="Ativos" value={ativos.count ?? 0} hint="Com acesso liberado" icon={UserCheck} tone="ok" href="/colaboradores?status=ativo" />
+        <StatCard label="Inativos" value={inativos.count ?? 0} hint="Acesso bloqueado" icon={UserMinus} tone="neutral" href="/colaboradores?status=inativo" />
       </div>
 
       {learning.length > 0 && (
         <section className="grid gap-2">
           <div className="flex items-baseline justify-between gap-2">
-            <h2 className="text-[13px] font-semibold uppercase tracking-[0.05em] text-muted">Trilhas {scope ? "da equipe" : ""}</h2>
-            {me.permissions.has(P.trilhasGerenciar) && (
+            <h2 className="flex items-center gap-2 text-[15px] font-semibold"><GraduationCap size={18} className="text-icon" aria-hidden /> Trilhas {scope ? "da equipe" : ""}</h2>
+            {me.permissions.has(P.trilhasVer) && (
               <Link href="/trilhas" className="text-[13px] font-semibold text-accent hover:underline">Gerenciar trilhas</Link>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Stat label="Matrículas" value={learning.length} />
-            <Stat label="Não iniciadas" value={learning.filter((e) => e.status === "nao_iniciada").length} />
-            <Stat label="Concluídas" value={learning.filter((e) => e.status === "concluida").length} />
-            <Stat label="Em atraso" value={late} hint={late ? "Prazo vencido sem conclusão" : undefined} />
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard label="Matrículas" value={learning.length} hint="Em todas as trilhas" icon={GraduationCap} />
+            <StatCard label="Não iniciadas" value={learning.filter((e) => e.status === "nao_iniciada").length} hint="Ainda sem acesso" icon={CircleDashed} tone="neutral" />
+            <StatCard label="Concluídas" value={learning.filter((e) => e.status === "concluida").length} hint="Trilhas em 100%" icon={CheckCircle2} tone="ok" />
+            <StatCard label="Em atraso" value={late} hint="Prazo vencido" icon={AlarmClock} tone={late ? "danger" : "neutral"} />
           </div>
         </section>
       )}
@@ -160,29 +161,35 @@ export default async function PainelPage() {
       <MyTracks enrollments={myEnrollments} />
 
       {(semCargo.count ?? 0) > 0 && (
-        <p className="rounded-lg border border-warn/30 bg-warn-soft px-4 py-2.5 text-[13px] text-warn">
+        <p className="flex items-start gap-2 rounded-xl border border-warn/30 bg-warn-soft px-4 py-3 text-[13px] text-warn">
+          <AlertTriangle size={17} className="mt-0.5 shrink-0" aria-hidden />
+          <span>
           {semCargo.count} {semCargo.count === 1 ? "pessoa está" : "pessoas estão"} sem cargo ou nível definido. Esses dados vão
           definir trilhas e competências nas próximas etapas.{" "}
           <Link href="/colaboradores?pendente=1" className="font-semibold underline">
             Ver lista
           </Link>
+          </span>
         </p>
       )}
 
-      <Card title="Em onboarding" description="Pessoas em onboarding, das mais recentes para as mais antigas.">
+      <Card icon={Rocket} title="Em onboarding" description="Pessoas em onboarding, das mais recentes para as mais antigas.">
         {people.length === 0 ? (
-          <EmptyState title="Ninguém em onboarding agora">Quando um colaborador for cadastrado com esse status, ele aparece aqui.</EmptyState>
+          <EmptyState icon={Rocket} title="Ninguém em onboarding agora">Quando um colaborador for cadastrado com esse status, ele aparece aqui.</EmptyState>
         ) : (
           <ul className="divide-y divide-line">
             {people.map((p) => (
               <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-                <div className="min-w-0">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Avatar name={p.full_name} path={p.avatar_path} size={36} />
+                  <div className="min-w-0">
                   <Link href={`/colaboradores/${p.id}`} className="font-medium hover:text-accent">
                     {p.full_name}
                   </Link>
                   <p className="text-[12.5px] text-muted">
                     {[p.area?.name, p.position?.name, p.level?.name].filter(Boolean).join(" · ") || "Sem área ou cargo"}
                   </p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-3 text-[12.5px] text-muted">
                   <span>Início {formatDate(p.onboarding_start_date)}</span>

@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { redirect } from "next/navigation";
+import { forbidden, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { PermissionKey } from "@/lib/permissions";
 import type { Profile, Role } from "@/lib/types";
@@ -41,13 +41,43 @@ export async function requireUser(): Promise<CurrentUser & { profile: NonNullabl
   return me as CurrentUser & { profile: NonNullable<CurrentUser["profile"]> };
 }
 
-/** Exige ao menos uma das permissões; senão mostra "sem acesso". */
+/** Exige ao menos uma das permissões; senão responde 403 (página "sem acesso"). */
 export async function requirePermission(...anyOf: PermissionKey[]) {
   const me = await requireUser();
-  if (!anyOf.some((p) => me.permissions.has(p))) redirect("/sem-acesso");
+  if (!anyOf.some((p) => me.permissions.has(p))) forbidden();
   return me;
+}
+
+/** Exige o perfil Administrador (configurações, perfis e permissões); senão 403. */
+export async function requireAdmin() {
+  const me = await requireUser();
+  if (!isAdmin(me)) forbidden();
+  return me;
+}
+
+export function isAdmin(me: CurrentUser): boolean {
+  return me.profile?.role.key === "admin" && me.profile.status !== "inativo";
 }
 
 export function can(me: CurrentUser, perm: PermissionKey): boolean {
   return me.permissions.has(perm);
+}
+
+const DENIED = { error: "Você não tem permissão para esta ação." } as const;
+
+/**
+ * Para Server Actions: confere no servidor se a pessoa tem uma das
+ * permissões. Devolve o erro a mostrar, ou null quando pode seguir.
+ * O banco confere de novo (RLS), então isto é a primeira barreira, não a única.
+ */
+export async function denyUnless(...anyOf: PermissionKey[]): Promise<{ error: string } | null> {
+  const me = await getCurrentUser();
+  if (!me?.profile || me.profile.status === "inativo") return { error: "Sua sessão expirou. Entre novamente." };
+  return anyOf.some((p) => me.permissions.has(p)) ? null : DENIED;
+}
+
+export async function denyUnlessAdmin(): Promise<{ error: string } | null> {
+  const me = await getCurrentUser();
+  if (!me?.profile || me.profile.status === "inativo") return { error: "Sua sessão expirou. Entre novamente." };
+  return isAdmin(me) ? null : { error: "Somente administradores podem fazer isso." };
 }

@@ -1,11 +1,11 @@
+import { ShieldCheck, Trash2 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionButton, ActionForm, SubmitButton, PageNotice, FormBar } from "@/components/forms";
 import { Alert, Badge, Card, Field, Input, PageHeader } from "@/components/ui";
 import { RichTextarea } from "@/components/rich-textarea";
-import { requirePermission } from "@/lib/auth";
-import { P } from "@/lib/permissions";
+import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { Permission } from "@/lib/types";
 import { deleteRole, saveRole } from "../actions";
@@ -13,7 +13,7 @@ import { deleteRole, saveRole } from "../actions";
 export const metadata: Metadata = { title: "Perfil de acesso" };
 
 export default async function PerfilPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ aviso?: string }> }) {
-  const me = await requirePermission(P.perfisGerenciar);
+  await requireAdmin();
   const { id } = await params;
   const { aviso } = await searchParams;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
@@ -28,8 +28,7 @@ export default async function PerfilPage({ params, searchParams }: { params: Pro
   if (!role) notFound();
 
   const isAdminRole = role.key === "admin";
-  const isOwnRole = me.profile.role_id === role.id;
-  const locked = isAdminRole || (isOwnRole && me.profile.role.key !== "admin");
+  const locked = isAdminRole;
   const granted = new Set((links ?? []).map((l) => l.permission_key as string));
   const modules = new Map<string, Permission[]>();
   for (const p of (perms ?? []) as Permission[]) {
@@ -40,6 +39,7 @@ export default async function PerfilPage({ params, searchParams }: { params: Pro
     <>
       <PageHeader
         eyebrow="Perfis de acesso"
+        icon={ShieldCheck}
         title={role.name}
         description={
           <span className="flex flex-wrap items-center gap-2">
@@ -49,15 +49,13 @@ export default async function PerfilPage({ params, searchParams }: { params: Pro
         }
         actions={
           !role.is_system && (
-            <ActionButton action={deleteRole} hidden={{ id: role.id }} label="Excluir perfil" variant="danger" confirm confirmLabel="Excluir" confirmText="O perfil de acesso será apagado. Só é possível se ninguém estiver usando." />
+            <ActionButton action={deleteRole} hidden={{ id: role.id, voltar: "1" }} label="Excluir perfil" variant="danger" icon={<Trash2 size={15} aria-hidden />} confirm confirmLabel="Excluir" confirmText="O perfil de acesso será apagado. Só é possível se ninguém estiver usando." />
           )
         }
       />
       {aviso === "criado" && <PageNotice message="Perfil criado. Agora escolha as permissões e salve." />}
       {isAdminRole && <Alert tone="brand">O Administrador tem sempre todas as permissões, para que a plataforma nunca fique sem quem a administre.</Alert>}
-      {!isAdminRole && isOwnRole && locked && (
-        <Alert tone="warn">Este é o seu perfil. Por segurança, só um administrador pode alterar as permissões dele.</Alert>
-      )}
+
 
       <Card>
         <ActionForm action={saveRole}>
@@ -80,7 +78,7 @@ export default async function PerfilPage({ params, searchParams }: { params: Pro
               <fieldset key={module} className="grid gap-2">
                 <legend className="mb-1 font-mono text-[11px] uppercase tracking-[0.08em] text-muted">{module}</legend>
                 {list.map((p) => {
-                  const restricted = p.key === P.perfisGerenciar && me.profile.role.key !== "admin";
+                  const restricted = false;
                   return (
                     <label
                       key={p.key}

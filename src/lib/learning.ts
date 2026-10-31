@@ -41,6 +41,8 @@ export interface ContentRow {
   estimated_minutes: number | null;
   owner_id: string | null;
   is_library: boolean;
+  /** Trilha a que o conteúdo pertence (null = só Biblioteca). */
+  track_id: string | null;
   status: PublishStatus;
   updated_at: string;
 }

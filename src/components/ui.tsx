@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 
@@ -5,57 +6,159 @@ export function cx(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }
 
+/**
+ * Cabeçalho da página: selo do módulo, ícone, título, descrição e ações.
+ * Fundo com leve degradê, no padrão das telas de referência.
+ */
 export function PageHeader({
   title,
   description,
   actions,
   eyebrow,
+  icon: Icon,
 }: {
   title: string;
   description?: ReactNode;
   actions?: ReactNode;
   eyebrow?: string;
+  icon?: LucideIcon;
 }) {
   return (
-    <header className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5">
-      <div className="min-w-0 space-y-1">
-        {eyebrow && <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-accent">{eyebrow}</p>}
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        {description && <p className="max-w-2xl text-muted">{description}</p>}
+    <header className="relative overflow-hidden rounded-2xl border border-line bg-surface px-5 py-5 sm:px-7 sm:py-6">
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,rgb(var(--accent-soft)/0.85),rgb(var(--surface)/0)_58%)]" />
+      <div className="relative flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0 space-y-3">
+          {eyebrow && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/80 px-2.5 py-0.5 text-[11.5px] font-medium text-muted">
+              <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-brand" />
+              {eyebrow}
+            </span>
+          )}
+          <div className="flex items-center gap-3.5">
+            {Icon && (
+              <span aria-hidden className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-accent-soft text-icon ring-1 ring-inset ring-icon/10">
+                <Icon size={24} strokeWidth={1.9} />
+              </span>
+            )}
+            <h1 className="min-w-0 text-[26px] font-bold leading-tight tracking-tight sm:text-[30px]">{title}</h1>
+          </div>
+          {description && <div className="max-w-3xl text-[14px] text-muted">{description}</div>}
+        </div>
+        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </header>
   );
 }
 
-export function Card({ children, className, title, description, actions }: {
+export function Card({ children, className, title, description, actions, icon: Icon, flush = false }: {
   children: ReactNode;
   className?: string;
   title?: string;
   description?: ReactNode;
   actions?: ReactNode;
+  icon?: LucideIcon;
+  /** Sem espaçamento interno (tabelas e listas que encostam na borda). */
+  flush?: boolean;
 }) {
   return (
-    <section className={cx("rounded-xl border border-line bg-surface", className)}>
+    <section className={cx("rounded-2xl border border-line bg-surface shadow-[0_1px_2px_rgba(16,24,40,0.04)]", className)}>
       {(title || actions) && (
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-4">
-          <div className="min-w-0">
-            {title && <h2 className="text-base font-semibold">{title}</h2>}
-            {description && <p className="mt-0.5 text-[13px] text-muted">{description}</p>}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            {Icon && (
+              <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-icon">
+                <Icon size={18} strokeWidth={1.9} />
+              </span>
+            )}
+            <div className="min-w-0">
+              {title && <h2 className="text-[15px] font-semibold">{title}</h2>}
+              {description && <p className="mt-0.5 text-[12.5px] text-muted">{description}</p>}
+            </div>
           </div>
           {actions}
         </div>
       )}
-      <div className="p-5">{children}</div>
+      <div className={flush ? "" : "p-5"}>{children}</div>
     </section>
   );
 }
 
+/** Indicador numérico com ícone (painéis e listagens). */
+export function StatCard({
+  label,
+  value,
+  hint,
+  icon: Icon,
+  tone = "brand",
+  href,
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: ReactNode;
+  icon: LucideIcon;
+  tone?: "brand" | "ok" | "warn" | "danger" | "neutral";
+  href?: string;
+}) {
+  const tones = {
+    brand: { tile: "bg-accent-soft text-icon", value: "text-accent", ring: "border-accent/25" },
+    ok: { tile: "bg-ok-soft text-ok", value: "text-ok", ring: "border-ok/25" },
+    warn: { tile: "bg-warn-soft text-warn", value: "text-warn", ring: "border-warn/30" },
+    danger: { tile: "bg-danger-soft text-danger", value: "text-danger", ring: "border-danger/25" },
+    neutral: { tile: "bg-sunken text-muted", value: "text-heading", ring: "border-line" },
+  }[tone];
+  const body = (
+    <div className={cx("flex h-full items-start justify-between gap-3 rounded-2xl border bg-surface p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-colors", tones.ring, href && "hover:bg-sunken/50")}>
+      <div className="min-w-0">
+        <p className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-muted">{label}</p>
+        <p className={cx("mt-2 text-[26px] font-bold leading-none tabular-nums", tones.value)}>{value}</p>
+        {hint && <p className="mt-2 truncate text-[12.5px] text-muted">{hint}</p>}
+      </div>
+      <span aria-hidden className={cx("grid h-11 w-11 shrink-0 place-items-center rounded-xl", tones.tile)}>
+        <Icon size={20} strokeWidth={1.9} />
+      </span>
+    </div>
+  );
+  return href ? <Link href={href} className="block">{body}</Link> : body;
+}
+
+/** Botão só com ícone, com nome acessível e dica ao passar o mouse. */
+export function IconLink({
+  href,
+  label,
+  icon: Icon,
+  tone = "neutral",
+}: {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  tone?: "neutral" | "danger" | "brand";
+}) {
+  return (
+    <Link href={href} title={label} aria-label={label} className={iconButtonClass(tone)}>
+      <Icon size={16} strokeWidth={1.9} aria-hidden />
+    </Link>
+  );
+}
+
+export function iconButtonClass(tone: "neutral" | "danger" | "brand" = "neutral") {
+  return cx(
+    "inline-grid h-8 w-8 place-items-center rounded-lg border border-transparent transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+    tone === "danger" && "text-muted hover:border-danger/30 hover:bg-danger-soft hover:text-danger",
+    tone === "brand" && "text-icon hover:border-accent/30 hover:bg-accent-soft",
+    tone === "neutral" && "text-muted hover:border-line hover:bg-sunken hover:text-ink",
+  );
+}
+
+/** Coluna de ações no fim de cada linha (Ver, Editar, Excluir…). */
+export function RowActions({ children }: { children: ReactNode }) {
+  return <div className="flex items-center justify-end gap-0.5">{children}</div>;
+}
+
 const buttonBase =
-  "inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 [&_svg]:shrink-0";
 
 export const buttonVariants = {
-  primary: `${buttonBase} bg-brand text-on-brand hover:bg-brand/85`,
+  primary: `${buttonBase} bg-brand text-on-brand shadow-[0_1px_2px_rgba(16,24,40,0.08)] hover:bg-brand/85`,
   secondary: `${buttonBase} border border-line bg-surface text-ink hover:bg-sunken`,
   ghost: `${buttonBase} text-accent hover:bg-accent-soft`,
   danger: `${buttonBase} border border-danger/40 bg-surface text-danger hover:bg-danger-soft`,
@@ -78,7 +181,7 @@ export function LinkButton({
 }
 
 const fieldBase =
-  "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted/70 focus:border-brand focus:outline-none disabled:bg-sunken disabled:text-muted";
+  "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink shadow-[0_1px_1px_rgba(16,24,40,0.03)] placeholder:text-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:bg-sunken disabled:text-muted";
 
 export function Input(props: ComponentProps<"input">) {
   return <input {...props} className={cx(fieldBase, props.className)} />;
@@ -159,20 +262,25 @@ export function Alert({ tone = "danger", children }: { tone?: "danger" | "ok" | 
   );
 }
 
-export function EmptyState({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
+export function EmptyState({ title, children, action, icon: Icon }: { title: string; children?: ReactNode; action?: ReactNode; icon?: LucideIcon }) {
   return (
-    <div className="grid justify-items-center gap-2 rounded-xl border border-dashed border-line px-6 py-10 text-center">
-      <p className="font-semibold">{title}</p>
+    <div className="grid justify-items-center gap-2 rounded-2xl border border-dashed border-line bg-surface/60 px-6 py-10 text-center">
+      {Icon && (
+        <span aria-hidden className="mb-1 grid h-11 w-11 place-items-center rounded-xl bg-sunken text-muted">
+          <Icon size={20} strokeWidth={1.9} />
+        </span>
+      )}
+      <p className="font-semibold text-heading">{title}</p>
       {children && <p className="max-w-md text-[13px] text-muted">{children}</p>}
       {action && <div className="mt-2">{action}</div>}
     </div>
   );
 }
 
-export function Table({ children }: { children: ReactNode }) {
+export function Table({ children, flush = false }: { children: ReactNode; flush?: boolean }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-      <table className="w-full min-w-[640px] border-collapse text-left text-sm [&_td]:border-t [&_td]:border-line [&_td]:px-4 [&_td]:py-3 [&_th]:bg-sunken/60 [&_th]:px-4 [&_th]:py-2.5 [&_th]:text-[12px] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-[0.04em] [&_th]:text-muted">
+    <div className={cx("overflow-x-auto bg-surface", flush ? "" : "rounded-2xl border border-line shadow-[0_1px_2px_rgba(16,24,40,0.04)]")}>
+      <table className="w-full min-w-[640px] border-collapse text-left text-sm [&_tbody_tr:hover]:bg-sunken/40 [&_td]:border-t [&_td]:border-line [&_td]:px-4 [&_td]:py-3 [&_th]:bg-sunken/50 [&_th]:px-4 [&_th]:py-3 [&_th]:text-[12.5px] [&_th]:font-semibold [&_th]:text-muted">
         {children}
       </table>
     </div>

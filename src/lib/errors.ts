@@ -13,7 +13,11 @@ export function friendlyError(err: DbError | null | undefined, fallback = "Não 
     case "23503":
       return "Este registro está em uso por outros cadastros. Desative-o em vez de excluir.";
     case "23514":
-      return "Algum campo está fora do formato esperado. Confira os dados e tente de novo.";
+      // Travas de negócio (ex.: conteúdo de outra trilha) chegam com mensagem própria.
+      if (err.message?.includes("contents_track_or_library")) return "Escolha a trilha do conteúdo ou marque-o como material da Biblioteca.";
+      return err.message && !err.message.includes("violates check constraint")
+        ? err.message
+        : "Algum campo está fora do formato esperado. Confira os dados e tente de novo.";
     case "42501":
       // Mensagens das travas de negócio já vêm em português.
       return err.message && !err.message.startsWith("new row violates") && !err.message.startsWith("permission denied")

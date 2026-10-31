@@ -1,3 +1,4 @@
+import { LibraryBig } from "lucide-react";
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
@@ -37,6 +38,7 @@ export default async function MateriaisPage() {
     <>
       <PageHeader
         eyebrow="Aprendizagem"
+        icon={LibraryBig}
         title="Materiais de apoio"
         description="Vídeos, apresentações e catálogos para consultar quando precisar, inclusive durante as reuniões com clientes. Clique para ver sem sair da lista."
       />

@@ -62,6 +62,7 @@ export interface ProfileRow {
   position_id: string | null;
   level_id: string | null;
   supervisor_id: string | null;
+  avatar_path: string | null;
   role: { key: string; name: string } | null;
   area: { name: string } | null;
   position: { name: string } | null;
@@ -70,4 +71,4 @@ export interface ProfileRow {
 }
 
 export const PROFILE_SELECT =
-  "id, full_name, email, status, admission_date, onboarding_start_date, last_access_at, created_at, role_id, area_id, position_id, level_id, supervisor_id, role:roles(key, name), area:areas(name), position:positions(name), level:levels(name), supervisor:supervisor_id(full_name)";
+  "id, full_name, email, avatar_path, status, admission_date, onboarding_start_date, last_access_at, created_at, role_id, area_id, position_id, level_id, supervisor_id, role:roles(key, name), area:areas(name), position:positions(name), level:levels(name), supervisor:supervisor_id(full_name)";

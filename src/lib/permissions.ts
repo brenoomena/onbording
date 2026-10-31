@@ -2,23 +2,43 @@
 export const P = {
   painelVer: "painel.ver",
   colaboradoresVer: "colaboradores.ver",
-  colaboradoresGerenciar: "colaboradores.gerenciar",
   equipeVer: "equipe.ver",
-  estruturaGerenciar: "estrutura.gerenciar",
-  perfisGerenciar: "perfis.gerenciar",
-  auditoriaVer: "auditoria.ver",
-  trilhasGerenciar: "trilhas.gerenciar",
-  conteudosGerenciar: "conteudos.gerenciar",
+  colaboradoresCriar: "colaboradores.criar",
+  colaboradoresEditar: "colaboradores.editar",
+  colaboradoresDesativar: "colaboradores.desativar",
+  estruturaCriar: "estrutura.criar",
+  estruturaEditar: "estrutura.editar",
+  estruturaExcluir: "estrutura.excluir",
+  trilhasVer: "trilhas.ver",
+  trilhasCriar: "trilhas.criar",
+  trilhasEditar: "trilhas.editar",
+  trilhasExcluir: "trilhas.excluir",
+  trilhasMatricular: "trilhas.matricular",
+  conteudosVer: "conteudos.ver",
+  conteudosCriar: "conteudos.criar",
+  conteudosEditar: "conteudos.editar",
+  conteudosExcluir: "conteudos.excluir",
   progressoVer: "progresso.ver",
+  auditoriaVer: "auditoria.ver",
 } as const;
 
 export type PermissionKey = (typeof P)[keyof typeof P];
 
+export const ESTRUTURA_ANY: PermissionKey[] = [P.estruturaCriar, P.estruturaEditar, P.estruturaExcluir];
+
+/** Nome do ícone (ver components/icons.tsx). */
+export type IconName =
+  | "painel" | "trilha" | "materiais" | "trilhas" | "conteudos" | "colaboradores" | "areas" | "cargos"
+  | "niveis" | "perfis" | "configuracoes" | "auditoria" | "meu-perfil";
+
 export interface MenuItem {
   href: string;
   label: string;
+  icon: IconName;
   /** Exibe o item se o usuário tiver QUALQUER uma destas permissões. Vazio = todos. */
   anyOf: PermissionKey[];
+  /** Só para o perfil Administrador (configurações e perfis de acesso). */
+  adminOnly?: boolean;
 }
 
 export interface MenuGroup {
@@ -29,49 +49,60 @@ export interface MenuGroup {
 export const MENU: MenuGroup[] = [
   {
     label: null,
-    items: [{ href: "/painel", label: "Painel", anyOf: [P.painelVer] }],
+    items: [{ href: "/painel", label: "Painel", icon: "painel", anyOf: [P.painelVer] }],
   },
   {
     label: "Aprendizagem",
     items: [
-      { href: "/minhas-trilhas", label: "Minhas trilhas", anyOf: [] },
-      { href: "/materiais", label: "Materiais", anyOf: [] },
-      { href: "/trilhas", label: "Trilhas", anyOf: [P.trilhasGerenciar] },
-      { href: "/conteudos", label: "Conteúdos", anyOf: [P.conteudosGerenciar] },
+      { href: "/minhas-trilhas", label: "Minhas trilhas", icon: "trilha", anyOf: [] },
+      { href: "/materiais", label: "Materiais", icon: "materiais", anyOf: [] },
     ],
   },
   {
-    label: "Pessoas",
-    items: [{ href: "/colaboradores", label: "Colaboradores", anyOf: [P.colaboradoresVer, P.equipeVer] }],
+    label: "Gestão",
+    items: [
+      { href: "/trilhas", label: "Trilhas", icon: "trilhas", anyOf: [P.trilhasVer] },
+      { href: "/conteudos", label: "Conteúdos", icon: "conteudos", anyOf: [P.conteudosVer] },
+      { href: "/colaboradores", label: "Colaboradores", icon: "colaboradores", anyOf: [P.colaboradoresVer, P.equipeVer] },
+    ],
   },
   {
     label: "Estrutura",
     items: [
-      { href: "/estrutura/areas", label: "Áreas", anyOf: [P.estruturaGerenciar] },
-      { href: "/estrutura/cargos", label: "Cargos", anyOf: [P.estruturaGerenciar] },
-      { href: "/estrutura/niveis", label: "Níveis", anyOf: [P.estruturaGerenciar] },
+      { href: "/estrutura/areas", label: "Áreas", icon: "areas", anyOf: ESTRUTURA_ANY },
+      { href: "/estrutura/cargos", label: "Cargos", icon: "cargos", anyOf: ESTRUTURA_ANY },
+      { href: "/estrutura/niveis", label: "Níveis", icon: "niveis", anyOf: ESTRUTURA_ANY },
     ],
   },
   {
     label: "Administração",
     items: [
-      { href: "/perfis", label: "Perfis de acesso", anyOf: [P.perfisGerenciar] },
-      { href: "/auditoria", label: "Auditoria", anyOf: [P.auditoriaVer] },
+      { href: "/perfis", label: "Perfis de acesso", icon: "perfis", anyOf: [], adminOnly: true },
+      { href: "/configuracoes", label: "Configurações", icon: "configuracoes", anyOf: [], adminOnly: true },
+      { href: "/auditoria", label: "Auditoria", icon: "auditoria", anyOf: [P.auditoriaVer] },
     ],
-  },
-  {
-    label: null,
-    items: [{ href: "/meu-perfil", label: "Meu perfil", anyOf: [] }],
   },
 ];
 
-export function visibleMenu(perms: ReadonlySet<string>): MenuGroup[] {
+export function visibleMenu(perms: ReadonlySet<string>, isAdmin: boolean): MenuGroup[] {
   return MENU.map((g) => ({
     ...g,
     items: g.items
-      .filter((i) => i.anyOf.length === 0 || i.anyOf.some((k) => perms.has(k)))
+      .filter((i) => (i.adminOnly ? isAdmin : i.anyOf.length === 0 || i.anyOf.some((k) => perms.has(k))))
       .map((i) =>
         i.href === "/colaboradores" && !perms.has(P.colaboradoresVer) ? { ...i, label: "Minha equipe" } : i,
       ),
   })).filter((g) => g.items.length > 0);
+}
+
+/** Título do módulo de cada rota, para a barra superior. */
+export function sectionFor(pathname: string): { group: string; label: string; icon: IconName } | null {
+  for (const g of MENU) {
+    for (const i of g.items) {
+      if (pathname === i.href || pathname.startsWith(`${i.href}/`)) return { group: g.label ?? "Início", label: i.label, icon: i.icon };
+    }
+  }
+  if (pathname.startsWith("/estudar")) return { group: "Aprendizagem", label: "Estudo", icon: "trilha" };
+  if (pathname.startsWith("/meu-perfil")) return { group: "Conta", label: "Meu perfil", icon: "meu-perfil" };
+  return null;
 }

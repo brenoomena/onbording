@@ -1,9 +1,10 @@
+import { Briefcase, Plus, Trash2 } from "lucide-react";
 import type { Metadata } from "next";
 import { ActionButton, ActionForm, SubmitButton } from "@/components/forms";
 import { Badge, Card, EmptyState, Field, Input, PageHeader, Select } from "@/components/ui";
 import { RichTextarea } from "@/components/rich-textarea";
-import { requirePermission } from "@/lib/auth";
-import { P } from "@/lib/permissions";
+import { can, requirePermission } from "@/lib/auth";
+import { ESTRUTURA_ANY, P } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import type { Area, Level } from "@/lib/types";
 import { removeItem, savePosition, toggleActive } from "../actions";
@@ -57,7 +58,10 @@ function PositionFields({ position, areas, levels }: { position?: PositionRow; a
 }
 
 export default async function CargosPage() {
-  await requirePermission(P.estruturaGerenciar);
+  const me = await requirePermission(...ESTRUTURA_ANY);
+  const canCreate = can(me, P.estruturaCriar);
+  const canEdit = can(me, P.estruturaEditar);
+  const canDelete = can(me, P.estruturaExcluir);
   const supabase = await createClient();
   const [pos, ar, lv] = await Promise.all([
     supabase.from("positions").select("id, name, area_id, description, active, position_levels(level_id), profiles(count)").order("name"),
@@ -73,10 +77,11 @@ export default async function CargosPage() {
     <>
       <PageHeader
         eyebrow="Estrutura"
+        icon={Briefcase}
         title="Cargos"
         description="Cada cargo pertence a uma área e tem os níveis em que pode ser exercido. As competências obrigatórias por cargo e nível entram na Etapa 4."
       />
-      <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
+      <div className={canCreate ? "grid items-start gap-6 lg:grid-cols-[1fr_340px]" : "grid items-start gap-6"}>
         <div className="grid gap-6">
           {areas.map((area) => {
             const list = positions.filter((p) => p.area_id === area.id);
@@ -98,6 +103,22 @@ export default async function CargosPage() {
                     return (
                       <div key={p.id} className="rounded-xl border border-line bg-surface p-4">
                         <InlineEditor
+                    canEdit={canEdit}
+                    actions={
+                      canDelete && people === 0 && (
+                        <ActionButton
+                          action={removeItem}
+                          hidden={{ kind: "cargos", id: p.id }}
+                          label="Excluir"
+                          variant="danger"
+                          icon={<Trash2 size={16} aria-hidden />}
+                          iconOnly
+                          confirm
+                          confirmLabel="Excluir cargo"
+                          confirmText="O registro será apagado definitivamente. Só é possível porque não está em uso."
+                        />
+                      )
+                    }
                           summary={
                             <div className="min-w-0 space-y-1.5">
                               <p className="flex flex-wrap items-center gap-2 font-semibold">
@@ -117,9 +138,6 @@ export default async function CargosPage() {
                             </ActionForm>
                             <div className="flex flex-wrap justify-end gap-2 border-t border-line pt-3">
                               <ActionButton action={toggleActive} hidden={{ kind: "cargos", id: p.id, active: String(!p.active) }} label={p.active ? "Desativar" : "Reativar"} />
-                              {people === 0 && (
-                                <ActionButton action={removeItem} hidden={{ kind: "cargos", id: p.id }} label="Excluir" variant="danger" confirm confirmLabel="Excluir cargo" />
-                              )}
                             </div>
                           </div>
                         </InlineEditor>
@@ -132,7 +150,8 @@ export default async function CargosPage() {
           })}
           {areas.length === 0 && <EmptyState title="Cadastre uma área primeiro">Todo cargo pertence a uma área.</EmptyState>}
         </div>
-        <Card title="Novo cargo">
+        {canCreate && (
+        <Card icon={Plus} title="Novo cargo">
           {areas.some((a) => a.active) ? (
             <ActionForm action={savePosition} resetOnSuccess>
               <PositionFields areas={areas} levels={levels} />
@@ -142,6 +161,7 @@ export default async function CargosPage() {
             <p className="text-[13px] text-muted">Não há áreas ativas.</p>
           )}
         </Card>
+        )}
       </div>
     </>
   );

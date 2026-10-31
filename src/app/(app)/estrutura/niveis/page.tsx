@@ -1,10 +1,11 @@
+import { ArrowDown, ArrowUp, Layers, Plus, Trash2 } from "lucide-react";
 import type { Metadata } from "next";
 import { plainText } from "@/components/markdown";
 import { ActionButton, ActionForm, SubmitButton } from "@/components/forms";
 import { Badge, Card, EmptyState, Field, Input, PageHeader } from "@/components/ui";
 import { RichTextarea } from "@/components/rich-textarea";
-import { requirePermission } from "@/lib/auth";
-import { P } from "@/lib/permissions";
+import { can, requirePermission } from "@/lib/auth";
+import { ESTRUTURA_ANY, P } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { moveLevel, removeItem, saveLevel, toggleActive } from "../actions";
 import { InlineEditor } from "../item-editor";
@@ -37,7 +38,10 @@ function LevelFields({ level }: { level?: LevelRow }) {
 }
 
 export default async function NiveisPage() {
-  await requirePermission(P.estruturaGerenciar);
+  const me = await requirePermission(...ESTRUTURA_ANY);
+  const canCreate = can(me, P.estruturaCriar);
+  const canEdit = can(me, P.estruturaEditar);
+  const canDelete = can(me, P.estruturaExcluir);
   const supabase = await createClient();
   const { data } = await supabase
     .from("levels")
@@ -49,10 +53,11 @@ export default async function NiveisPage() {
     <>
       <PageHeader
         eyebrow="Estrutura"
+        icon={Layers}
         title="Níveis profissionais"
         description="A ordem define a hierarquia, do nível inicial ao mais experiente. Ela será usada para comparar competências com o próximo nível."
       />
-      <div className="grid items-start gap-6 lg:grid-cols-[1fr_320px]">
+      <div className={canCreate ? "grid items-start gap-6 lg:grid-cols-[1fr_320px]" : "grid items-start gap-6"}>
         {levels.length === 0 ? (
           <EmptyState title="Nenhum nível cadastrado">Crie o primeiro nível ao lado.</EmptyState>
         ) : (
@@ -67,15 +72,31 @@ export default async function NiveisPage() {
                       {i + 1}
                     </span>
                     <div className="flex flex-col">
-                      {i > 0 && (
-                        <ActionButton action={moveLevel} hidden={{ id: l.id, direction: "-1" }} label="↑" variant="ghost" pendingLabel="…" />
+                      {canEdit && i > 0 && (
+                        <ActionButton action={moveLevel} hidden={{ id: l.id, direction: "-1" }} label="Subir nível" icon={<ArrowUp size={15} aria-hidden />} iconOnly />
                       )}
-                      {i < levels.length - 1 && (
-                        <ActionButton action={moveLevel} hidden={{ id: l.id, direction: "1" }} label="↓" variant="ghost" pendingLabel="…" />
+                      {canEdit && i < levels.length - 1 && (
+                        <ActionButton action={moveLevel} hidden={{ id: l.id, direction: "1" }} label="Descer nível" icon={<ArrowDown size={15} aria-hidden />} iconOnly />
                       )}
                     </div>
                   </div>
                   <InlineEditor
+                    canEdit={canEdit}
+                    actions={
+                      canDelete && people === 0 && positions === 0 && (
+                        <ActionButton
+                          action={removeItem}
+                          hidden={{ kind: "niveis", id: l.id }}
+                          label="Excluir"
+                          variant="danger"
+                          icon={<Trash2 size={16} aria-hidden />}
+                          iconOnly
+                          confirm
+                          confirmLabel="Excluir nível"
+                          confirmText="O registro será apagado definitivamente. Só é possível porque não está em uso."
+                        />
+                      )
+                    }
                     summary={
                       <div className="min-w-0">
                         <p className="flex flex-wrap items-center gap-2 font-semibold">
@@ -95,9 +116,6 @@ export default async function NiveisPage() {
                       </ActionForm>
                       <div className="flex flex-wrap justify-end gap-2 border-t border-line pt-3">
                         <ActionButton action={toggleActive} hidden={{ kind: "niveis", id: l.id, active: String(!l.active) }} label={l.active ? "Desativar" : "Reativar"} />
-                        {people === 0 && positions === 0 && (
-                          <ActionButton action={removeItem} hidden={{ kind: "niveis", id: l.id }} label="Excluir" variant="danger" confirm confirmLabel="Excluir nível" />
-                        )}
                       </div>
                     </div>
                   </InlineEditor>
@@ -106,12 +124,14 @@ export default async function NiveisPage() {
             })}
           </ol>
         )}
-        <Card title="Novo nível" description="Entra no topo da hierarquia. Use as setas para reposicionar.">
+        {canCreate && (
+        <Card icon={Plus} title="Novo nível" description="Entra no topo da hierarquia. Use as setas para reposicionar.">
           <ActionForm action={saveLevel} resetOnSuccess>
             <LevelFields />
             <div><SubmitButton>Criar nível</SubmitButton></div>
           </ActionForm>
         </Card>
+        )}
       </div>
     </>
   );

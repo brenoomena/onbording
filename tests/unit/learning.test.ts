@@ -76,3 +76,23 @@ describe("initials", () => {
     expect(initials("Élida Ávila")).toBe("ÉÁ");
   });
 });
+
+import { isDark, sanitizeTheme, themeCss } from "@/lib/theme-tokens";
+
+describe("tema personalizado", () => {
+  it("aceita só tokens conhecidos com cor #RRGGBB", () => {
+    const t = sanitizeTheme({ light: { brand: "#FF6600", hack: "#000000", ink: "red;}body{x:y" }, dark: "nada", outro: {} });
+    expect(t).toEqual({ light: { brand: "#ff6600" } });
+  });
+  it("gera variáveis RGB para os dois modos", () => {
+    const css = themeCss({ light: { brand: "#ff6600" }, dark: { brand: "#00ff00" } });
+    expect(css).toContain("--brand:255 102 0;");
+    expect(css).toContain(':root[data-theme="dark"]{');
+    expect(css).toContain("--brand:0 255 0;");
+    expect(css).not.toContain("hack");
+  });
+  it("identifica fundo escuro para escolher a logo", () => {
+    expect(isDark("#0f1b2d")).toBe(true);
+    expect(isDark("#ffffff")).toBe(false);
+  });
+});

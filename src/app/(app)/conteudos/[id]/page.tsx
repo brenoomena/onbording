@@ -1,9 +1,10 @@
+import { Eye, FileText, Trash2 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionButton, PageNotice } from "@/components/forms";
-import { Alert, Card, PageHeader } from "@/components/ui";
-import { requirePermission } from "@/lib/auth";
+import { Alert, Card, PageHeader, buttonVariants } from "@/components/ui";
+import { can, requirePermission } from "@/lib/auth";
 import type { AudienceRule, ContentRow } from "@/lib/learning";
 import { P } from "@/lib/permissions";
 import { loadStructure } from "@/lib/queries";
@@ -15,13 +16,14 @@ import { loadContentFormData } from "../form-data";
 export const metadata: Metadata = { title: "Conteúdo" };
 
 export default async function ConteudoPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ aviso?: string }> }) {
-  await requirePermission(P.conteudosGerenciar);
+  const me = await requirePermission(P.conteudosVer);
+  const canEdit = can(me, P.conteudosEditar);
   const { id } = await params;
   const { aviso } = await searchParams;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const supabase = await createClient();
-  const [{ data: content }, { data: rules }, { data: uses }, structure, { owners, categories }] = await Promise.all([
+  const [{ data: content }, { data: rules }, { data: uses }, structure, { owners, categories, tracks }] = await Promise.all([
     supabase.from("contents").select("*").eq("id", id).maybeSingle(),
     supabase.from("audience_rules").select("area_id, position_id, level_id").eq("content_id", id),
     supabase.from("module_items").select("module:modules(id, title, track:tracks(id, name))").eq("content_id", id),
@@ -36,14 +38,15 @@ export default async function ConteudoPage({ params, searchParams }: { params: P
     <>
       <PageHeader
         eyebrow="Conteúdos"
+        icon={FileText}
         title={c.title}
         actions={
           <div className="flex flex-wrap items-start gap-2">
-            <Link href={`/estudar/${c.id}?previa=1`} className="rounded-lg border border-line px-3.5 py-1.5 text-[13px] font-semibold hover:bg-sunken">
-              Ver como colaborador
+            <Link href={`/estudar/${c.id}?previa=1`} className={buttonVariants.secondary}>
+              <Eye size={16} aria-hidden /> Ver como colaborador
             </Link>
-            {usedIn.length === 0 && (
-              <ActionButton action={deleteContent} hidden={{ id: c.id }} label="Excluir" variant="danger" confirm confirmLabel="Excluir conteúdo" confirmText="O conteúdo e o arquivo enviado serão apagados definitivamente." />
+            {usedIn.length === 0 && can(me, P.conteudosExcluir) && (
+              <ActionButton action={deleteContent} hidden={{ id: c.id, voltar: "1" }} label="Excluir" variant="danger" icon={<Trash2 size={15} aria-hidden />} confirm confirmLabel="Excluir conteúdo" confirmText="O conteúdo e o arquivo enviado serão apagados definitivamente." />
             )}
           </div>
         }
@@ -52,7 +55,7 @@ export default async function ConteudoPage({ params, searchParams }: { params: P
         <PageNotice
           message={
             c.status === "publicado"
-              ? "Conteúdo criado e publicado. Para os colaboradores verem, inclua em uma trilha ou marque para a biblioteca."
+              ? "Conteúdo criado e publicado. Inclua-o em um módulo da trilha (ou marque para a Biblioteca) para os colaboradores verem."
               : "Conteúdo criado como rascunho. Quando estiver pronto, clique em Publicar."
           }
         />
@@ -77,6 +80,8 @@ export default async function ConteudoPage({ params, searchParams }: { params: P
           structure={structure}
           owners={owners}
           categories={categories}
+          tracks={tracks}
+          readOnly={!canEdit}
         />
       </Card>
     </>

@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // forbidden() responde 403 nas rotas sem permissão
+  experimental: { authInterrupts: true },
   async headers() {
     return [
       {

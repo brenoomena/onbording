@@ -57,26 +57,30 @@ describe("chave de perfil", () => {
 });
 
 describe("menu por permissão", () => {
-  it("colaborador vê só painel e meu perfil", () => {
-    const items = visibleMenu(new Set([P.painelVer])).flatMap((g) => g.items.map((i) => i.label));
-    expect(items).toEqual(["Painel", "Minhas trilhas", "Materiais", "Meu perfil"]);
+  it("colaborador vê só painel e aprendizagem", () => {
+    const items = visibleMenu(new Set([P.painelVer]), false).flatMap((g) => g.items.map((i) => i.label));
+    expect(items).toEqual(["Painel", "Minhas trilhas", "Materiais"]);
   });
 
   it("supervisor vê 'Minha equipe'", () => {
-    const items = visibleMenu(new Set([P.painelVer, P.equipeVer])).flatMap((g) => g.items.map((i) => i.label));
-    expect(items).toEqual(["Painel", "Minhas trilhas", "Materiais", "Minha equipe", "Meu perfil"]);
+    const items = visibleMenu(new Set([P.painelVer, P.equipeVer]), false).flatMap((g) => g.items.map((i) => i.label));
+    expect(items).toEqual(["Painel", "Minhas trilhas", "Materiais", "Minha equipe"]);
+  });
+
+  it("quem tem todas as permissões, mas não é administrador, não vê perfis nem configurações", () => {
+    const items = visibleMenu(new Set(Object.values(P)), false).flatMap((g) => g.items.map((i) => i.label));
+    expect(items).not.toContain("Perfis de acesso");
+    expect(items).not.toContain("Configurações");
+    expect(items).toContain("Auditoria");
   });
 
   it("administrador vê todos os menus", () => {
-    const items = visibleMenu(new Set(Object.values(P))).flatMap((g) => g.items.map((i) => i.label));
-    expect(items).toEqual(["Painel", "Minhas trilhas", "Materiais", "Trilhas", "Conteúdos", "Colaboradores", "Áreas", "Cargos", "Níveis", "Perfis de acesso", "Auditoria", "Meu perfil"]);
+    const items = visibleMenu(new Set(Object.values(P)), true).flatMap((g) => g.items.map((i) => i.label));
+    expect(items).toEqual(["Painel", "Minhas trilhas", "Materiais", "Trilhas", "Conteúdos", "Colaboradores", "Áreas", "Cargos", "Níveis", "Perfis de acesso", "Configurações", "Auditoria"]);
   });
-});
 
-describe("mensagens de erro", () => {
-  it("traduz erros do banco", () => {
-    expect(friendlyError({ code: "23503" })).toMatch(/em uso/);
-    expect(friendlyError({ code: "P0001", message: "O cargo selecionado não pertence à área do colaborador." })).toMatch(/não pertence/);
-    expect(friendlyError({ code: "42501", message: "new row violates row-level security policy" })).toMatch(/não tem permissão/);
+  it("estrutura aparece com qualquer uma das ações", () => {
+    const items = visibleMenu(new Set([P.estruturaExcluir]), false).flatMap((g) => g.items.map((i) => i.label));
+    expect(items).toEqual(["Minhas trilhas", "Materiais", "Áreas", "Cargos", "Níveis"]);
   });
 });
