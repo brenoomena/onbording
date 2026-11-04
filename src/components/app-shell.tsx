@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, LogOut, Menu, Network, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
+import { ChevronRight, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Waypoints, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -197,7 +197,7 @@ function Brand({ logo, mini }: { logo: ShellProps["logo"]; mini: boolean }) {
   // Selo abaixo da logo: identifica o módulo dentro do hub da Implantta.
   const tag = (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-sidebar-text/20 bg-sidebar-active-bg/60 px-3 py-1 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-sidebar-text">
-      <Network size={12} aria-hidden className="text-brand" />
+      <Waypoints size={13} strokeWidth={2.2} aria-hidden className="text-brand" />
       Hub
       <span aria-hidden className="h-3 w-px bg-sidebar-text/40" />
       Onbording
