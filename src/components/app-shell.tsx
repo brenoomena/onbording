@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, LogOut, Menu, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
+import { ChevronRight, LogOut, Menu, Network, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -49,10 +49,10 @@ export function AppShell({ groups, user, logo, compact: initialCompact, children
     const mini = compact && !mobile;
     return (
       <div className="flex h-full flex-col">
-        <div className={cx("flex items-start justify-between gap-2 px-4 pb-4 pt-5", mini && "justify-center px-2")}>
+        <div className={cx("relative flex items-start justify-center gap-2 px-4 pb-4 pt-5", mini && "px-2")}>
           <Brand logo={logo} mini={mini} />
           {mobile && (
-            <button type="button" onClick={() => setOpen(false)} aria-label="Fechar menu" className="rounded-lg p-1.5 text-sidebar-text hover:bg-sidebar-active-bg">
+            <button type="button" onClick={() => setOpen(false)} aria-label="Fechar menu" className="absolute right-3 top-4 rounded-lg p-1.5 text-sidebar-text hover:bg-sidebar-active-bg">
               <X size={20} />
             </button>
           )}
@@ -194,17 +194,21 @@ export function AppShell({ groups, user, logo, compact: initialCompact, children
 }
 
 function Brand({ logo, mini }: { logo: ShellProps["logo"]; mini: boolean }) {
-  const name = (
-    <span className="block text-[15px] font-semibold leading-tight text-sidebar-active-text">
-      Onboarding <span className="text-brand">Implantta</span>
+  // Selo abaixo da logo: identifica o módulo dentro do hub da Implantta.
+  const tag = (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-sidebar-text/20 bg-sidebar-active-bg/60 px-3 py-1 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-sidebar-text">
+      <Network size={12} aria-hidden className="text-brand" />
+      Hub
+      <span aria-hidden className="h-3 w-px bg-sidebar-text/40" />
+      Onbording
     </span>
   );
   const hasLogo = logo.light || logo.dark;
   if (!hasLogo) {
     return (
-      <Link href="/painel" className="flex items-center gap-2.5">
+      <Link href="/painel" className={cx("grid justify-items-center gap-2.5", mini ? "" : "w-full")}>
         <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand text-[15px] font-bold text-on-brand">I</span>
-        {!mini && name}
+        {!mini && tag}
       </Link>
     );
   }
@@ -212,18 +216,18 @@ function Brand({ logo, mini }: { logo: ShellProps["logo"]; mini: boolean }) {
     src && (
       <span className={cls}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt="Logomarca" className={cx("object-contain", mini ? "h-9 w-11" : "max-h-12 w-auto max-w-[200px]")} />
+        <img src={src} alt="Logomarca" className={cx("mx-auto object-contain", mini ? "h-8 w-11" : "max-h-9 w-auto max-w-[150px]")} />
       </span>
     );
   return (
-    <Link href="/painel" className="grid min-w-0 gap-2">
+    <Link href="/painel" className={cx("grid min-w-0 justify-items-center gap-2.5", !mini && "w-full")}>
       {logo.light === logo.dark ? img(logo.light, "block") : (
         <>
           {img(logo.light, "only-light")}
           {img(logo.dark, "only-dark")}
         </>
       )}
-      {!mini && name}
+      {!mini && tag}
     </Link>
   );
 }
