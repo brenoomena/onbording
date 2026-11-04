@@ -10,6 +10,7 @@ export interface Branding {
   logoDarkPath: string | null;
   symbolPath: string | null;
   symbolDarkPath: string | null;
+  faviconPath: string | null;
   sizes: LogoSizes;
 }
 
@@ -20,7 +21,7 @@ export interface BrandImage {
 }
 
 export const BRANDING_TAG = "branding";
-const EMPTY: Branding = { theme: {}, logoPath: null, logoDarkPath: null, symbolPath: null, symbolDarkPath: null, sizes: {} };
+const EMPTY: Branding = { theme: {}, logoPath: null, logoDarkPath: null, symbolPath: null, symbolDarkPath: null, faviconPath: null, sizes: {} };
 
 /**
  * Identidade visual para desenhar as telas (inclusive login). Lida pela
@@ -43,13 +44,14 @@ export const getBranding = unstable_cache(
         logoDarkPath: str("logo_dark_path"),
         symbolPath: str("symbol_path"),
         symbolDarkPath: str("symbol_dark_path"),
+        faviconPath: str("favicon_path"),
         sizes: sanitizeSizes(d.logo_sizes),
       };
     } catch {
       return EMPTY;
     }
   },
-  ["branding-v2"],
+  ["branding-v3"],
   { tags: [BRANDING_TAG], revalidate: 600 },
 );
 

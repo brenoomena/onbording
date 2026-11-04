@@ -2,15 +2,22 @@ import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { THEME_COOKIE, parseTheme, themeAttr } from "@/lib/theme";
 import "@fontsource-variable/inter";
-import { getBranding } from "@/lib/branding";
+import { brandingUrl, getBranding } from "@/lib/branding";
 import { themeCss } from "@/lib/theme-tokens";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: { default: "Onboarding Implantta", template: "%s · Onboarding Implantta" },
-  description: "Plataforma de onboarding e desenvolvimento dos colaboradores Implantta.",
-  robots: { index: false, follow: false },
-};
+/** Favicon: o enviado em Configurações; sem ele, o ícone padrão. */
+export async function generateMetadata(): Promise<Metadata> {
+  const favicon = brandingUrl((await getBranding()).faviconPath);
+  return {
+    title: { default: "Onboarding Implantta", template: "%s · Onboarding Implantta" },
+    description: "Plataforma de onboarding e desenvolvimento dos colaboradores Implantta.",
+    robots: { index: false, follow: false },
+    icons: favicon
+      ? { icon: [{ url: favicon, type: "image/png", sizes: "192x192" }], apple: [{ url: favicon, sizes: "192x192" }] }
+      : { icon: [{ url: "/favicon-padrao.svg", type: "image/svg+xml" }] },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: [

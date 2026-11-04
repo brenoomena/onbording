@@ -44,6 +44,10 @@ const FIELD_LABEL: Record<string, string> = {
   theme: "cores",
   logo_path: "logomarca",
   logo_dark_path: "logomarca (fundo escuro)",
+  symbol_path: "símbolo",
+  symbol_dark_path: "símbolo (fundo escuro)",
+  favicon_path: "favicon",
+  logo_sizes: "tamanho das logos",
   track_id: "trilha",
   avatar_path: "foto",
 };

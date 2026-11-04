@@ -315,6 +315,14 @@ run("Etapa 2 · trilhas, conteúdos, matrículas e progresso", () => {
     expect(log.rows[0].n).toBe(1);
   });
 
+  it("favicon: só PNG na pasta da marca e devolvido pela função pública", async () => {
+    await asUser(db.pool, admin, (q) => q("update app_settings set favicon_path = 'logo/11111111-2222-3333-4444-555555555555.png'"));
+    await expect(asUser(db.pool, admin, (q) => q("update app_settings set favicon_path = 'logo/11111111-2222-3333-4444-555555555555.svg'"))).rejects.toThrow(/check constraint/);
+    await expect(asUser(db.pool, admin, (q) => q("update app_settings set favicon_path = '../x.png'"))).rejects.toThrow(/check constraint/);
+    const b = await asUser(db.pool, null, (q) => q("select public.get_branding() b"));
+    expect(b.rows[0].b.favicon_path).toBe("logo/11111111-2222-3333-4444-555555555555.png");
+  });
+
   it("símbolo e tamanhos das logos: limites validados no banco e só o admin altera", async () => {
     await asUser(db.pool, admin, (q) =>
       q(`update app_settings set logo_sizes = '{"logo":{"w":175,"h":44},"symbol":{"w":36,"h":36}}'::jsonb,

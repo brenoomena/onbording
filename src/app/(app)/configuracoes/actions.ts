@@ -93,3 +93,21 @@ export async function setLogoSize(slot: LogoSlot, width: number, ratio: number):
   refreshBranding();
   return { ok: `Tamanho salvo: ${size.w} × ${size.h} px.` };
 }
+
+const FAVICON_PATH = /^logo\/[0-9a-f-]{36}\.png$/;
+
+/** Grava (ou remove) o favicon e apaga o arquivo anterior. Somente Administrador. */
+export async function setFavicon(path: string | null): Promise<ActionState> {
+  const denied = await denyUnlessAdmin();
+  if (denied) return denied;
+  if (path !== null && !FAVICON_PATH.test(path)) return { error: "Arquivo de favicon inválido." };
+  const supabase = await createClient();
+  const { data: before } = await supabase.from("app_settings").select("favicon_path").eq("id", 1).maybeSingle();
+  const { data, error } = await supabase.from("app_settings").update({ favicon_path: path }).eq("id", 1).select("id");
+  if (error) return { error: friendlyError(error) };
+  if (!data?.length) return { error: "Somente administradores podem alterar o favicon." };
+  const old = before?.favicon_path;
+  if (old && old !== path) await supabase.storage.from("branding").remove([old]);
+  refreshBranding();
+  return { ok: path ? "Favicon atualizado. Pode levar alguns instantes para aparecer na aba do navegador." : "Favicon removido; voltou o ícone padrão." };
+}
