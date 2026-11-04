@@ -79,30 +79,35 @@ export default async function EstudarPage({
   return (
     <>
       {!preview && <StudyTracker contentId={id} />}
-      <PageHeader
-        eyebrow={nav.trackName ?? content.category ?? "Conteúdo"}
-        icon={FileText}
-        title={content.title}
-        description={
-          <span className="flex flex-wrap items-center gap-2">
-            <Badge tone={KIND_TONE[content.kind]}>{KIND_LABEL[content.kind]}</Badge>
-            {content.external_platform && <span>{content.external_platform}</span>}
-            {content.estimated_minutes && <span>· cerca de {content.estimated_minutes} min</span>}
-            {done && <Badge tone="ok">Concluído em {formatDate(mine?.completed_at)}</Badge>}
-          </span>
-        }
-      />
-      {preview && <Alert tone="brand">Pré-visualização: o seu tempo e a conclusão não são registrados.</Alert>}
-      {content.description && <Markdown>{content.description}</Markdown>}
-
-      <div className="sticky top-[57px] z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface/95 p-3 shadow-[0_4px_14px_rgba(0,0,0,0.06)] backdrop-blur sm:px-4 lg:top-2">
-        <div className="text-[13px] text-muted">
-          {mine ? `Tempo ativo neste conteúdo: ${formatMinutes(mine.active_seconds)} · ${mine.visits} ${mine.visits === 1 ? "acesso" : "acessos"}` : "Primeiro acesso"}
+      {/* Cabeçalho compacto: título, etiquetas e a ação de concluir numa faixa só, para o conteúdo ganhar espaço. */}
+      <header className="sticky top-[68px] z-10 flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-xl border border-line bg-surface/95 px-3.5 py-2.5 shadow-[0_4px_14px_rgba(0,0,0,0.05)] backdrop-blur sm:px-4">
+        <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-icon-bg text-icon">
+          <FileText size={18} strokeWidth={1.9} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="flex min-w-0 items-center gap-1 text-[11.5px] font-medium text-muted">
+            {nav.trackId ? (
+              <Link href={`/minhas-trilhas/${nav.trackId}`} className="truncate hover:text-accent hover:underline">{nav.trackName}</Link>
+            ) : (
+              <span className="truncate">{content.category ?? "Conteúdo"}</span>
+            )}
+          </p>
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
+            <h1 className="min-w-0 truncate text-[17px] font-semibold leading-snug tracking-tight sm:text-[18px]">{content.title}</h1>
+            <span className="flex flex-wrap items-center gap-1.5 text-[12px] text-muted">
+              <Badge tone={KIND_TONE[content.kind]}>{KIND_LABEL[content.kind]}</Badge>
+              {content.external_platform && <span>{content.external_platform}</span>}
+              {content.estimated_minutes && <span>· cerca de {content.estimated_minutes} min</span>}
+              <span className="hidden md:inline">
+                · {mine ? `${formatMinutes(mine.active_seconds)} de estudo · ${mine.visits} ${mine.visits === 1 ? "acesso" : "acessos"}` : "primeiro acesso"}
+              </span>
+            </span>
+          </div>
         </div>
         {!preview &&
           (done ? (
             <span className="flex items-center gap-2">
-              <Badge tone="ok">Concluído</Badge>
+              <Badge tone="ok">Concluído em {formatDate(mine?.completed_at)}</Badge>
               {nav.next && <Link href={`/estudar/${nav.next}${q}`} className={buttonVariants.primary}>Próximo →</Link>}
             </span>
           ) : (
@@ -114,7 +119,9 @@ export default async function EstudarPage({
               </SubmitButton>
             </ActionForm>
           ))}
-      </div>
+      </header>
+      {preview && <Alert tone="brand">Pré-visualização: o seu tempo e a conclusão não são registrados.</Alert>}
+      {content.description && <Markdown>{content.description}</Markdown>}
 
       <article className="rounded-xl border border-line bg-surface p-5 sm:p-7">
         <ContentViewer content={content} fileUrl={fileUrl} />
