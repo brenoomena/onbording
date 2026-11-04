@@ -170,13 +170,17 @@ await step("validação: link sem endereço é recusado", async () => {
 
 await step("inclui o texto em um novo módulo e coloca no início da trilha", async () => {
   await A.goto(`${BASE}/trilhas/${trackId}`);
+  await A.getByRole("tab", { name: "Novo módulo" }).click();
   await A.fill("#new-mod-title", "Boas-vindas");
   await A.getByRole("button", { name: "Criar módulo" }).click();
   await A.getByText('Módulo "Boas-vindas" criado.').waitFor();
-  await A.reload();
-  const mod = A.locator("div.rounded-xl", { has: A.locator("p.font-semibold", { hasText: /^Boas-vindas$/ }) }).first();
-  await mod.locator("select[name=content_id]").selectOption({ label: "Boas-vindas ao time comercial" });
-  await mod.getByRole("button", { name: "Incluir" }).click();
+  // Volta sozinho para a Estrutura; o conteúdo fora dos módulos entra pelo seletor de módulo.
+  await A.getByRole("tab", { name: /Estrutura/, selected: true }).waitFor();
+  const row = A.locator("li", { hasText: "Boas-vindas ao time comercial" }).filter({ has: A.locator("select[name=module_id]") });
+  const sel = row.locator("select[name=module_id]");
+  const value = await sel.evaluate((el) => [...el.options].find((o) => o.text.endsWith(": Boas-vindas"))?.value);
+  await sel.selectOption(value);
+  await row.getByRole("button", { name: "Incluir" }).click();
   await A.getByText("Conteúdo incluído.").waitFor();
   for (let i = 0; i < 4; i++) {
     await A.reload();
@@ -332,26 +336,25 @@ await step("trilha opcional aparece como disponível e a vendedora se inscreve",
   await A.waitForURL(/aviso=criada/);
   await A.getByRole("dialog").getByRole("button", { name: "OK" }).click();
   await A.waitForFunction(() => !location.search.includes("aviso="));
+  // Trilha recém-criada abre direto na aba Novo módulo.
   await A.fill("#new-mod-title", "Módulo único");
   await A.getByRole("button", { name: "Criar módulo" }).click();
   await A.getByText('Módulo "Módulo único" criado.').waitFor();
-  await A.reload();
-  // Conteúdos de outra trilha não aparecem para inclusão
-  const opts = await A.locator("select[name=content_id]").first().locator("option").allInnerTexts();
-  assert.ok(!opts.some((o) => o.includes("Boas-vindas ao time comercial")), "não oferece conteúdo de outra trilha");
   const newTrack = A.url().split("/trilhas/")[1].split("?")[0];
-  await A.getByRole("link", { name: "Cadastre um conteúdo nesta trilha" }).first().click();
-  await A.waitForURL(/conteudos\/novo\?trilha=/);
+  // Não há mais seletor de conteúdos no módulo: cadastra direto numa aba da mesma tela.
+  assert.equal(await A.locator("select[name=content_id]").count(), 0);
+  await A.getByRole("button", { name: "Cadastrar conteúdo neste módulo" }).first().click();
+  await A.getByRole("tab", { name: "Novo conteúdo", selected: true }).waitFor();
   assert.equal(await A.inputValue("#track"), newTrack);
+  assert.ok(await A.locator("#track").isDisabled(), "trilha fixa ao cadastrar dentro dela");
   await A.fill("#title", "Técnicas de negociação");
   await A.locator("label", { hasText: /^Texto$/ }).click();
   await A.fill("#body", "Ouça mais do que fala.");
   await A.getByRole("button", { name: "Criar e publicar" }).click();
-  await A.waitForURL(/conteudos\/[0-9a-f-]{36}\?aviso=criado/);
-  await A.goto(`${BASE}/trilhas/${newTrack}`);
-  await A.locator("select[name=content_id]").first().selectOption({ label: "Técnicas de negociação" });
-  await A.getByRole("button", { name: "Incluir" }).first().click();
-  await A.getByText("Conteúdo incluído.").waitFor();
+  await A.getByText(/Técnicas de negociação" publicado e incluído no módulo/).waitFor();
+  await A.getByRole("tab", { name: /Estrutura/, selected: true }).waitFor();
+  await A.locator("a", { hasText: "Técnicas de negociação" }).waitFor();
+  assert.ok(A.url().includes(`/trilhas/${newTrack}`), "continua na mesma tela da trilha");
   await A.getByRole("button", { name: "Publicar", exact: true }).click();
   await A.locator("header span.rounded-full", { hasText: "Publicado" }).waitFor();
   await V.goto(`${BASE}/minhas-trilhas`);

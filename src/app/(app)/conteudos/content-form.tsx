@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { AudienceEditor } from "@/components/audience-editor";
 import { ActionForm, SubmitButton, FormBar } from "@/components/forms";
 import { Alert, Badge, Field, Input, Select, cx, PUBLISH_TONE } from "@/components/ui";
 import { RichTextarea } from "@/components/rich-textarea";
+import { AfterOk } from "@/components/tabs";
 import type { ActionState } from "@/lib/action-state";
 import { KIND_LABEL, PUBLISH_LABEL, formatBytes, type AudienceRule, type ContentKind, type ContentRow, type PublishStatus } from "@/lib/learning";
 import type { PersonOption, Structure } from "@/lib/queries";
@@ -25,6 +26,7 @@ export function ContentForm({
   defaultTrackId,
   readOnly = false,
   modulesCount = 0,
+  inTrack,
 }: {
   action: (s: ActionState, fd: FormData) => Promise<ActionState>;
   content?: ContentRow;
@@ -39,6 +41,12 @@ export function ContentForm({
   readOnly?: boolean;
   /** Em quantos módulos da trilha atual o conteúdo está (para o "Mover de trilha"). */
   modulesCount?: number;
+  /**
+   * Criado dentro da trilha (aba "Novo conteúdo"): a trilha fica fixa, os
+   * campos extras (módulo) aparecem logo abaixo dela e, ao criar, volta para
+   * a aba de origem em vez de abrir a página do conteúdo.
+   */
+  inTrack?: { extra?: ReactNode; tab: string };
 }) {
   const [kind, setKind] = useState<ContentKind>(content?.kind ?? "link");
   const [library, setLibrary] = useState(content?.is_library ?? false);
@@ -85,6 +93,8 @@ export function ContentForm({
         const e = state.fieldErrors ?? {};
         return (
           <>
+            {inTrack && <AfterOk state={state} from={inTrack.tab} />}
+            {inTrack && <input type="hidden" name="em_trilha" value="1" />}
             {!readOnly && <PublishBar status={content?.status} isNew={!content} />}
             <fieldset disabled={readOnly} className="grid gap-4 disabled:opacity-80">
             {content && <input type="hidden" name="id" value={content.id} />}
@@ -106,7 +116,7 @@ export function ContentForm({
                 id="track"
                 value={track}
                 required
-                disabled={!!content}
+                disabled={!!content || !!inTrack}
                 className={content ? "min-w-[220px] flex-1" : undefined}
                 onChange={(ev) => {
                   setTrack(ev.target.value);
@@ -137,6 +147,7 @@ export function ContentForm({
               )}
               </div>
             </Field>
+            {inTrack?.extra}
 
             <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
               <Field label="Título" htmlFor="title" error={e.title}>
@@ -147,8 +158,8 @@ export function ContentForm({
                 <datalist id="categories">{categories.map((c) => <option key={c} value={c} />)}</datalist>
               </Field>
             </div>
-            <Field label="Descrição" htmlFor="description" hint="Aparece na lista e no topo do conteúdo." error={e.description}>
-              <RichTextarea id="description" name="description" rows={3} defaultValue={content?.description ?? ""} maxLength={1000} />
+            <Field label="Descrição" htmlFor={inTrack ? "conteudo-description" : "description"} hint="Aparece na lista e no topo do conteúdo." error={e.description}>
+              <RichTextarea id={inTrack ? "conteudo-description" : "description"} name="description" rows={3} defaultValue={content?.description ?? ""} maxLength={1000} />
             </Field>
 
             <fieldset className="grid gap-3">
@@ -246,11 +257,11 @@ export function ContentForm({
             </div>
             <Field
               label="Objetivo e orientações"
-              htmlFor="objective"
+              htmlFor={inTrack ? "conteudo-objective" : "objective"}
               hint="Aparece logo abaixo do conteúdo (vídeo, foto, arquivo). Use para o objetivo, orientações, links extras e logins de acesso."
               error={e.objective}
             >
-              <RichTextarea id="objective" name="objective" rows={5} defaultValue={content?.objective ?? ""} maxLength={4000} />
+              <RichTextarea id={inTrack ? "conteudo-objective" : "objective"} name="objective" rows={5} defaultValue={content?.objective ?? ""} maxLength={4000} />
             </Field>
 
             <fieldset className="grid gap-3 rounded-xl border border-line p-4">

@@ -1,19 +1,21 @@
 import { ArrowDown, ArrowUp, Eye, FilePlus2, Layers3, Plus, Route, Settings2, Trash2, Users, X } from "lucide-react";
+import { Tabs, type TabDef } from "@/components/tabs";
 import type { Metadata } from "next";
 import { Markdown } from "@/components/markdown";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionButton, ActionForm, SubmitButton, PageNotice } from "@/components/forms";
-import { Alert, Badge, Card, Field, Input, PageHeader, Select, buttonVariants, PUBLISH_TONE, KIND_TONE } from "@/components/ui";
+import { Alert, Badge, Card, Field, Input, PageHeader, buttonVariants, PUBLISH_TONE, KIND_TONE } from "@/components/ui";
 import { RichTextarea } from "@/components/rich-textarea";
 import { can, requirePermission } from "@/lib/auth";
 import { KIND_LABEL, PUBLISH_LABEL, type AudienceRule } from "@/lib/learning";
 import { P } from "@/lib/permissions";
 import { loadStructure } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
+import { saveContent } from "../../conteudos/actions";
+import { ContentForm } from "../../conteudos/content-form";
+import { loadContentFormData } from "../../conteudos/form-data";
 import {
-  addItem,
-  addModule,
   deleteModule,
   deleteTrack,
   moveItem,
@@ -26,16 +28,17 @@ import {
 } from "../actions";
 import { TrackForm } from "../track-form";
 import { loadTrack } from "./load";
+import { ModulePicker, NewContentButton, NewModuleForm, PlaceContent } from "./track-parts";
 
 export const metadata: Metadata = { title: "Trilha" };
 
 const tone = PUBLISH_TONE;
 
-export default async function TrilhaPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ aviso?: string }> }) {
+export default async function TrilhaPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ aviso?: string; aba?: string }> }) {
   const me = await requirePermission(P.trilhasVer);
   const canEdit = can(me, P.trilhasEditar);
   const { id } = await params;
-  const { aviso } = await searchParams;
+  const { aviso, aba } = await searchParams;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const loaded = await loadTrack(id);
@@ -43,13 +46,16 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
   const { track, modules } = loaded;
 
   const supabase = await createClient();
-  const [{ data: rules }, { data: contents }, { count: enrolled }, structure] = await Promise.all([
+  const canCreateContent = can(me, P.conteudosCriar);
+  const [{ data: rules }, { data: contents }, { count: enrolled }, structure, formData] = await Promise.all([
     supabase.from("audience_rules").select("area_id, position_id, level_id").eq("track_id", id),
     // Só os conteúdos que pertencem a esta trilha podem entrar nos módulos dela.
     supabase.from("contents").select("id, title, status, kind").eq("track_id", id).neq("status", "arquivado").order("title"),
     supabase.from("enrollments").select("id", { count: "exact", head: true }).eq("track_id", id),
     loadStructure(),
+    canCreateContent ? loadContentFormData() : Promise.resolve(null),
   ]);
+  const moduleOptions = modules.map((m) => ({ id: m.id, title: m.title }));
   const options = (contents ?? []) as { id: string; title: string; status: string; kind: keyof typeof KIND_LABEL }[];
   const totalItems = modules.reduce((s, m) => s + m.items.length, 0);
   const drafts = modules.flatMap((m) => m.items).filter((i) => i.content.status !== "publicado");
@@ -106,139 +112,171 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
 
       {!canEdit && <Alert tone="brand">Você pode consultar esta trilha. Para alterar, é preciso a permissão de editar trilhas.</Alert>}
 
-      <section className="grid gap-4">
-        <h2 className="flex items-center gap-2 text-lg font-semibold"><Layers3 size={19} className="text-icon" aria-hidden /> Estrutura</h2>
-        {modules.length === 0 && <p className="text-[13px] text-muted">Nenhum módulo ainda. Crie o primeiro abaixo.</p>}
-        {modules.map((m, mi) => (
-          <div key={m.id} className="rounded-xl border border-line bg-surface">
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-4 py-3">
-              <div className="min-w-0">
-                <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-accent">Módulo {mi + 1}</p>
-                <p className="font-semibold">{m.title}</p>
-                {m.description && <Markdown size="sm" className="text-muted">{m.description}</Markdown>}
-              </div>
-              {canEdit && <div className="flex flex-wrap items-start gap-1">
-                {mi > 0 && <ActionButton action={moveModule} hidden={{ id: m.id, direction: "-1", track_id: id }} label="Subir módulo" icon={<ArrowUp size={16} aria-hidden />} iconOnly />}
-                {mi < modules.length - 1 && (
-                  <ActionButton action={moveModule} hidden={{ id: m.id, direction: "1", track_id: id }} label="Descer módulo" icon={<ArrowDown size={16} aria-hidden />} iconOnly />
-                )}
-                <details className="relative">
-                  <summary className={`${buttonVariants.ghost} cursor-pointer list-none py-1.5 text-[13px] [&::-webkit-details-marker]:hidden`}><Settings2 size={15} aria-hidden /> Editar</summary>
-                  <div className="absolute right-0 z-10 mt-1 w-[min(90vw,360px)] rounded-xl border border-line bg-surface p-4 shadow-lg">
-                    <ActionForm action={updateModule}>
-                      <input type="hidden" name="id" value={m.id} />
-                      <Field label="Nome do módulo" htmlFor={`mt-${m.id}`}>
-                        <Input id={`mt-${m.id}`} name="title" defaultValue={m.title} required />
-                      </Field>
-                      <Field label="Descrição" htmlFor={`md-${m.id}`}>
-                        <RichTextarea id={`md-${m.id}`} name="description" rows={2} defaultValue={m.description ?? ""} maxLength={1000} />
-                      </Field>
-                      <div className="flex items-center justify-between gap-2">
-                        <SubmitButton className="py-1.5 text-[13px]">Salvar</SubmitButton>
+      <Tabs
+        label="Edição da trilha"
+        initial={aba ?? (aviso === "criada" && canEdit ? "modulo" : "estrutura")}
+        tabs={[
+          {
+            key: "estrutura",
+            label: "Estrutura",
+            icon: <Layers3 size={16} aria-hidden />,
+            count: modules.length,
+            content: (
+              <>
+                {modules.length === 0 && <p className="text-[13px] text-muted">Nenhum módulo ainda. Crie o primeiro na aba <strong>Novo módulo</strong>.</p>}
+                {modules.map((m, mi) => (
+                  <div key={m.id} className="rounded-xl border border-line bg-surface">
+                    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-accent">Módulo {mi + 1}</p>
+                        <p className="font-semibold">{m.title}</p>
+                        {m.description && <Markdown size="sm" className="text-muted">{m.description}</Markdown>}
                       </div>
-                    </ActionForm>
-                    <div className="mt-3 border-t border-line pt-3">
-                      <ActionButton action={deleteModule} hidden={{ id: m.id }} label="Excluir módulo" variant="danger" icon={<Trash2 size={15} aria-hidden />} confirm confirmLabel="Excluir" confirmText="O módulo sai da trilha. Os conteúdos continuam cadastrados nesta trilha." />
+                      {canEdit && <div className="flex flex-wrap items-start gap-1">
+                        {mi > 0 && <ActionButton action={moveModule} hidden={{ id: m.id, direction: "-1", track_id: id }} label="Subir módulo" icon={<ArrowUp size={16} aria-hidden />} iconOnly />}
+                        {mi < modules.length - 1 && (
+                          <ActionButton action={moveModule} hidden={{ id: m.id, direction: "1", track_id: id }} label="Descer módulo" icon={<ArrowDown size={16} aria-hidden />} iconOnly />
+                        )}
+                        <details className="relative">
+                          <summary className={`${buttonVariants.ghost} cursor-pointer list-none py-1.5 text-[13px] [&::-webkit-details-marker]:hidden`}><Settings2 size={15} aria-hidden /> Editar</summary>
+                          <div className="absolute right-0 z-10 mt-1 w-[min(90vw,360px)] rounded-xl border border-line bg-surface p-4 shadow-lg">
+                            <ActionForm action={updateModule}>
+                              <input type="hidden" name="id" value={m.id} />
+                              <Field label="Nome do módulo" htmlFor={`mt-${m.id}`}>
+                                <Input id={`mt-${m.id}`} name="title" defaultValue={m.title} required />
+                              </Field>
+                              <Field label="Descrição" htmlFor={`md-${m.id}`}>
+                                <RichTextarea id={`md-${m.id}`} name="description" rows={2} defaultValue={m.description ?? ""} maxLength={1000} />
+                              </Field>
+                              <div className="flex items-center justify-between gap-2">
+                                <SubmitButton className="py-1.5 text-[13px]">Salvar</SubmitButton>
+                              </div>
+                            </ActionForm>
+                            <div className="mt-3 border-t border-line pt-3">
+                              <ActionButton action={deleteModule} hidden={{ id: m.id }} label="Excluir módulo" variant="danger" icon={<Trash2 size={15} aria-hidden />} confirm confirmLabel="Excluir" confirmText="O módulo sai da trilha. Os conteúdos continuam cadastrados nesta trilha." />
+                            </div>
+                          </div>
+                        </details>
+                      </div>}
                     </div>
-                  </div>
-                </details>
-              </div>}
-            </div>
 
-            <ol className="divide-y divide-line">
-              {m.items.map((it, ii) => (
-                <li key={it.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="w-5 shrink-0 text-right font-mono text-[12px] text-muted">{ii + 1}</span>
-                    <div className="min-w-0">
-                      <Link href={`/conteudos/${it.content.id}`} className="text-[14px] font-medium hover:text-accent">{it.content.title}</Link>
-                      <p className="flex flex-wrap items-center gap-1.5 text-[12px] text-muted">
-                        <Badge tone={KIND_TONE[it.content.kind]}>{KIND_LABEL[it.content.kind]}</Badge>
-                        {it.content.external_platform && ` · ${it.content.external_platform}`}
-                        {it.content.status !== "publicado" && <Badge tone={PUBLISH_TONE[it.content.status]}>{PUBLISH_LABEL[it.content.status]}</Badge>}
-                      </p>
-                    </div>
-                  </div>
-                  {canEdit ? <div className="flex flex-wrap items-center gap-1">
-                    <ActionButton
-                      action={toggleRequired}
-                      hidden={{ id: it.id, value: String(!it.is_required), track_id: id }}
-                      label={it.is_required ? "Obrigatório" : "Opcional"}
-                      variant={it.is_required ? "secondary" : "ghost"}
-                      pendingLabel="…"
-                    />
-                    {ii > 0 && <ActionButton action={moveItem} hidden={{ id: it.id, direction: "-1", track_id: id }} label="Subir" icon={<ArrowUp size={16} aria-hidden />} iconOnly />}
-                    {ii < m.items.length - 1 && (
-                      <ActionButton action={moveItem} hidden={{ id: it.id, direction: "1", track_id: id }} label="Descer" icon={<ArrowDown size={16} aria-hidden />} iconOnly />
-                    )}
-                    <ActionButton action={removeItem} hidden={{ id: it.id, track_id: id }} label="Remover do módulo" variant="danger" icon={<X size={16} aria-hidden />} iconOnly confirm confirmLabel="Remover" confirmText="O conteúdo sai deste módulo, mas continua cadastrado nesta trilha." />
-                  </div> : <Badge tone={it.is_required ? "brand" : "neutral"}>{it.is_required ? "Obrigatório" : "Opcional"}</Badge>}
-                </li>
-              ))}
-            </ol>
-
-            {canEdit && <div className="border-t border-line bg-bg/60 px-4 py-3">
-              <ActionForm action={addItem} className="sm:grid-cols-[1fr_auto_auto] sm:items-end">
-                <input type="hidden" name="module_id" value={m.id} />
-                <input type="hidden" name="track_id" value={id} />
-                <div className="grid gap-1">
-                  <label htmlFor={`add-${m.id}`} className="text-[12px] font-medium text-muted">Incluir conteúdo desta trilha</label>
-                  <Select id={`add-${m.id}`} name="content_id" defaultValue="">
-                    <option value="" disabled>{options.some((o) => !m.items.some((i) => i.content.id === o.id)) ? "Escolha um conteúdo" : "Todos os conteúdos da trilha já estão neste módulo"}</option>
-                    {options
-                      .filter((o) => !m.items.some((i) => i.content.id === o.id))
-                      .map((o) => (
-                        <option key={o.id} value={o.id}>
-                          {o.title}
-                          {o.status !== "publicado" ? " (rascunho)" : ""}
-                        </option>
+                    <ol className="divide-y divide-line">
+                      {m.items.map((it, ii) => (
+                        <li key={it.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="w-5 shrink-0 text-right font-mono text-[12px] text-muted">{ii + 1}</span>
+                            <div className="min-w-0">
+                              <Link href={`/conteudos/${it.content.id}`} className="text-[14px] font-medium hover:text-accent">{it.content.title}</Link>
+                              <p className="flex flex-wrap items-center gap-1.5 text-[12px] text-muted">
+                                <Badge tone={KIND_TONE[it.content.kind]}>{KIND_LABEL[it.content.kind]}</Badge>
+                                {it.content.external_platform && ` · ${it.content.external_platform}`}
+                                {it.content.status !== "publicado" && <Badge tone={PUBLISH_TONE[it.content.status]}>{PUBLISH_LABEL[it.content.status]}</Badge>}
+                              </p>
+                            </div>
+                          </div>
+                          {canEdit ? <div className="flex flex-wrap items-center gap-1">
+                            <ActionButton
+                              action={toggleRequired}
+                              hidden={{ id: it.id, value: String(!it.is_required), track_id: id }}
+                              label={it.is_required ? "Obrigatório" : "Opcional"}
+                              variant={it.is_required ? "secondary" : "ghost"}
+                              pendingLabel="…"
+                            />
+                            {ii > 0 && <ActionButton action={moveItem} hidden={{ id: it.id, direction: "-1", track_id: id }} label="Subir" icon={<ArrowUp size={16} aria-hidden />} iconOnly />}
+                            {ii < m.items.length - 1 && (
+                              <ActionButton action={moveItem} hidden={{ id: it.id, direction: "1", track_id: id }} label="Descer" icon={<ArrowDown size={16} aria-hidden />} iconOnly />
+                            )}
+                            <ActionButton action={removeItem} hidden={{ id: it.id, track_id: id }} label="Remover do módulo" variant="danger" icon={<X size={16} aria-hidden />} iconOnly confirm confirmLabel="Remover" confirmText="O conteúdo sai deste módulo, mas continua cadastrado nesta trilha." />
+                          </div> : <Badge tone={it.is_required ? "brand" : "neutral"}>{it.is_required ? "Obrigatório" : "Opcional"}</Badge>}
+                        </li>
                       ))}
-                  </Select>
-                </div>
-                <label className="flex items-center gap-2 pb-2 text-[13px]">
-                  <input type="checkbox" name="is_required" defaultChecked className="h-4 w-4 accent-[rgb(var(--brand))]" /> Obrigatório
-                </label>
-                <SubmitButton variant="secondary" className="py-2 text-[13px]"><Plus size={15} aria-hidden /> Incluir</SubmitButton>
-              </ActionForm>
-              {can(me, P.conteudosCriar) && (
-                <p className="mt-2 flex items-center gap-1 text-[12px] text-muted">
-                  <FilePlus2 size={13} aria-hidden /> Não encontrou?{" "}
-                  <Link href={`/conteudos/novo?trilha=${id}`} className="font-medium text-accent hover:underline">Cadastre um conteúdo nesta trilha</Link>.
-                </p>
-              )}
-            </div>}
-          </div>
-        ))}
+                    </ol>
 
-        {outside.length > 0 && (
-          <Alert tone="brand">
-            {outside.length === 1 ? "1 conteúdo desta trilha ainda não está" : `${outside.length} conteúdos desta trilha ainda não estão`} em nenhum módulo:{" "}
-            {outside.map((o) => o.title).join(", ")}.
-          </Alert>
-        )}
+                    {canEdit && canCreateContent && (
+                      <div className="border-t border-line bg-bg/60 px-4 py-2.5">
+                        <NewContentButton moduleId={m.id} compact />
+                      </div>
+                    )}
+                  </div>
+                ))}
 
-        {canEdit && <Card title="Novo módulo" icon={Plus}>
-          <ActionForm action={addModule} resetOnSuccess className="sm:grid-cols-[1fr_2fr_auto] sm:items-end">
-            <input type="hidden" name="track_id" value={id} />
-            <Field label="Nome" htmlFor="new-mod-title">
-              <Input id="new-mod-title" name="title" required minLength={2} maxLength={120} />
-            </Field>
-            <Field label="Descrição (opcional)" htmlFor="new-mod-desc">
-              <Input id="new-mod-desc" name="description" maxLength={1000} />
-            </Field>
-            <SubmitButton variant="secondary">Criar módulo</SubmitButton>
-          </ActionForm>
-        </Card>}
-      </section>
-
-      {canEdit && (
-        <section className="grid gap-4">
-          <h2 className="flex items-center gap-2 text-lg font-semibold"><Settings2 size={19} className="text-icon" aria-hidden /> Dados e público</h2>
-          <Card>
-            <TrackForm action={saveTrack} track={track} rules={(rules ?? []) as AudienceRule[]} structure={structure} />
-          </Card>
-        </section>
-      )}
+                {outside.length > 0 && (
+                  <Card
+                    title="Conteúdos desta trilha fora dos módulos"
+                    description="Não aparecem para os colaboradores até entrarem num módulo."
+                    icon={FilePlus2}
+                    flush
+                  >
+                    <ul className="divide-y divide-line">
+                      {outside.map((o) => (
+                        <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
+                          <span className="flex min-w-0 items-center gap-2">
+                            <span className="truncate text-[14px] font-medium">{o.title}</span>
+                            <Badge tone={KIND_TONE[o.kind]}>{KIND_LABEL[o.kind]}</Badge>
+                            {o.status !== "publicado" && <Badge tone={PUBLISH_TONE[o.status as keyof typeof PUBLISH_TONE]}>{PUBLISH_LABEL[o.status as keyof typeof PUBLISH_LABEL]}</Badge>}
+                          </span>
+                          {canEdit && moduleOptions.length > 0 && <PlaceContent trackId={id} contentId={o.id} modules={moduleOptions} />}
+                        </li>
+                      ))}
+                    </ul>
+                  </Card>
+                )}
+              </>
+            ),
+          },
+          ...(canEdit
+            ? [
+                {
+                  key: "modulo",
+                  label: "Novo módulo",
+                  icon: <Plus size={16} aria-hidden />,
+                  content: (
+                    <Card title="Novo módulo" description="O módulo entra no fim da trilha; depois é possível reordenar na Estrutura." icon={Plus}>
+                      <NewModuleForm trackId={id} />
+                    </Card>
+                  ),
+                } satisfies TabDef,
+              ]
+            : []),
+          ...(canCreateContent && formData
+            ? [
+                {
+                  key: "conteudo",
+                  label: "Novo conteúdo",
+                  icon: <FilePlus2 size={16} aria-hidden />,
+                  content: (
+                    <Card title="Novo conteúdo nesta trilha" description="Crie como rascunho e publique quando estiver pronto. Ele pertence só a esta trilha." icon={FilePlus2}>
+                      <ContentForm
+                        action={saveContent}
+                        rules={[]}
+                        structure={structure}
+                        owners={formData.owners}
+                        categories={formData.categories}
+                        tracks={formData.tracks}
+                        defaultTrackId={id}
+                        inTrack={{ tab: "conteudo", extra: canEdit ? <ModulePicker modules={moduleOptions} /> : undefined }}
+                      />
+                    </Card>
+                  ),
+                } satisfies TabDef,
+              ]
+            : []),
+          ...(canEdit
+            ? [
+                {
+                  key: "dados",
+                  label: "Dados e público",
+                  icon: <Settings2 size={16} aria-hidden />,
+                  content: (
+                    <Card>
+                      <TrackForm action={saveTrack} track={track} rules={(rules ?? []) as AudienceRule[]} structure={structure} />
+                    </Card>
+                  ),
+                } satisfies TabDef,
+              ]
+            : []),
+        ]}
+      />
     </>
   );
 }
