@@ -65,6 +65,7 @@ export default async function AreasPage() {
                 <div key={a.id} className="rounded-xl border border-line bg-surface p-4">
                   <InlineEditor
                     canEdit={canEdit}
+                    title={`Editar área: ${a.name}`}
                     actions={
                       canDelete && positions === 0 && people === 0 && (
                         <ActionButton
@@ -83,7 +84,7 @@ export default async function AreasPage() {
                     summary={
                       <div className="min-w-0">
                         <p className="flex flex-wrap items-center gap-2 font-semibold">
-                          {a.name} {!a.active && <Badge>Inativa</Badge>}
+                          {a.name} {!a.active && <Badge tone="silver">Inativa</Badge>}
                         </p>
                         <p className="text-[12.5px] tabular-nums text-muted">
                           {positions} {positions === 1 ? "cargo" : "cargos"} · {people} {people === 1 ? "colaborador" : "colaboradores"}

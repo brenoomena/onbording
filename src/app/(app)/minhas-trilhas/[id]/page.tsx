@@ -4,7 +4,7 @@ import { Markdown } from "@/components/markdown";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProgressBar } from "@/components/progress-bar";
-import { Badge, EmptyState, PageHeader, cx, formatDate } from "@/components/ui";
+import { Badge, EmptyState, PageHeader, cx, formatDate, ENROLLMENT_TONE } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { ENROLLMENT_LABEL, KIND_LABEL, isOverdue, itemStates } from "@/lib/learning";
 import { loadEnrollmentsOf, loadProgressOf } from "@/lib/my-learning";
@@ -56,7 +56,7 @@ export default async function MinhaTrilhaPage({ params }: { params: Promise<{ id
         <div className="grid gap-3 rounded-xl border border-line bg-surface p-4 sm:grid-cols-[1fr_auto] sm:items-center">
           <ProgressBar value={Number(enrollment.progress_percent)} label="Seu progresso" />
           <div className="flex flex-wrap gap-2 text-[13px]">
-            <Badge tone={isOverdue(enrollment.due_date, enrollment.status) ? "danger" : enrollment.status === "concluida" ? "ok" : "neutral"}>
+            <Badge tone={isOverdue(enrollment.due_date, enrollment.status) ? "danger" : ENROLLMENT_TONE[enrollment.status]}>
               {isOverdue(enrollment.due_date, enrollment.status) ? "Em atraso" : ENROLLMENT_LABEL[enrollment.status]}
             </Badge>
             {enrollment.due_date && <span className="text-muted">Prazo {formatDate(enrollment.due_date)}</span>}

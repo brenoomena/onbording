@@ -1,7 +1,7 @@
 import { UserRound } from "lucide-react";
 import type { Metadata } from "next";
 import { ActionForm, SubmitButton } from "@/components/forms";
-import { Card, Field, Input, PageHeader, StatusBadge, formatDate } from "@/components/ui";
+import { Card, Field, Input, PageHeader, StatusBadge, formatDate, LevelBadge } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { PROFILE_SELECT, type ProfileRow } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
@@ -31,12 +31,12 @@ export default async function MeuPerfilPage() {
               ["Perfil de acesso", p.role?.name],
               ["Área", p.area?.name],
               ["Cargo", p.position?.name],
-              ["Nível", p.level?.name],
+              ["Nível", p.level?.name ? <LevelBadge name={p.level.name} /> : null],
               ["Supervisor", p.supervisor?.full_name],
               ["Admissão", formatDate(p.admission_date)],
               ["Início do onboarding", formatDate(p.onboarding_start_date)],
             ].map(([k, v]) => (
-              <div key={k} className="grid gap-0.5">
+              <div key={String(k)} className="grid gap-0.5">
                 <dt className="text-[12.5px] text-muted">{k}</dt>
                 <dd className="font-medium break-words">{v || "Não definido"}</dd>
               </div>

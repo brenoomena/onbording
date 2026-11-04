@@ -7,7 +7,7 @@ import { visibleMenu } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { resolveTheme } from "@/lib/theme-tokens";
 
-export default async function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({ children, modal }: { children: React.ReactNode; modal: React.ReactNode }) {
   const me = await requireUser();
   const groups = visibleMenu(me.permissions, isAdmin(me));
 
@@ -29,6 +29,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       user={{ name: me.profile.full_name, role: me.profile.role.name, avatarPath: me.profile.avatar_path }}
       logo={logo}
       compact={jar.get(MENU_COOKIE)?.value === "compacto"}
+      modal={modal}
     >
       {children}
     </AppShell>

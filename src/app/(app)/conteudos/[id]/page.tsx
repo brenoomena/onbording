@@ -42,7 +42,7 @@ export default async function ConteudoPage({ params, searchParams }: { params: P
         title={c.title}
         actions={
           <div className="flex flex-wrap items-start gap-2">
-            <Link href={`/estudar/${c.id}?previa=1`} className={buttonVariants.secondary}>
+            <Link href={`/conteudos/${c.id}/ver`} className={buttonVariants.secondary}>
               <Eye size={16} aria-hidden /> Ver como colaborador
             </Link>
             {usedIn.length === 0 && can(me, P.conteudosExcluir) && (
@@ -82,6 +82,7 @@ export default async function ConteudoPage({ params, searchParams }: { params: P
           categories={categories}
           tracks={tracks}
           readOnly={!canEdit}
+          modulesCount={usedIn.filter((m) => m.track.id === c.track_id).length}
         />
       </Card>
     </>

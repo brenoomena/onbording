@@ -157,12 +157,12 @@ function Preview({ colors, mode }: { colors: Record<TokenKey, string>; mode: Mod
           })}
         </div>
         <div className="grid content-start gap-2.5 p-3">
-          <div className="rounded-lg border border-line bg-surface p-2.5">
+          <div className="rounded-lg border border-line bg-surface bg-[linear-gradient(115deg,rgb(var(--header-bg)),rgb(var(--surface)/0)_62%)] p-2.5">
             <span className="inline-flex items-center gap-1 rounded-full border border-line px-1.5 text-[8.5px] text-muted">
               <span className="h-1 w-1 rounded-full bg-brand" /> Gestão
             </span>
             <p className="mt-1 flex items-center gap-1.5 text-[14px] font-bold text-heading">
-              <span className="grid h-6 w-6 place-items-center rounded-md bg-accent-soft text-icon"><Route size={13} aria-hidden /></span>
+              <span className="grid h-6 w-6 place-items-center rounded-md bg-icon-bg text-icon"><Route size={13} aria-hidden /></span>
               Trilhas
             </p>
             <p className="text-[10px] text-muted">Subtítulo e textos de apoio</p>
@@ -182,6 +182,10 @@ function Preview({ colors, mode }: { colors: Record<TokenKey, string>; mode: Mod
             <p className="flex items-center justify-between px-2 py-1.5 text-[10.5px]">
               <span className="flex items-center gap-1"><BookOpenCheck size={11} className="text-icon" aria-hidden /> Onboarding Comercial</span>
               <span className="text-accent underline">Abrir</span>
+            </p>
+            <p className="flex items-center justify-between border-t border-line bg-accent-soft px-2 py-1.5 text-[10.5px] text-accent">
+              <span>Item selecionado</span>
+              <span className="text-[9px]">Destaque suave</span>
             </p>
           </div>
           <div className="flex gap-1.5">

@@ -1,7 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { revalidatePath } from "@/lib/revalidate";
+
 import { denyUnless, denyUnlessAdmin, requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/errors";
@@ -20,7 +20,7 @@ export async function saveContent(_: ActionState, fd: FormData): Promise<ActionS
   // Trilha a que o conteúdo pertence; sem trilha, só como material da Biblioteca.
   const trackRaw = String(fd.get("track_id") ?? "");
   const trackId = /^[0-9a-f-]{36}$/i.test(trackRaw) ? trackRaw : null;
-  if (!trackId && !isLibrary) {
+  if (!trackId && !isLibrary && !id) {
     return { error: "Escolha a trilha do conteúdo.", fieldErrors: { track_id: "Escolha a trilha ou marque como material da Biblioteca." } };
   }
   const rules = isLibrary ? parseAudience(fd) : [];
@@ -40,14 +40,23 @@ export async function saveContent(_: ActionState, fd: FormData): Promise<ActionS
     is_library: isLibrary,
     track_id: trackId,
   };
+  // Conteúdo existente: a trilha só muda pelo "Mover de trilha" (ação própria).
+  const update: Partial<typeof row> = { ...row };
+  delete update.track_id;
 
   const supabase = await createClient();
   let contentId = id;
   let previousFile: string | null = null;
   if (id) {
-    const { data: before } = await supabase.from("contents").select("storage_path").eq("id", id).maybeSingle();
+    const { data: before } = await supabase.from("contents").select("storage_path, track_id").eq("id", id).maybeSingle();
     previousFile = before?.storage_path ?? null;
-    const { error } = await supabase.from("contents").update(row).eq("id", id);
+    if (!before?.track_id && !isLibrary) {
+      return {
+        error: "Este conteúdo não tem trilha, então precisa continuar na Biblioteca. Para colocá-lo numa trilha, use Mover de trilha.",
+        fieldErrors: { is_library: "Sem trilha, o conteúdo fica na Biblioteca." },
+      };
+    }
+    const { error } = await supabase.from("contents").update(update).eq("id", id);
     if (error) return { error: friendlyError(error) };
   } else {
     const { data, error } = await supabase.from("contents").insert(row).select("id").single();
@@ -67,11 +76,11 @@ export async function saveContent(_: ActionState, fd: FormData): Promise<ActionS
     await supabase.storage.from("conteudos").remove([previousFile]);
   }
 
-  revalidatePath("/conteudos");
-  revalidatePath(`/conteudos/${contentId}`);
-  if (trackId) revalidatePath(`/trilhas/${trackId}`);
-  revalidatePath("/materiais");
-  if (!id) redirect(`/conteudos/${contentId}?aviso=criado`);
+  await revalidatePath("/conteudos");
+  await revalidatePath(`/conteudos/${contentId}`);
+  if (trackId) await revalidatePath(`/trilhas/${trackId}`);
+  await revalidatePath("/materiais");
+  if (!id) return { redirectTo: `/conteudos/${contentId}?aviso=criado` };
   const msg = { publicado: "Conteúdo publicado. Já aparece para o público dele.", rascunho: "Salvo como rascunho. Ainda não aparece para os colaboradores.", arquivado: "Conteúdo arquivado." };
   return { ok: msg[d.status] };
 }
@@ -93,9 +102,43 @@ export async function deleteContent(_: ActionState, fd: FormData): Promise<Actio
   }
   if (!data?.length) return { error: "Conteúdo não encontrado." };
   if (c?.storage_path) await supabase.storage.from("conteudos").remove([c.storage_path]);
-  revalidatePath("/conteudos");
-  revalidatePath("/trilhas", "layout");
+  await revalidatePath("/conteudos");
+  await revalidatePath("/trilhas", "layout");
   // Excluído na própria página do conteúdo: volta para a lista.
-  if (fd.get("voltar") === "1") redirect("/conteudos");
+  if (fd.get("voltar") === "1") return { redirectTo: "/conteudos" };
   return { ok: "Conteúdo excluído." };
+}
+
+/**
+ * Move o conteúdo para outra trilha (ou para a Biblioteca). Ele sai dos
+ * módulos da trilha antiga; nunca fica em duas trilhas ao mesmo tempo.
+ */
+export async function moveContent(_: ActionState, fd: FormData): Promise<ActionState> {
+  const denied = await denyUnless(P.conteudosEditar);
+  if (denied) return denied;
+  const id = String(fd.get("id") ?? "");
+  const target = String(fd.get("track_id") ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return { error: "Conteúdo inválido." };
+  const toLibrary = target === "biblioteca";
+  if (!toLibrary && !/^[0-9a-f-]{36}$/i.test(target)) {
+    return { error: "Escolha a trilha de destino.", fieldErrors: { track_id: "Escolha a trilha de destino." } };
+  }
+  const supabase = await createClient();
+  const { data: before } = await supabase.from("contents").select("track_id").eq("id", id).maybeSingle();
+  const { data: removed, error } = await supabase.rpc("move_content_to_track", { p_content: id, p_track: toLibrary ? null : target });
+  if (error) return { error: friendlyError(error) };
+
+  await revalidatePath("/conteudos");
+  await revalidatePath(`/conteudos/${id}`);
+  if (before?.track_id) await revalidatePath(`/trilhas/${before.track_id}`);
+  if (!toLibrary) await revalidatePath(`/trilhas/${target}`);
+  await revalidatePath("/materiais");
+  await revalidatePath("/minhas-trilhas", "layout");
+  const n = Number(removed ?? 0);
+  const where = toLibrary ? "para a Biblioteca" : "para a nova trilha";
+  return {
+    ok: n
+      ? `Conteúdo movido ${where}. Ele saiu de ${n} ${n === 1 ? "módulo" : "módulos"} da trilha anterior; inclua-o num módulo da nova trilha para os colaboradores verem.`
+      : `Conteúdo movido ${where}.${toLibrary ? "" : " Inclua-o num módulo da trilha para os colaboradores verem."}`,
+  };
 }

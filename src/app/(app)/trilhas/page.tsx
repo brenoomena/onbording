@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ActionButton } from "@/components/forms";
 import { plainText } from "@/components/markdown";
 import { ProgressBar } from "@/components/progress-bar";
-import { Badge, EmptyState, IconLink, LinkButton, PageHeader, RowActions, StatCard, Table } from "@/components/ui";
+import { Badge, EmptyState, IconLink, LinkButton, PageHeader, RowActions, StatCard, Table, PUBLISH_TONE } from "@/components/ui";
 import { can, requirePermission } from "@/lib/auth";
 import { PUBLISH_LABEL, isOverdue, type EnrollmentStatus, type PublishStatus } from "@/lib/learning";
 import { P } from "@/lib/permissions";
@@ -24,7 +24,7 @@ interface Row {
   enrollments: { status: EnrollmentStatus; progress_percent: number; due_date: string | null }[];
 }
 
-const tone = { rascunho: "warn", publicado: "ok", arquivado: "neutral" } as const;
+const tone = PUBLISH_TONE;
 
 export default async function TrilhasPage() {
   const me = await requirePermission(P.trilhasVer);
@@ -111,7 +111,7 @@ export default async function TrilhasPage() {
                   </td>
                   <td>
                     <RowActions>
-                      <IconLink href={`/minhas-trilhas/${t.id}`} label="Ver como colaborador" icon={Eye} />
+                      <IconLink href={`/trilhas/${t.id}/ver`} label="Ver trilha" icon={Eye} />
                       <IconLink href={`/trilhas/${t.id}`} label={canEdit ? "Editar trilha" : "Abrir trilha"} icon={Pencil} />
                       {canEnroll && <IconLink href={`/trilhas/${t.id}/matriculas`} label="Matrículas e progresso" icon={Users} />}
                       {canDelete && (

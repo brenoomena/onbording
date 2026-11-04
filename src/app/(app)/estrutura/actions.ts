@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath } from "@/lib/revalidate";
+
 import { denyUnless, denyUnlessAdmin, requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/errors";
@@ -17,9 +18,9 @@ function kindOf(fd: FormData): Kind {
   return k as Kind;
 }
 
-function refresh(kind: Kind) {
-  revalidatePath(`/estrutura/${kind}`);
-  revalidatePath("/colaboradores");
+async function refresh(kind: Kind) {
+  await revalidatePath(`/estrutura/${kind}`);
+  await revalidatePath("/colaboradores");
 }
 
 // ------------------------------------------------------------------ áreas
@@ -35,7 +36,7 @@ export async function saveArea(_: ActionState, fd: FormData): Promise<ActionStat
     ? await supabase.from("areas").update(parsed.data).eq("id", id)
     : await supabase.from("areas").insert(parsed.data);
   if (error) return { error: friendlyError(error) };
-  refresh("areas");
+  await refresh("areas");
   return { ok: id ? "Área atualizada." : `Área "${parsed.data.name}" criada.` };
 }
 
@@ -56,7 +57,7 @@ export async function saveLevel(_: ActionState, fd: FormData): Promise<ActionSta
     const { error } = await supabase.from("levels").insert({ ...parsed.data, rank: (last?.rank ?? 0) + 1 });
     if (error) return { error: friendlyError(error) };
   }
-  refresh("niveis");
+  await refresh("niveis");
   return { ok: id ? "Nível atualizado." : `Nível "${parsed.data.name}" criado no topo da hierarquia.` };
 }
 
@@ -69,7 +70,7 @@ export async function moveLevel(_: ActionState, fd: FormData): Promise<ActionSta
     p_direction: Number(fd.get("direction")),
   });
   if (error) return { error: friendlyError(error) };
-  refresh("niveis");
+  await refresh("niveis");
   return {};
 }
 
@@ -125,7 +126,7 @@ export async function savePosition(_: ActionState, fd: FormData): Promise<Action
     if (error) return { error: friendlyError(error) };
   }
 
-  refresh("cargos");
+  await refresh("cargos");
   return { ok: id ? "Cargo atualizado." : `Cargo "${parsed.data.name}" criado.` };
 }
 
@@ -139,7 +140,7 @@ export async function toggleActive(_: ActionState, fd: FormData): Promise<Action
   const supabase = await createClient();
   const { error } = await supabase.from(TABLES[kind]).update({ active }).eq("id", String(fd.get("id")));
   if (error) return { error: friendlyError(error) };
-  refresh(kind);
+  await refresh(kind);
   return {};
 }
 
@@ -151,6 +152,6 @@ export async function removeItem(_: ActionState, fd: FormData): Promise<ActionSt
   const { data, error } = await supabase.from(TABLES[kind]).delete().eq("id", String(fd.get("id"))).select("id");
   if (error) return { error: friendlyError(error) };
   if (!data?.length) return { error: "Registro não encontrado." };
-  refresh(kind);
+  await refresh(kind);
   return {};
 }

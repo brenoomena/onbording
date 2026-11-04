@@ -2,7 +2,7 @@ import { ArrowDown, ArrowUp, Layers, Plus, Trash2 } from "lucide-react";
 import type { Metadata } from "next";
 import { plainText } from "@/components/markdown";
 import { ActionButton, ActionForm, SubmitButton } from "@/components/forms";
-import { Badge, Card, EmptyState, Field, Input, PageHeader } from "@/components/ui";
+import { Badge, Card, EmptyState, Field, Input, PageHeader, LevelBadge } from "@/components/ui";
 import { RichTextarea } from "@/components/rich-textarea";
 import { can, requirePermission } from "@/lib/auth";
 import { ESTRUTURA_ANY, P } from "@/lib/permissions";
@@ -68,7 +68,7 @@ export default async function NiveisPage() {
               return (
                 <li key={l.id} className="grid grid-cols-[auto_1fr] items-start gap-3 rounded-xl border border-line bg-surface p-4">
                   <div className="flex flex-col items-center gap-1">
-                    <span className="grid h-8 w-8 place-items-center rounded-full bg-accent-soft font-mono text-[13px] font-semibold text-accent">
+                    <span className="grid h-8 w-8 place-items-center rounded-full bg-icon-bg font-mono text-[13px] font-semibold text-icon">
                       {i + 1}
                     </span>
                     <div className="flex flex-col">
@@ -82,6 +82,7 @@ export default async function NiveisPage() {
                   </div>
                   <InlineEditor
                     canEdit={canEdit}
+                    title={`Editar nível: ${l.name}`}
                     actions={
                       canDelete && people === 0 && positions === 0 && (
                         <ActionButton
@@ -100,7 +101,7 @@ export default async function NiveisPage() {
                     summary={
                       <div className="min-w-0">
                         <p className="flex flex-wrap items-center gap-2 font-semibold">
-                          {l.name} {!l.active && <Badge>Inativo</Badge>}
+                          <LevelBadge name={l.name} /> {!l.active && <Badge tone="silver">Inativo</Badge>}
                         </p>
                         <p className="text-[12.5px] tabular-nums text-muted">
                           Usado em {positions} {positions === 1 ? "cargo" : "cargos"} · {people} {people === 1 ? "colaborador" : "colaboradores"}

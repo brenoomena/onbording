@@ -231,7 +231,7 @@ function Block({ icon, title, hint, children }: { icon: ReactNode; title: string
   return (
     <section className="grid gap-4 rounded-xl border border-line p-4 sm:p-5">
       <header className="flex items-start gap-3">
-        <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-icon">{icon}</span>
+        <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-icon-bg text-icon">{icon}</span>
         <div>
           <h2 className="text-[15px] font-semibold">{title}</h2>
           {hint && <p className="text-[12.5px] text-muted">{hint}</p>}

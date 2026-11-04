@@ -259,6 +259,43 @@ run("Etapa 2 · trilhas, conteúdos, matrículas e progresso", () => {
     await expect(asUser(db.pool, admin, (q) => q("delete from tracks where id = $1", [other]))).rejects.toThrow(/foreign key/);
   });
 
+  it("mover de trilha: sai dos módulos da trilha antiga e nunca fica em duas trilhas", async () => {
+    const { a, b, modA, c } = await asUser(db.pool, admin, async (q) => {
+      const ta = (await q("insert into tracks (name) values ('Origem') returning id")).rows[0].id as string;
+      const tb = (await q("insert into tracks (name) values ('Destino') returning id")).rows[0].id as string;
+      const m = (await q("insert into modules (track_id, title, position) values ($1, 'Mod origem', 1) returning id", [ta])).rows[0].id as string;
+      const cc = (await q("insert into contents (title, kind, url, track_id) values ('Viajante', 'link', 'https://x.com', $1) returning id", [ta])).rows[0].id as string;
+      await q("insert into module_items (module_id, content_id, position) values ($1, $2, 1)", [m, cc]);
+      return { a: ta, b: tb, modA: m, c: cc };
+    });
+    // Sem permissão de editar conteúdos, não move
+    await expect(asUser(db.pool, vendedor, (q) => q("select public.move_content_to_track($1, $2)", [c, b]))).rejects.toThrow(/permissão/);
+    const moved = await asUser(db.pool, admin, (q) => q("select public.move_content_to_track($1, $2) n", [c, b]));
+    expect(moved.rows[0].n).toBe(1);
+    const after = await asSystem(db.pool, (q) =>
+      q("select track_id, (select count(*)::int from module_items where content_id = $1) uses from contents where id = $1", [c]),
+    );
+    expect(after.rows[0]).toMatchObject({ track_id: b, uses: 0 });
+    // Não entra mais nos módulos da trilha antiga
+    await expect(
+      asUser(db.pool, admin, (q) => q("insert into module_items (module_id, content_id, position) values ($1, $2, 1)", [modA, c])),
+    ).rejects.toThrow(/pertence a outra trilha/);
+    // Para a Biblioteca: fica sem trilha e marcado como material de consulta
+    await asUser(db.pool, admin, (q) => q("select public.move_content_to_track($1, null)", [c]));
+    const lib = await asSystem(db.pool, (q) => q("select track_id, is_library from contents where id = $1", [c]));
+    expect(lib.rows[0]).toMatchObject({ track_id: null, is_library: true });
+    // Trilha arquivada não recebe conteúdo
+    await asUser(db.pool, admin, (q) => q("update tracks set status = 'arquivado' where id = $1", [a]));
+    await expect(asUser(db.pool, admin, (q) => q("select public.move_content_to_track($1, $2)", [c, a]))).rejects.toThrow(/arquivada/);
+    // Quem edita conteúdos mas não trilhas não tira conteúdo de módulos
+    await asSystem(db.pool, (q) =>
+      q("insert into role_permissions (role_id, permission_key) select id, unnest(array['conteudos.ver','conteudos.editar']) from roles where key='supervisor' on conflict do nothing"),
+    );
+    const [ted] = await itemsOf("Técnicas de Vendas");
+    await expect(asUser(db.pool, sup, (q) => q("select public.move_content_to_track($1, $2)", [ted, b]))).rejects.toThrow(/editar trilhas/);
+    await asSystem(db.pool, (q) => q("delete from role_permissions where role_id=(select id from roles where key='supervisor') and permission_key like 'conteudos.%'"));
+  });
+
   // ------------------------------------------------- permissões por ação
 
   it("quem pode criar conteúdo não exclui sem a permissão de excluir", async () => {
@@ -306,6 +343,9 @@ run("Etapa 2 · trilhas, conteúdos, matrículas e progresso", () => {
     await expect(
       asUser(db.pool, admin, (q) => q(`update app_settings set theme = '{"light":{"position":"#000000"}}'::jsonb`)),
     ).rejects.toThrow(/check constraint/);
+    // Fundo dos ícones e fundo do título são cores próprias
+    const ok = await asSystem(db.pool, (q) => q(`select private.valid_theme('{"light":{"icon-bg":"#d4edfc","header-bg":"#e9eff7"}}'::jsonb) v`));
+    expect(ok.rows[0].v).toBe(true);
     await expect(
       asUser(db.pool, admin, (q) => q("update app_settings set logo_path = '../../segredo.png'")),
     ).rejects.toThrow(/check constraint/);

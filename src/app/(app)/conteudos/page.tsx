@@ -2,12 +2,13 @@ import { Eye, FileStack, Filter, LibraryBig, Pencil, Plus, Route, Search, Trash2
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ActionButton } from "@/components/forms";
-import { Badge, Card, EmptyState, IconLink, Input, LinkButton, PageHeader, RowActions, Select, Table, buttonVariants, formatDate } from "@/components/ui";
+import { Badge, Card, EmptyState, IconLink, Input, LinkButton, PageHeader, RowActions, Select, Table, buttonVariants, formatDate, KIND_TONE, PUBLISH_TONE } from "@/components/ui";
 import { can, requirePermission } from "@/lib/auth";
 import { KIND_LABEL, PUBLISH_LABEL, type ContentKind, type PublishStatus } from "@/lib/learning";
 import { P } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { deleteContent } from "./actions";
+import { MoveContent } from "./move-content";
 
 export const metadata: Metadata = { title: "Conteúdos" };
 
@@ -24,7 +25,6 @@ interface Row {
   module_items: { count: number }[];
 }
 
-const statusTone = { rascunho: "warn", publicado: "ok", arquivado: "neutral" } as const;
 const LIBRARY = "biblioteca";
 
 export default async function ConteudosPage({
@@ -172,7 +172,7 @@ export default async function ConteudosPage({
                             {[c.category, c.external_platform].filter(Boolean).join(" · ") || " "}
                           </p>
                         </td>
-                        <td className="text-[13px]">{KIND_LABEL[c.kind]}</td>
+                        <td><Badge tone={KIND_TONE[c.kind]}>{KIND_LABEL[c.kind]}</Badge></td>
                         <td className="text-[13px]">
                           <span className="flex flex-wrap items-center gap-1">
                             {isLib ? null : inModules ? <span>Em módulo</span> : <span className="text-warn">Fora dos módulos</span>}
@@ -180,11 +180,22 @@ export default async function ConteudosPage({
                           </span>
                         </td>
                         <td className="text-[13px] tabular-nums">{formatDate(c.updated_at)}</td>
-                        <td><Badge tone={statusTone[c.status]}>{PUBLISH_LABEL[c.status]}</Badge></td>
+                        <td><Badge tone={PUBLISH_TONE[c.status]} dot>{PUBLISH_LABEL[c.status]}</Badge></td>
                         <td>
                           <RowActions>
-                            <IconLink href={`/estudar/${c.id}?previa=1`} label="Ver como colaborador" icon={Eye} />
+                            <IconLink href={`/conteudos/${c.id}/ver`} label="Ver como colaborador" icon={Eye} />
                             <IconLink href={`/conteudos/${c.id}`} label={canEdit ? "Editar conteúdo" : "Abrir conteúdo"} icon={Pencil} />
+                            {canEdit && (
+                              <MoveContent
+                                iconOnly
+                                contentId={c.id}
+                                contentTitle={c.title}
+                                currentTrackId={c.track_id}
+                                currentTrackName={c.track_id ? trackName.get(c.track_id) ?? null : null}
+                                modulesCount={c.module_items[0]?.count ?? 0}
+                                tracks={tracks}
+                              />
+                            )}
                             {canDelete && (
                               <ActionButton
                                 action={deleteContent}

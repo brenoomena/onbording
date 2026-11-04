@@ -121,3 +121,18 @@ describe("tamanho das logos", () => {
     expect(sanitizeSizes({ logo: { w: 175, h: 44 }, symbol: { w: 99, h: 99 }, outro: { w: 1, h: 1 } })).toEqual({ logo: { w: 175, h: 44 } });
   });
 });
+
+import { levelTone } from "@/lib/tags";
+
+describe("cores dos níveis", () => {
+  it("Júnior azul, Pleno prata, Sênior dourado (com ou sem acento)", () => {
+    expect(levelTone("Júnior")).toBe("blue");
+    expect(levelTone("junior")).toBe("blue");
+    expect(levelTone("Analista Jr")).toBe("blue");
+    expect(levelTone("Pleno")).toBe("silver");
+    expect(levelTone("Sênior")).toBe("gold");
+    expect(levelTone("SENIOR")).toBe("gold");
+    expect(levelTone("Especialista")).toBe("violet");
+    expect(levelTone("Trainee")).toBe("indigo");
+  });
+});

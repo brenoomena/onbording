@@ -4,7 +4,7 @@ import { plainText } from "@/components/markdown";
 import Link from "next/link";
 import { ActionButton } from "@/components/forms";
 import { ProgressBar } from "@/components/progress-bar";
-import { Badge, EmptyState, PageHeader, formatDate } from "@/components/ui";
+import { Badge, EmptyState, PageHeader, formatDate, ENROLLMENT_TONE } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { ENROLLMENT_LABEL, isOverdue } from "@/lib/learning";
 import { loadEnrollmentsOf } from "@/lib/my-learning";
@@ -40,7 +40,7 @@ export default async function MinhasTrilhasPage() {
           <h2 className="font-semibold">{e.track.name}</h2>
           <div className="flex gap-1.5">
             {e.track.is_mandatory && <Badge tone="brand">Obrigatória</Badge>}
-            <Badge tone={overdue ? "danger" : e.status === "concluida" ? "ok" : "neutral"}>{overdue ? "Em atraso" : ENROLLMENT_LABEL[e.status]}</Badge>
+            <Badge tone={overdue ? "danger" : ENROLLMENT_TONE[e.status]}>{overdue ? "Em atraso" : ENROLLMENT_LABEL[e.status]}</Badge>
           </div>
         </div>
         {e.track.description && <p className="line-clamp-2 text-[13px] text-muted">{plainText(e.track.description)}</p>}

@@ -1,45 +1,56 @@
 "use client";
 
-import { Pencil, X } from "lucide-react";
-import type { ReactNode } from "react";
+import { Pencil } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { ModalPanel } from "@/components/modal-panel";
+import { iconButtonClass } from "@/components/ui";
 
 /**
- * Linha da lista com edição no próprio lugar. As ações rápidas (excluir…)
- * ficam ao lado do botão Editar; sem permissão de editar, a linha só mostra
- * o resumo e as ações permitidas.
+ * Linha da lista com o botão Editar, que abre o formulário numa janela à
+ * direita. As ações rápidas (excluir…) ficam ao lado; sem permissão de
+ * editar, a linha só mostra o resumo e as ações permitidas.
  */
 export function InlineEditor({
   summary,
   children,
   actions,
   canEdit = true,
+  title = "Editar",
 }: {
   summary: ReactNode;
   children: ReactNode;
   actions?: ReactNode;
   canEdit?: boolean;
+  /** Título da janela de edição. */
+  title?: string;
 }) {
-  if (!canEdit) {
-    return (
-      <div className="flex items-center justify-between gap-3">
-        {summary}
-        {actions && <div className="flex shrink-0 items-center gap-0.5">{actions}</div>}
-      </div>
-    );
-  }
+  const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   return (
-    <div className="relative">
-      <details className="group">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 pr-10 [&::-webkit-details-marker]:hidden">
-          {summary}
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-[12.5px] font-semibold text-accent group-open:bg-accent-soft">
-            <span className="inline-flex items-center gap-1 group-open:hidden"><Pencil size={14} aria-hidden /> Editar</span>
-            <span className="hidden items-center gap-1 group-open:inline-flex"><X size={14} aria-hidden /> Fechar</span>
-          </span>
-        </summary>
-        <div className="mt-3 rounded-lg border border-line bg-bg p-4">{children}</div>
-      </details>
-      {actions && <div className="absolute right-0 top-0 flex items-center gap-0.5">{actions}</div>}
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0 flex-1">{summary}</div>
+      <div className="flex shrink-0 items-center gap-0.5">
+        {canEdit && (
+          <button type="button" onClick={() => setOpen(true)} title={title} aria-label={title} className={iconButtonClass("brand")}>
+            <Pencil size={16} strokeWidth={1.9} aria-hidden />
+          </button>
+        )}
+        {actions}
+      </div>
+      {open &&
+        mounted &&
+        createPortal(
+          <ModalPanel label={title} onClose={() => setOpen(false)}>
+            <section className="grid gap-4 rounded-2xl border border-line bg-surface p-5">
+              <div className="border-b border-line pb-3">{summary}</div>
+              {children}
+            </section>
+          </ModalPanel>,
+          document.body,
+        )}
     </div>
   );
 }

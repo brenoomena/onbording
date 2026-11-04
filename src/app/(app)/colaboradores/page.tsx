@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Avatar } from "@/components/avatar";
 import { ActionButton } from "@/components/forms";
-import { Card, EmptyState, IconLink, Input, LinkButton, PageHeader, RowActions, Select, StatusBadge, Table, buttonVariants, formatDate, formatDateTime } from "@/components/ui";
+import { Card, EmptyState, IconLink, Input, LinkButton, PageHeader, RowActions, Select, StatusBadge, Table, buttonVariants, formatDate, formatDateTime, LevelBadge } from "@/components/ui";
 import { can, isAdmin, requirePermission } from "@/lib/auth";
 import { P } from "@/lib/permissions";
 import { PROFILE_SELECT, loadStructure, loadSupervisorOptions, type ProfileRow } from "@/lib/queries";
@@ -207,7 +207,8 @@ export default async function ColaboradoresPage({ searchParams }: { searchParams
                   </div>
                 </td>
                 <td className="text-[13px]">
-                  {[p.area?.name, p.position?.name, p.level?.name].filter(Boolean).join(" · ") || <span className="text-muted">Não definido</span>}
+                  {[p.area?.name, p.position?.name].filter(Boolean).join(" · ") || (!p.level && <span className="text-muted">Não definido</span>)}
+                  {p.level && <span className="ml-1.5 inline-block align-middle"><LevelBadge name={p.level.name} /></span>}
                 </td>
                 <td className="text-[13px]">{p.supervisor?.full_name ?? <span className="text-muted">—</span>}</td>
                 <td className="text-[13px] tabular-nums">{formatDate(p.admission_date)}</td>

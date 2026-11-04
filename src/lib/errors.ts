@@ -24,6 +24,7 @@ export function friendlyError(err: DbError | null | undefined, fallback = "Não 
         ? err.message
         : "Você não tem permissão para fazer esta alteração.";
     case "P0001":
+    case "P0002":
       return err.message ?? fallback;
     case "PGRST116":
       return "Registro não encontrado ou sem permissão de acesso.";

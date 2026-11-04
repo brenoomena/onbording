@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Avatar } from "@/components/avatar";
 import { ActionButton, PageNotice } from "@/components/forms";
-import { Alert, Badge, Card, PageHeader, StatusBadge, buttonVariants, formatDate, formatDateTime } from "@/components/ui";
+import { Alert, Badge, Card, PageHeader, StatusBadge, buttonVariants, formatDate, formatDateTime, LevelBadge } from "@/components/ui";
 import { can, isAdmin, requirePermission } from "@/lib/auth";
 import { P } from "@/lib/permissions";
 import { PROFILE_SELECT, type ProfileRow } from "@/lib/queries";
@@ -93,12 +93,12 @@ export default async function ColaboradorPage({
               {[
                 ["Área", person.area?.name],
                 ["Cargo", person.position?.name],
-                ["Nível", person.level?.name],
+                ["Nível", person.level?.name ? <LevelBadge name={person.level.name} /> : null],
                 ["Supervisor", person.supervisor?.full_name],
                 ["Admissão", formatDate(person.admission_date)],
                 ["Início do onboarding", formatDate(person.onboarding_start_date)],
               ].map(([k, v]) => (
-                <div key={k} className="grid gap-0.5">
+                <div key={String(k)} className="grid gap-0.5">
                   <dt className="text-[12.5px] text-muted">{k}</dt>
                   <dd className="font-medium">{v || "Não definido"}</dd>
                 </div>
@@ -138,7 +138,7 @@ export default async function ColaboradorPage({
       {isSelf && <Alert tone="brand">Este é o seu cadastro. Por segurança, você não pode alterar o próprio perfil de acesso, suas permissões nem se desativar.</Alert>}
 
       <LearningCard profileId={person.id} canManageTracks={can(me, P.trilhasMatricular)} />
-      <Link href="/colaboradores" className="text-[13px] font-medium text-accent hover:underline">← Voltar para a lista</Link>
+      <Link href="/colaboradores" className="hide-in-modal text-[13px] font-medium text-accent hover:underline">← Voltar para a lista</Link>
     </>
   );
 }

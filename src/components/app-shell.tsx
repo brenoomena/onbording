@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { Avatar } from "@/components/avatar";
+import { NoticeHost } from "@/components/forms";
 import { ModuleIcon } from "@/components/icons";
 import { cx } from "@/components/ui";
 import { sizeStyle, type BrandImage } from "@/lib/branding";
@@ -19,6 +20,8 @@ interface ShellProps {
   logo: { light: BrandImage | null; dark: BrandImage | null; symbolLight: BrandImage | null; symbolDark: BrandImage | null };
   compact: boolean;
   children: ReactNode;
+  /** Janela de ver/editar aberta por cima da página (slot @modal). */
+  modal?: ReactNode;
 }
 
 /**
@@ -26,7 +29,7 @@ interface ShellProps {
  * superior com o módulo atual e área de conteúdo. No celular o menu abre
  * como gaveta.
  */
-export function AppShell({ groups, user, logo, compact: initialCompact, children }: ShellProps) {
+export function AppShell({ groups, user, logo, compact: initialCompact, children, modal }: ShellProps) {
   const pathname = usePathname();
   const [compact, setCompact] = useState(initialCompact);
   const [open, setOpen] = useState(false);
@@ -190,6 +193,8 @@ export function AppShell({ groups, user, logo, compact: initialCompact, children
           <div className="mx-auto grid max-w-[1320px] gap-6 [&>*]:min-w-0">{children}</div>
         </main>
       </div>
+      {modal}
+      <NoticeHost />
     </div>
   );
 }

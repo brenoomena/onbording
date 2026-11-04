@@ -5,7 +5,7 @@ import { plainText } from "@/components/markdown";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ContentViewer, ObjectiveNote, externalHref, type ViewerContent } from "@/components/content-viewer";
 import { StudyTracker } from "@/components/study-tracker";
-import { Badge, EmptyState, Input, buttonVariants, cx } from "@/components/ui";
+import { Badge, EmptyState, Input, buttonVariants, cx, KIND_TONE } from "@/components/ui";
 import { KIND_LABEL } from "@/lib/learning";
 
 export interface Material extends ViewerContent {
@@ -157,7 +157,7 @@ export function MaterialsBrowser({ items, viewed }: { items: Material[]; viewed:
                     </span>
                     <span className="flex items-center gap-1.5">
                       {seen.has(c.id) && <Badge tone="ok">Visto</Badge>}
-                      <Badge>{KIND_LABEL[c.kind]}</Badge>
+                      <Badge tone={KIND_TONE[c.kind]}>{KIND_LABEL[c.kind]}</Badge>
                     </span>
                   </button>
                 </li>

@@ -20,7 +20,7 @@ export function Avatar({ name, path, size = 36, className }: { name: string; pat
     <span
       aria-hidden
       style={style}
-      className={cx("grid shrink-0 select-none place-items-center rounded-full bg-accent-soft font-semibold tracking-wide text-accent", className)}
+      className={cx("grid shrink-0 select-none place-items-center rounded-full bg-icon-bg font-semibold tracking-wide text-icon", className)}
     >
       {initials(name)}
     </span>

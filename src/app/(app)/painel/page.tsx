@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ProgressBar } from "@/components/progress-bar";
 import { Avatar } from "@/components/avatar";
-import { Badge, Card, EmptyState, PageHeader, StatCard, StatusBadge, formatDate } from "@/components/ui";
+import { Badge, Card, EmptyState, PageHeader, StatCard, StatusBadge, formatDate, ENROLLMENT_TONE, LevelBadge } from "@/components/ui";
 import { requirePermission } from "@/lib/auth";
 import { ENROLLMENT_LABEL, isOverdue, todayBR } from "@/lib/learning";
 import { loadEnrollmentsOf, type MyEnrollment } from "@/lib/my-learning";
@@ -30,7 +30,7 @@ function MyTracks({ enrollments }: { enrollments: MyEnrollment[] }) {
             <li key={e.id} className="grid gap-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <Link href={`/minhas-trilhas/${e.track.id}`} className="font-medium hover:text-accent">{e.track.name}</Link>
-                <Badge tone={overdue ? "danger" : e.status === "concluida" ? "ok" : "neutral"}>
+                <Badge tone={overdue ? "danger" : ENROLLMENT_TONE[e.status]}>
                   {overdue ? "Em atraso" : ENROLLMENT_LABEL[e.status]}
                 </Badge>
               </div>
@@ -71,12 +71,12 @@ export default async function PainelPage() {
             {[
               ["Área", profile.area?.name],
               ["Cargo", profile.position?.name],
-              ["Nível", profile.level?.name],
+              ["Nível", profile.level?.name ? <LevelBadge name={profile.level.name} /> : null],
               ["Supervisor", profile.supervisor?.full_name],
               ["Admissão", formatDate(profile.admission_date)],
               ["Início do onboarding", formatDate(profile.onboarding_start_date)],
             ].map(([k, v]) => (
-              <div key={k} className="grid gap-0.5">
+              <div key={String(k)} className="grid gap-0.5">
                 <dt className="text-[12.5px] text-muted">{k}</dt>
                 <dd className="font-medium">{v || "Não definido"}</dd>
               </div>

@@ -4,6 +4,12 @@ export interface ActionState {
   ok?: string;
   error?: string;
   fieldErrors?: Record<string, string>;
+  /**
+   * Para onde ir depois da ação (substitui o endereço atual). Feito no
+   * navegador e não com redirect() do servidor, que trava quando a ação
+   * roda dentro de uma janela de rota interceptada.
+   */
+  redirectTo?: string;
 }
 
 export function fromZod(error: ZodError): ActionState {

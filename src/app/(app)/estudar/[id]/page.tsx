@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { ContentViewer, ObjectiveNote } from "@/components/content-viewer";
 import { StudyTracker } from "@/components/study-tracker";
-import { Alert, Badge, PageHeader, buttonVariants, formatDate } from "@/components/ui";
+import { Alert, Badge, PageHeader, buttonVariants, formatDate, KIND_TONE } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { KIND_LABEL, formatMinutes, itemStates, type ContentRow } from "@/lib/learning";
 import { loadProgressOf } from "@/lib/my-learning";
@@ -85,7 +85,7 @@ export default async function EstudarPage({
         title={content.title}
         description={
           <span className="flex flex-wrap items-center gap-2">
-            <Badge>{KIND_LABEL[content.kind]}</Badge>
+            <Badge tone={KIND_TONE[content.kind]}>{KIND_LABEL[content.kind]}</Badge>
             {content.external_platform && <span>{content.external_platform}</span>}
             {content.estimated_minutes && <span>· cerca de {content.estimated_minutes} min</span>}
             {done && <Badge tone="ok">Concluído em {formatDate(mine?.completed_at)}</Badge>}

@@ -1,7 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { revalidatePath } from "@/lib/revalidate";
+
 import { denyUnless, denyUnlessAdmin, requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -67,8 +67,8 @@ export async function createProfile(_: ActionState, formData: FormData): Promise
     return { error: friendlyError(error) };
   }
 
-  revalidatePath("/colaboradores");
-  redirect(`/colaboradores/${userId}?aviso=convidado`);
+  await revalidatePath("/colaboradores");
+  return { redirectTo: `/colaboradores/${userId}?aviso=convidado` };
 }
 
 export async function updateProfile(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -83,9 +83,9 @@ export async function updateProfile(_: ActionState, formData: FormData): Promise
   if (error) return { error: friendlyError(error) };
   if (!data?.length) return { error: "Você não tem permissão para editar este colaborador." };
 
-  revalidatePath("/colaboradores");
-  revalidatePath(`/colaboradores/${id}`);
-  revalidatePath(`/colaboradores/${id}/editar`);
+  await revalidatePath("/colaboradores");
+  await revalidatePath(`/colaboradores/${id}`);
+  await revalidatePath(`/colaboradores/${id}/editar`);
   return { ok: "Alterações salvas." };
 }
 
@@ -101,8 +101,8 @@ export async function setProfileStatus(_: ActionState, formData: FormData): Prom
   if (error) return { error: friendlyError(error) };
   if (!data?.length) return { error: "Você não tem permissão para alterar este colaborador." };
 
-  revalidatePath("/colaboradores");
-  revalidatePath(`/colaboradores/${id}`);
+  await revalidatePath("/colaboradores");
+  await revalidatePath(`/colaboradores/${id}`);
   return { ok: status === "inativo" ? "Colaborador desativado." : "Colaborador reativado." };
 }
 
@@ -166,7 +166,7 @@ export async function saveUserPermissions(_: ActionState, formData: FormData): P
     if (error) return { error: friendlyError(error) };
   }
 
-  revalidatePath(`/colaboradores/${profileId}`);
-  revalidatePath(`/colaboradores/${profileId}/editar`);
+  await revalidatePath(`/colaboradores/${profileId}`);
+  await revalidatePath(`/colaboradores/${profileId}/editar`);
   return { ok: toDelete.length + toUpsert.length ? "Permissões salvas. Valem a partir da próxima tela que a pessoa abrir." : "Nenhuma alteração." };
 }

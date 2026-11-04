@@ -46,7 +46,7 @@ export default async function PerfisPage() {
             return (
               <div key={r.id} className="flex items-start justify-between gap-3 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-brand/60">
                 <Link href={`/perfis/${r.id}`} className="flex min-w-0 flex-1 items-start gap-3">
-                  <span aria-hidden className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-icon">
+                  <span aria-hidden className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-icon-bg text-icon">
                     <ShieldCheck size={19} />
                   </span>
                   <span className="grid min-w-0 gap-1">

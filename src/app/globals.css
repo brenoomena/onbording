@@ -81,3 +81,12 @@ h3 {
 .prose-onb > :first-child { margin-top: 0; }
 
 @keyframes shrink { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* Janelas (ver/editar) */
+@keyframes modal-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-slide { from { transform: translateX(28px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes modal-pop { from { transform: translateY(10px) scale(0.985); opacity: 0; } to { transform: none; opacity: 1; } }
+.modal-backdrop { animation: modal-fade 160ms ease-out; }
+.modal-drawer { animation: modal-slide 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.modal-center { animation: modal-pop 200ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.in-modal .hide-in-modal { display: none; }

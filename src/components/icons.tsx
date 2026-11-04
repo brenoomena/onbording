@@ -51,7 +51,7 @@ export function IconTile({
   className?: string;
 }) {
   const tones = {
-    brand: "bg-accent-soft text-icon",
+    brand: "bg-icon-bg text-icon",
     ok: "bg-ok-soft text-ok",
     warn: "bg-warn-soft text-warn",
     danger: "bg-danger-soft text-danger",

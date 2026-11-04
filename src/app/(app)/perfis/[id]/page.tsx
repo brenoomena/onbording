@@ -59,7 +59,7 @@ export default async function PerfilPage({ params, searchParams }: { params: Pro
 
       <Card>
         <ActionForm action={saveRole}>
-          <FormBar info={<Link href="/perfis" className="font-medium text-accent hover:underline">← Voltar aos perfis</Link>}>
+          <FormBar info={<Link href="/perfis" className="hide-in-modal font-medium text-accent hover:underline">← Voltar aos perfis</Link>}>
             <SubmitButton>Salvar perfil</SubmitButton>
           </FormBar>
           <input type="hidden" name="id" value={role.id} />

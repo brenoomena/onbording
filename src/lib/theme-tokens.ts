@@ -17,6 +17,8 @@ export const TOKEN_KEYS = [
   "accent",
   "accent-soft",
   "icon",
+  "icon-bg",
+  "header-bg",
   "heading",
   "ink",
   "muted",
@@ -48,8 +50,10 @@ export const TOKEN_GROUPS: { title: string; hint: string; tokens: { key: TokenKe
       { key: "brand", label: "Primária (botões)" },
       { key: "on-brand", label: "Texto sobre a primária" },
       { key: "accent", label: "Secundária (links e destaques)" },
-      { key: "accent-soft", label: "Destaque suave (fundos de ícones e seleção)" },
+      { key: "accent-soft", label: "Destaque suave (seleção e itens ativos)" },
       { key: "icon", label: "Ícones" },
+      { key: "icon-bg", label: "Fundo dos ícones" },
+      { key: "header-bg", label: "Fundo do título das páginas" },
     ],
   },
   {
@@ -86,6 +90,8 @@ export const DEFAULT_THEME: Record<Mode, Record<TokenKey, string>> = {
     accent: "#0b86c8",
     "accent-soft": "#e2f4fe",
     icon: "#0b86c8",
+    "icon-bg": "#d4edfc",
+    "header-bg": "#e9eff7",
     heading: "#16202c",
     ink: "#333333",
     muted: "#69717b",
@@ -105,6 +111,8 @@ export const DEFAULT_THEME: Record<Mode, Record<TokenKey, string>> = {
     accent: "#5cc8ff",
     "accent-soft": "#1d3a4c",
     icon: "#5cc8ff",
+    "icon-bg": "#1c4a66",
+    "header-bg": "#1c2633",
     heading: "#f3f6fa",
     ink: "#e6ebf1",
     muted: "#a6afb9",
@@ -117,8 +125,29 @@ export const DEFAULT_THEME: Record<Mode, Record<TokenKey, string>> = {
 
 /** Cores de estado (não personalizáveis, para manter o significado). */
 const STATUS: Record<Mode, Record<string, string>> = {
-  light: { ok: "#15803d", "ok-soft": "#e7f5ec", warn: "#a16207", "warn-soft": "#fef3c7", danger: "#b91c1c", "danger-soft": "#fee2e2" },
-  dark: { ok: "#4ade80", "ok-soft": "#173322", warn: "#facc15", "warn-soft": "#423410", danger: "#f87171", "danger-soft": "#451a1a" },
+  light: {
+    ok: "#15803d", "ok-soft": "#e7f5ec", warn: "#a16207", "warn-soft": "#fef3c7", danger: "#b91c1c", "danger-soft": "#fee2e2",
+    // Etiquetas (situação, status, tipo de material, nível)
+    "tag-blue": "#1d5fc4", "tag-blue-soft": "#e3eefd",
+    "tag-violet": "#6d3fc7", "tag-violet-soft": "#efe8fd",
+    "tag-teal": "#0f766e", "tag-teal-soft": "#dcf5f1",
+    "tag-orange": "#c2410c", "tag-orange-soft": "#ffedd5",
+    "tag-pink": "#be185d", "tag-pink-soft": "#fce7f3",
+    "tag-indigo": "#4338ca", "tag-indigo-soft": "#e6e8fd",
+    "tag-silver": "#56606c", "tag-silver-soft": "#e8ebef",
+    "tag-gold": "#8a6100", "tag-gold-soft": "#fbefc9",
+  },
+  dark: {
+    ok: "#4ade80", "ok-soft": "#173322", warn: "#facc15", "warn-soft": "#423410", danger: "#f87171", "danger-soft": "#451a1a",
+    "tag-blue": "#7fb0ff", "tag-blue-soft": "#1a2d4d",
+    "tag-violet": "#c0a4ff", "tag-violet-soft": "#2e2350",
+    "tag-teal": "#5eead4", "tag-teal-soft": "#123a37",
+    "tag-orange": "#fdba74", "tag-orange-soft": "#43261a",
+    "tag-pink": "#f9a8d4", "tag-pink-soft": "#46203a",
+    "tag-indigo": "#a5b4fc", "tag-indigo-soft": "#262a55",
+    "tag-silver": "#cbd2da", "tag-silver-soft": "#363d48",
+    "tag-gold": "#f5cf5b", "tag-gold-soft": "#45370f",
+  },
 };
 
 const HEX = /^#[0-9a-f]{6}$/i;

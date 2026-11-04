@@ -2,6 +2,7 @@
 
 import { createContext, startTransition, useActionState, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import { Button, buttonVariants, cx, iconButtonClass } from "@/components/ui";
 import type { ActionState } from "@/lib/action-state";
 
@@ -66,6 +67,7 @@ export function ActionForm({
 }) {
   const [state, formAction, pending] = useActionState(action, {} as ActionState);
   const ref = useRef<HTMLFormElement>(null);
+  useRedirectAfter(state, ref);
 
   useEffect(() => {
     if (resetOnSuccess && state.ok) ref.current?.reset();
@@ -89,6 +91,25 @@ export function ActionForm({
       </form>
     </PendingContext.Provider>
   );
+}
+
+/**
+ * Depois da ação: segue para `redirectTo` quando pedido (sem empilhar no
+ * histórico). Dentro de uma janela, atualiza a tela pelo navegador, porque
+ * o servidor não manda a página atualizada nesse caso (ver lib/revalidate).
+ */
+function useRedirectAfter(state: ActionState, el: React.RefObject<HTMLElement | null>) {
+  const router = useRouter();
+  useEffect(() => {
+    if (state.redirectTo) {
+      // Na janela, troca o conteúdo dela; em página inteira, abre a próxima
+      // página inteira (sem virar janela por cima do formulário).
+      if (el.current?.closest(".in-modal")) router.replace(state.redirectTo);
+      else window.location.replace(state.redirectTo);
+      return;
+    }
+    if ((state.ok || state.error) && el.current?.closest(".in-modal")) router.refresh();
+  }, [state, router, el]);
 }
 
 /** Botão que dispara uma Server Action; com `confirm`, pede confirmação numa janela antes. */
@@ -121,6 +142,8 @@ export function ActionButton({
   const [state, formAction, pending] = useActionState(action, {} as ActionState);
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const formRef = useRef<HTMLFormElement>(null);
+  useRedirectAfter(state, formRef);
   const inputs = hidden && Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />);
 
   // Fecha a confirmação quando a ação termina (o resultado aparece em outra janela).
@@ -130,7 +153,7 @@ export function ActionButton({
 
   return (
     <PendingContext.Provider value={pending}>
-      <form action={formAction} className="inline-flex">
+      <form ref={formRef} action={formAction} className="inline-flex">
         {inputs}
         {confirm ? (
           <>
@@ -267,7 +290,7 @@ export function NoticeDialog({
 }
 
 function ToneIcon({ tone }: { tone: "ok" | "danger" | "warn" | "brand" }) {
-  const cls = { ok: "bg-ok-soft text-ok", danger: "bg-danger-soft text-danger", warn: "bg-warn-soft text-warn", brand: "bg-accent-soft text-accent" }[tone];
+  const cls = { ok: "bg-ok-soft text-ok", danger: "bg-danger-soft text-danger", warn: "bg-warn-soft text-warn", brand: "bg-icon-bg text-icon" }[tone];
   return (
     <span aria-hidden className={cx("grid h-9 w-9 shrink-0 place-items-center rounded-full", cls)}>
       <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -283,11 +306,30 @@ function ToneIcon({ tone }: { tone: "ok" | "danger" | "warn" | "brand" }) {
  */
 export function FormBar({ children, info }: { children: ReactNode; info?: ReactNode }) {
   return (
-    <div className="sticky top-[57px] z-10 -mx-1 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface/95 px-3 py-2.5 shadow-[0_4px_14px_rgba(0,0,0,0.06)] backdrop-blur lg:top-2">
+    <div className="sticky top-[57px] z-10 -mx-1 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface/95 px-3 py-2.5 shadow-[0_4px_14px_rgba(0,0,0,0.06)] backdrop-blur lg:top-2 [.in-modal_&]:top-0">
       <div className="min-w-0 text-[13px] text-muted">{info}</div>
       <div className="flex flex-wrap items-center gap-2">{children}</div>
     </div>
   );
+}
+
+/**
+ * Aviso que sobrevive à troca de tela (ex.: o item muda de grupo na lista e o
+ * botão que disparou a ação deixa de existir). Exibido pelo NoticeHost.
+ */
+export function announce(tone: "ok" | "danger" | "warn" | "brand", message: string) {
+  window.dispatchEvent(new CustomEvent("onb:aviso", { detail: { tone, message } }));
+}
+
+export function NoticeHost() {
+  const [notice, setNotice] = useState<{ tone: "ok" | "danger" | "warn" | "brand"; message: string } | null>(null);
+  useEffect(() => {
+    const on = (e: Event) => setNotice((e as CustomEvent).detail);
+    window.addEventListener("onb:aviso", on);
+    return () => window.removeEventListener("onb:aviso", on);
+  }, []);
+  if (!notice) return null;
+  return <NoticeDialog key={notice.message} tone={notice.tone} message={notice.message} duration={5000} onClose={() => setNotice(null)} />;
 }
 
 /** Aviso vindo do endereço (?aviso=…) depois de criar algo: mostra em janela e limpa o endereço. */

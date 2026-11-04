@@ -3,7 +3,19 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_PATHS = ["/login", "/recuperar-senha", "/auth/confirm", "/auth/callback", "/auth/erro"];
 
+/**
+ * Marca as Server Actions disparadas de dentro de uma janela de rota
+ * interceptada (ver/editar sobre a lista): só nesse caso o navegador manda o
+ * cabeçalho Next-Url junto com a ação. Usado por lib/revalidate.ts.
+ */
+export const MODAL_HEADER = "x-em-janela";
+function markModalAction(request: NextRequest) {
+  request.headers.delete(MODAL_HEADER);
+  if (request.headers.get("next-action") && request.headers.has("next-url")) request.headers.set(MODAL_HEADER, "1");
+}
+
 export async function updateSession(request: NextRequest) {
+  markModalAction(request);
   let response = NextResponse.next({ request });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

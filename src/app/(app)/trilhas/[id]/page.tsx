@@ -4,7 +4,7 @@ import { Markdown } from "@/components/markdown";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionButton, ActionForm, SubmitButton, PageNotice } from "@/components/forms";
-import { Alert, Badge, Card, Field, Input, PageHeader, Select, buttonVariants } from "@/components/ui";
+import { Alert, Badge, Card, Field, Input, PageHeader, Select, buttonVariants, PUBLISH_TONE, KIND_TONE } from "@/components/ui";
 import { RichTextarea } from "@/components/rich-textarea";
 import { can, requirePermission } from "@/lib/auth";
 import { KIND_LABEL, PUBLISH_LABEL, type AudienceRule } from "@/lib/learning";
@@ -29,7 +29,7 @@ import { loadTrack } from "./load";
 
 export const metadata: Metadata = { title: "Trilha" };
 
-const tone = { rascunho: "warn", publicado: "ok", arquivado: "neutral" } as const;
+const tone = PUBLISH_TONE;
 
 export default async function TrilhaPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ aviso?: string }> }) {
   const me = await requirePermission(P.trilhasVer);
@@ -73,7 +73,7 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
         }
         actions={
           <div className="flex flex-wrap items-start gap-2">
-            <Link href={`/minhas-trilhas/${id}`} className={buttonVariants.secondary}>
+            <Link href={`/trilhas/${id}/ver`} className={buttonVariants.secondary}>
               <Eye size={16} aria-hidden /> Ver como colaborador
             </Link>
             {can(me, P.trilhasMatricular) && (
@@ -153,9 +153,9 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
                     <div className="min-w-0">
                       <Link href={`/conteudos/${it.content.id}`} className="text-[14px] font-medium hover:text-accent">{it.content.title}</Link>
                       <p className="flex flex-wrap items-center gap-1.5 text-[12px] text-muted">
-                        {KIND_LABEL[it.content.kind]}
+                        <Badge tone={KIND_TONE[it.content.kind]}>{KIND_LABEL[it.content.kind]}</Badge>
                         {it.content.external_platform && ` · ${it.content.external_platform}`}
-                        {it.content.status !== "publicado" && <Badge tone="warn">{PUBLISH_LABEL[it.content.status]}</Badge>}
+                        {it.content.status !== "publicado" && <Badge tone={PUBLISH_TONE[it.content.status]}>{PUBLISH_LABEL[it.content.status]}</Badge>}
                       </p>
                     </div>
                   </div>
@@ -172,7 +172,7 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
                       <ActionButton action={moveItem} hidden={{ id: it.id, direction: "1", track_id: id }} label="Descer" icon={<ArrowDown size={16} aria-hidden />} iconOnly />
                     )}
                     <ActionButton action={removeItem} hidden={{ id: it.id, track_id: id }} label="Remover do módulo" variant="danger" icon={<X size={16} aria-hidden />} iconOnly confirm confirmLabel="Remover" confirmText="O conteúdo sai deste módulo, mas continua cadastrado nesta trilha." />
-                  </div> : <Badge>{it.is_required ? "Obrigatório" : "Opcional"}</Badge>}
+                  </div> : <Badge tone={it.is_required ? "brand" : "neutral"}>{it.is_required ? "Obrigatório" : "Opcional"}</Badge>}
                 </li>
               ))}
             </ol>

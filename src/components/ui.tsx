@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
+import { levelTone, type Tone } from "@/lib/tags";
 
 export function cx(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
@@ -24,8 +25,8 @@ export function PageHeader({
   icon?: LucideIcon;
 }) {
   return (
-    <header className="relative overflow-hidden rounded-2xl border border-line bg-surface px-5 py-5 sm:px-7 sm:py-6">
-      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,rgb(var(--accent-soft)/0.85),rgb(var(--surface)/0)_58%)]" />
+    <header className="relative overflow-hidden rounded-2xl border border-line bg-surface px-5 py-5 sm:px-7 sm:py-6 [.in-modal_&]:py-4 sm:[.in-modal_&]:px-5">
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,rgb(var(--header-bg)),rgb(var(--surface)/0)_58%)]" />
       <div className="relative flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0 space-y-3">
           {eyebrow && (
@@ -36,11 +37,11 @@ export function PageHeader({
           )}
           <div className="flex items-center gap-3.5">
             {Icon && (
-              <span aria-hidden className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-accent-soft text-icon ring-1 ring-inset ring-icon/10">
+              <span aria-hidden className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-icon-bg text-icon ring-1 ring-inset ring-icon/10">
                 <Icon size={24} strokeWidth={1.9} />
               </span>
             )}
-            <h1 className="min-w-0 text-[26px] font-bold leading-tight tracking-tight sm:text-[30px]">{title}</h1>
+            <h1 className="min-w-0 text-[26px] font-bold leading-tight tracking-tight sm:text-[30px] [.in-modal_&]:text-[22px] sm:[.in-modal_&]:text-[24px]">{title}</h1>
           </div>
           {description && <div className="max-w-3xl text-[14px] text-muted">{description}</div>}
         </div>
@@ -66,7 +67,7 @@ export function Card({ children, className, title, description, actions, icon: I
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
           <div className="flex min-w-0 items-center gap-3">
             {Icon && (
-              <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-icon">
+              <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-icon-bg text-icon">
                 <Icon size={18} strokeWidth={1.9} />
               </span>
             )}
@@ -100,7 +101,7 @@ export function StatCard({
   href?: string;
 }) {
   const tones = {
-    brand: { tile: "bg-accent-soft text-icon", value: "text-accent", ring: "border-accent/25" },
+    brand: { tile: "bg-icon-bg text-icon", value: "text-accent", ring: "border-accent/25" },
     ok: { tile: "bg-ok-soft text-ok", value: "text-ok", ring: "border-ok/25" },
     warn: { tile: "bg-warn-soft text-warn", value: "text-warn", ring: "border-warn/30" },
     danger: { tile: "bg-danger-soft text-danger", value: "text-danger", ring: "border-danger/25" },
@@ -225,27 +226,43 @@ export function Field({
   );
 }
 
-type Tone = "neutral" | "brand" | "ok" | "warn" | "danger";
+export { ENROLLMENT_TONE, KIND_TONE, PUBLISH_TONE, levelTone, type TagColor } from "@/lib/tags";
 const toneClass: Record<Tone, string> = {
   neutral: "bg-sunken text-muted",
   brand: "bg-accent-soft text-accent",
   ok: "bg-ok-soft text-ok",
   warn: "bg-warn-soft text-warn",
   danger: "bg-danger-soft text-danger",
+  // Classes completas (o Tailwind só gera as que aparecem escritas).
+  blue: "bg-tag-blue-soft text-tag-blue",
+  violet: "bg-tag-violet-soft text-tag-violet",
+  teal: "bg-tag-teal-soft text-tag-teal",
+  orange: "bg-tag-orange-soft text-tag-orange",
+  pink: "bg-tag-pink-soft text-tag-pink",
+  indigo: "bg-tag-indigo-soft text-tag-indigo",
+  silver: "bg-tag-silver-soft text-tag-silver ring-1 ring-inset ring-tag-silver/25",
+  gold: "bg-tag-gold-soft text-tag-gold ring-1 ring-inset ring-tag-gold/30",
 };
 
-export function Badge({ tone = "neutral", children }: { tone?: Tone; children: ReactNode }) {
+export function Badge({ tone = "neutral", children, dot = false }: { tone?: Tone; children: ReactNode; dot?: boolean }) {
   return (
-    <span className={cx("inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[12px] font-medium", toneClass[tone])}>
+    <span className={cx("inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-[12px] font-medium", toneClass[tone])}>
+      {dot && <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />}
       {children}
     </span>
   );
 }
 
+/** Status do colaborador: ativo verde, em onboarding violeta, inativo prata. */
 export function StatusBadge({ status }: { status: "onboarding" | "ativo" | "inativo" }) {
-  if (status === "ativo") return <Badge tone="ok">Ativo</Badge>;
-  if (status === "onboarding") return <Badge tone="brand">Em onboarding</Badge>;
-  return <Badge>Inativo</Badge>;
+  if (status === "ativo") return <Badge tone="ok" dot>Ativo</Badge>;
+  if (status === "onboarding") return <Badge tone="violet" dot>Em onboarding</Badge>;
+  return <Badge tone="silver" dot>Inativo</Badge>;
+}
+
+export function LevelBadge({ name }: { name: string | null | undefined }) {
+  if (!name) return null;
+  return <Badge tone={levelTone(name)}>{name}</Badge>;
 }
 
 export function Alert({ tone = "danger", children }: { tone?: "danger" | "ok" | "warn" | "brand"; children: ReactNode }) {

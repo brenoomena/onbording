@@ -1,7 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { revalidatePath } from "@/lib/revalidate";
+
 import { denyUnless, denyUnlessAdmin, requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/errors";
@@ -11,12 +11,12 @@ import { moduleSchema, parseAudience, trackSchema } from "@/lib/validation";
 
 const isId = (v: unknown): v is string => typeof v === "string" && /^[0-9a-f-]{36}$/i.test(v);
 
-function refresh(trackId?: string) {
-  revalidatePath("/trilhas");
-  revalidatePath("/minhas-trilhas");
+async function refresh(trackId?: string) {
+  await revalidatePath("/trilhas");
+  await revalidatePath("/minhas-trilhas");
   if (trackId) {
-    revalidatePath(`/trilhas/${trackId}`);
-    revalidatePath(`/trilhas/${trackId}/matriculas`);
+    await revalidatePath(`/trilhas/${trackId}`);
+    await revalidatePath(`/trilhas/${trackId}/matriculas`);
   }
 }
 
@@ -49,8 +49,8 @@ export async function saveTrack(_: ActionState, fd: FormData): Promise<ActionSta
     if (error) return { error: friendlyError(error) };
   }
 
-  refresh(trackId);
-  if (!id) redirect(`/trilhas/${trackId}?aviso=criada`);
+  await refresh(trackId);
+  if (!id) return { redirectTo: `/trilhas/${trackId}?aviso=criada` };
   return { ok: "Trilha salva. Se for obrigatória e estiver publicada, quem entrou no público já foi matriculado." };
 }
 
@@ -70,7 +70,7 @@ export async function setTrackStatus(_: ActionState, fd: FormData): Promise<Acti
   }
   const { error } = await supabase.from("tracks").update({ status }).eq("id", id);
   if (error) return { error: friendlyError(error) };
-  refresh(id);
+  await refresh(id);
   return { ok: status === "publicado" ? "Trilha publicada." : status === "arquivado" ? "Trilha arquivada." : "Trilha voltou para rascunho." };
 }
 
@@ -91,9 +91,9 @@ export async function deleteTrack(_: ActionState, fd: FormData): Promise<ActionS
     return { error: friendlyError(error) };
   }
   if (!data?.length) return { error: "Trilha não encontrada." };
-  refresh();
+  await refresh();
   // Excluída na própria página da trilha: volta para a lista.
-  if (fd.get("voltar") === "1") redirect("/trilhas");
+  if (fd.get("voltar") === "1") return { redirectTo: "/trilhas" };
   return { ok: "Trilha excluída." };
 }
 
@@ -109,7 +109,7 @@ export async function addModule(_: ActionState, fd: FormData): Promise<ActionSta
   const { data: last } = await supabase.from("modules").select("position").eq("track_id", trackId).order("position", { ascending: false }).limit(1).maybeSingle();
   const { error } = await supabase.from("modules").insert({ ...parsed.data, track_id: trackId, position: (last?.position ?? 0) + 1 });
   if (error) return { error: friendlyError(error) };
-  refresh(trackId);
+  await refresh(trackId);
   return { ok: `Módulo "${parsed.data.title}" criado.` };
 }
 
@@ -122,7 +122,7 @@ export async function updateModule(_: ActionState, fd: FormData): Promise<Action
   const supabase = await createClient();
   const { data, error } = await supabase.from("modules").update(parsed.data).eq("id", id).select("track_id").single();
   if (error) return { error: friendlyError(error) };
-  refresh(data.track_id);
+  await refresh(data.track_id);
   return { ok: "Módulo salvo." };
 }
 
@@ -133,7 +133,7 @@ export async function deleteModule(_: ActionState, fd: FormData): Promise<Action
   const supabase = await createClient();
   const { data, error } = await supabase.from("modules").delete().eq("id", id).select("track_id");
   if (error) return { error: friendlyError(error) };
-  refresh(data?.[0]?.track_id);
+  await refresh(data?.[0]?.track_id);
   return {};
 }
 
@@ -143,7 +143,7 @@ export async function moveModule(_: ActionState, fd: FormData): Promise<ActionSt
   const supabase = await createClient();
   const { error } = await supabase.rpc("move_module", { p_module: String(fd.get("id")), p_direction: Number(fd.get("direction")) });
   if (error) return { error: friendlyError(error) };
-  refresh(String(fd.get("track_id")));
+  await refresh(String(fd.get("track_id")));
   return {};
 }
 
@@ -164,7 +164,7 @@ export async function addItem(_: ActionState, fd: FormData): Promise<ActionState
     is_required: fd.get("is_required") === "on",
   });
   if (error) return { error: error.code === "23505" ? "Este conteúdo já está neste módulo." : friendlyError(error) };
-  refresh(String(fd.get("track_id")));
+  await refresh(String(fd.get("track_id")));
   return { ok: "Conteúdo incluído." };
 }
 
@@ -174,7 +174,7 @@ export async function toggleRequired(_: ActionState, fd: FormData): Promise<Acti
   const supabase = await createClient();
   const { error } = await supabase.from("module_items").update({ is_required: fd.get("value") === "true" }).eq("id", String(fd.get("id")));
   if (error) return { error: friendlyError(error) };
-  refresh(String(fd.get("track_id")));
+  await refresh(String(fd.get("track_id")));
   return {};
 }
 
@@ -184,7 +184,7 @@ export async function moveItem(_: ActionState, fd: FormData): Promise<ActionStat
   const supabase = await createClient();
   const { error } = await supabase.rpc("move_module_item", { p_item: String(fd.get("id")), p_direction: Number(fd.get("direction")) });
   if (error) return { error: friendlyError(error) };
-  refresh(String(fd.get("track_id")));
+  await refresh(String(fd.get("track_id")));
   return {};
 }
 
@@ -194,7 +194,7 @@ export async function removeItem(_: ActionState, fd: FormData): Promise<ActionSt
   const supabase = await createClient();
   const { error } = await supabase.from("module_items").delete().eq("id", String(fd.get("id")));
   if (error) return { error: friendlyError(error) };
-  refresh(String(fd.get("track_id")));
+  await refresh(String(fd.get("track_id")));
   return {};
 }
 
@@ -218,7 +218,7 @@ export async function enrollPeople(_: ActionState, fd: FormData): Promise<Action
     )
     .select("id");
   if (error) return { error: friendlyError(error) };
-  refresh(trackId);
+  await refresh(trackId);
   const added = data?.length ?? 0;
   const skipped = people.length - added;
   return { ok: `${added} ${added === 1 ? "pessoa matriculada" : "pessoas matriculadas"}.${skipped ? ` ${skipped} já estava${skipped > 1 ? "m" : ""} matriculada${skipped > 1 ? "s" : ""}.` : ""}` };
@@ -236,7 +236,7 @@ export async function updateDueDate(_: ActionState, fd: FormData): Promise<Actio
     .select("track_id")
     .single();
   if (error) return { error: friendlyError(error) };
-  refresh(data.track_id);
+  await refresh(data.track_id);
   return { ok: "Prazo salvo." };
 }
 
@@ -249,6 +249,6 @@ export async function removeEnrollment(_: ActionState, fd: FormData): Promise<Ac
   if (e.status !== "nao_iniciada") return { error: "Só é possível remover matrículas ainda não iniciadas, para preservar o histórico." };
   const { error } = await supabase.from("enrollments").delete().eq("id", String(fd.get("id")));
   if (error) return { error: friendlyError(error) };
-  refresh(e.track_id);
+  await refresh(e.track_id);
   return {};
 }

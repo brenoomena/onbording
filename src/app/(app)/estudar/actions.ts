@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath } from "@/lib/revalidate";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/errors";
@@ -13,9 +13,9 @@ export async function completeContent(_: ActionState, fd: FormData): Promise<Act
   const supabase = await createClient();
   const { error } = await supabase.rpc("complete_content", { p_content: contentId, p_mode: mode });
   if (error) return { error: friendlyError(error, "Não foi possível registrar a conclusão.") };
-  revalidatePath(`/estudar/${contentId}`);
-  revalidatePath("/minhas-trilhas", "layout");
-  revalidatePath("/painel");
+  await revalidatePath(`/estudar/${contentId}`);
+  await revalidatePath("/minhas-trilhas", "layout");
+  await revalidatePath("/painel");
   return { ok: "Conteúdo concluído." };
 }
 
@@ -24,6 +24,6 @@ export async function enrollMe(_: ActionState, fd: FormData): Promise<ActionStat
   const supabase = await createClient();
   const { error } = await supabase.rpc("enroll_me", { p_track: String(fd.get("track_id")) });
   if (error) return { error: friendlyError(error, "Não foi possível se inscrever.") };
-  revalidatePath("/minhas-trilhas");
+  await revalidatePath("/minhas-trilhas");
   return { ok: "Inscrição feita. A trilha aparece em Minhas trilhas." };
 }

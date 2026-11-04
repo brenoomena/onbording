@@ -27,7 +27,15 @@ const config: Config = {
         danger: token("danger"),
         "danger-soft": token("danger-soft"),
         heading: token("heading"),
+        ...Object.fromEntries(
+          ["blue", "violet", "teal", "orange", "pink", "indigo", "silver", "gold"].flatMap((c) => [
+            [`tag-${c}`, token(`tag-${c}`)],
+            [`tag-${c}-soft`, token(`tag-${c}-soft`)],
+          ]),
+        ),
         icon: token("icon"),
+        "icon-bg": token("icon-bg"),
+        "header-bg": token("header-bg"),
         "sidebar-bg": token("sidebar-bg"),
         "sidebar-text": token("sidebar-text"),
         "sidebar-muted": token("sidebar-muted"),

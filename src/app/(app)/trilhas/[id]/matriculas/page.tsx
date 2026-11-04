@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionButton, ActionForm, SubmitButton } from "@/components/forms";
 import { ProgressBar } from "@/components/progress-bar";
-import { Badge, Card, EmptyState, Field, Input, PageHeader, Table, formatDate } from "@/components/ui";
+import { Badge, Card, EmptyState, Field, Input, PageHeader, Table, formatDate, ENROLLMENT_TONE } from "@/components/ui";
 import { requirePermission } from "@/lib/auth";
 import { ENROLLMENT_LABEL, formatMinutes, isOverdue, type EnrollmentStatus } from "@/lib/learning";
 import { P } from "@/lib/permissions";
@@ -26,7 +26,7 @@ interface Row {
 }
 
 const ORIGIN = { automatica: "Automática", manual: "Manual", propria: "Própria" } as Record<string, string>;
-const tone = { nao_iniciada: "neutral", em_andamento: "brand", concluida: "ok" } as const;
+const tone = ENROLLMENT_TONE;
 
 export default async function MatriculasPage({ params }: { params: Promise<{ id: string }> }) {
   await requirePermission(P.trilhasMatricular);

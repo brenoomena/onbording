@@ -60,6 +60,9 @@ async function login(page, email, password) {
   await page.waitForURL(/\/painel/);
 }
 async function logout(page) {
+  // Fecha uma janela de ver/editar que esteja aberta por cima do menu.
+  if (await page.locator(".in-modal").count()) await page.keyboard.press("Escape");
+  await page.locator(".in-modal").waitFor({ state: "detached" });
   await page.locator("aside button", { hasText: "Sair" }).click();
   await page.waitForURL(/\/login/);
 }
@@ -95,7 +98,6 @@ await step("cria e exclui uma área sem vínculos; área em uso não oferece exc
   await A.getByRole("button", { name: "Criar área" }).click();
   await A.getByText('Área "Implantação" criada.').waitFor();
   const row = A.locator("div.rounded-xl", { hasText: "Implantação" }).first();
-  await row.locator("summary").first().click();
   await row.getByRole("button", { name: "Excluir", exact: true }).click();
   await A.getByRole("dialog").getByRole("button", { name: "Excluir área" }).click();
   await A.waitForTimeout(800);
@@ -274,7 +276,7 @@ await step("admin muda o perfil do supervisor e o menu dele muda", async () => {
   await A.getByRole("link", { name: "Sérgio Supervisor" }).click();
   await A.waitForURL(/colaboradores\/[0-9a-f-]{36}$/);
   await A.getByRole("heading", { name: "Sérgio Supervisor" }).waitFor();
-  await A.getByRole("link", { name: "Editar" }).click();
+  await A.getByRole("dialog").getByRole("link", { name: "Editar" }).click();
   await A.waitForURL(/editar$/);
   await A.selectOption("#role_id", { label: "Recursos Humanos" });
   await A.getByRole("button", { name: "Salvar alterações" }).click();

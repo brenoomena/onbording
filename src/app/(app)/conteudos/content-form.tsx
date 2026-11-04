@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AudienceEditor } from "@/components/audience-editor";
 import { ActionForm, SubmitButton, FormBar } from "@/components/forms";
-import { Alert, Badge, Field, Input, Select, cx } from "@/components/ui";
+import { Alert, Badge, Field, Input, Select, cx, PUBLISH_TONE } from "@/components/ui";
 import { RichTextarea } from "@/components/rich-textarea";
 import type { ActionState } from "@/lib/action-state";
 import { KIND_LABEL, PUBLISH_LABEL, formatBytes, type AudienceRule, type ContentKind, type ContentRow, type PublishStatus } from "@/lib/learning";
 import type { PersonOption, Structure } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
 import type { TrackOption } from "./form-data";
+import { MoveContent } from "./move-content";
 
 const MAX_BYTES = 50 * 1024 * 1024;
 
@@ -23,6 +24,7 @@ export function ContentForm({
   tracks,
   defaultTrackId,
   readOnly = false,
+  modulesCount = 0,
 }: {
   action: (s: ActionState, fd: FormData) => Promise<ActionState>;
   content?: ContentRow;
@@ -35,11 +37,22 @@ export function ContentForm({
   defaultTrackId?: string;
   /** Sem permissão de editar: mostra os dados sem permitir salvar. */
   readOnly?: boolean;
+  /** Em quantos módulos da trilha atual o conteúdo está (para o "Mover de trilha"). */
+  modulesCount?: number;
 }) {
   const [kind, setKind] = useState<ContentKind>(content?.kind ?? "link");
   const [library, setLibrary] = useState(content?.is_library ?? false);
   const [track, setTrack] = useState<string>(content ? content.track_id ?? "biblioteca" : defaultTrackId ?? "");
   const libraryOnly = track === "biblioteca";
+  // Depois de "Mover de trilha" a página recarrega os dados: acompanha a trilha nova.
+  const savedTrack = content ? content.track_id ?? "biblioteca" : null;
+  useEffect(() => {
+    if (savedTrack !== null) {
+      setTrack(savedTrack);
+      if (savedTrack === "biblioteca") setLibrary(true);
+    }
+  }, [savedTrack]);
+  const currentTrackName = content?.track_id ? tracks.find((t) => t.id === content.track_id)?.name ?? "Trilha arquivada" : null;
   const [file, setFile] = useState({
     path: content?.storage_path ?? "",
     name: content?.file_name ?? "",
@@ -79,13 +92,22 @@ export function ContentForm({
             <Field
               label="Trilha"
               htmlFor="track"
-              hint={libraryOnly ? "Material só de consulta: aparece na página Materiais para o público escolhido abaixo." : "O conteúdo só pode ser incluído nos módulos desta trilha."}
+              hint={
+                content
+                  ? "Um conteúdo pertence a uma única trilha. Para trocar, use Mover de trilha: ele sai dos módulos da trilha atual."
+                  : libraryOnly
+                    ? "Material só de consulta: aparece na página Materiais para o público escolhido abaixo."
+                    : "O conteúdo só pode ser incluído nos módulos desta trilha."
+              }
               error={e.track_id}
             >
+              <div className={content ? "flex flex-wrap items-center gap-2" : "contents"}>
               <Select
                 id="track"
                 value={track}
                 required
+                disabled={!!content}
+                className={content ? "min-w-[220px] flex-1" : undefined}
                 onChange={(ev) => {
                   setTrack(ev.target.value);
                   if (ev.target.value === "biblioteca") setLibrary(true);
@@ -103,6 +125,17 @@ export function ContentForm({
                 )}
                 <option value="biblioteca">Biblioteca (sem trilha)</option>
               </Select>
+              {content && !readOnly && (
+                <MoveContent
+                  contentId={content.id}
+                  contentTitle={content.title}
+                  currentTrackId={content.track_id}
+                  currentTrackName={currentTrackName}
+                  modulesCount={modulesCount}
+                  tracks={tracks}
+                />
+              )}
+              </div>
             </Field>
 
             <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
@@ -261,12 +294,12 @@ export function ContentForm({
  * nunca muda a situação atual do conteúdo.
  */
 function PublishBar({ status = "rascunho", isNew }: { status?: PublishStatus; isNew: boolean }) {
-  const tone = status === "publicado" ? "ok" : status === "arquivado" ? "neutral" : "warn";
+  const tone = PUBLISH_TONE[status];
   return (
     <FormBar
       info={
         <span className="flex flex-wrap items-center gap-2">
-          Situação {isNew ? "ao criar" : "atual"}: <Badge tone={tone}>{PUBLISH_LABEL[status]}</Badge>
+          Situação {isNew ? "ao criar" : "atual"}: <Badge tone={tone} dot>{PUBLISH_LABEL[status]}</Badge>
           {status !== "publicado" && <span className="hidden sm:inline">· só quem gerencia conteúdos vê.</span>}
         </span>
       }

@@ -1,7 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { revalidatePath } from "@/lib/revalidate";
+
 import { denyUnless, denyUnlessAdmin, requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/errors";
@@ -21,8 +21,8 @@ export async function createRole(_: ActionState, fd: FormData): Promise<ActionSt
     .select("id")
     .single();
   if (error) return { error: friendlyError(error) };
-  revalidatePath("/perfis");
-  redirect(`/perfis/${data.id}?aviso=criado`);
+  await revalidatePath("/perfis");
+  return { redirectTo: `/perfis/${data.id}?aviso=criado` };
 }
 
 export async function saveRole(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -56,8 +56,8 @@ export async function saveRole(_: ActionState, fd: FormData): Promise<ActionStat
     }
   }
 
-  revalidatePath("/perfis");
-  revalidatePath(`/perfis/${id}`);
+  await revalidatePath("/perfis");
+  await revalidatePath(`/perfis/${id}`);
   return { ok: "Perfil salvo. As novas permissões valem a partir do próximo carregamento de página de cada pessoa." };
 }
 
@@ -72,7 +72,7 @@ export async function deleteRole(_: ActionState, fd: FormData): Promise<ActionSt
     };
   }
   if (!data?.length) return { error: "Perfil não encontrado." };
-  revalidatePath("/perfis");
-  if (fd.get("voltar") === "1") redirect("/perfis");
+  await revalidatePath("/perfis");
+  if (fd.get("voltar") === "1") return { redirectTo: "/perfis" };
   return { ok: "Perfil excluído." };
 }

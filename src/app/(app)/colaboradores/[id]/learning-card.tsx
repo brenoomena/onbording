@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ProgressBar } from "@/components/progress-bar";
-import { Badge, Card, formatDate } from "@/components/ui";
+import { Badge, Card, formatDate, ENROLLMENT_TONE } from "@/components/ui";
 import { ENROLLMENT_LABEL, formatMinutes, isOverdue } from "@/lib/learning";
 import { loadEnrollmentsOf, loadProgressOf } from "@/lib/my-learning";
 
@@ -33,7 +33,7 @@ export async function LearningCard({ profileId, canManageTracks }: { profileId: 
                   <span className="flex flex-wrap items-center gap-2 text-[12.5px] text-muted">
                     {e.due_date && <span>Prazo {formatDate(e.due_date)}</span>}
                     {e.completed_at && <span>Concluída em {formatDate(e.completed_at)}</span>}
-                    <Badge tone={overdue ? "danger" : e.status === "concluida" ? "ok" : "neutral"}>{overdue ? "Em atraso" : ENROLLMENT_LABEL[e.status]}</Badge>
+                    <Badge tone={overdue ? "danger" : ENROLLMENT_TONE[e.status]}>{overdue ? "Em atraso" : ENROLLMENT_LABEL[e.status]}</Badge>
                   </span>
                 </div>
                 <ProgressBar value={Number(e.progress_percent)} />
