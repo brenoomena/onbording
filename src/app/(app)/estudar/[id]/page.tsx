@@ -99,7 +99,7 @@ export default async function EstudarPage({
               {content.external_platform && <span>{content.external_platform}</span>}
               {content.estimated_minutes && <span>· cerca de {content.estimated_minutes} min</span>}
               <span className="hidden md:inline">
-                · {mine ? `${formatMinutes(mine.active_seconds)} de estudo · ${mine.visits} ${mine.visits === 1 ? "acesso" : "acessos"}` : "primeiro acesso"}
+                · {mine ? `${mine.active_seconds > 0 ? `${formatMinutes(mine.active_seconds)} de estudo · ` : ""}${mine.visits} ${mine.visits === 1 ? "acesso" : "acessos"}` : "primeiro acesso"}
               </span>
             </span>
           </div>
