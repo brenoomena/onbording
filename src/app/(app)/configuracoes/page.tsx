@@ -4,6 +4,7 @@ import { Card, PageHeader } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth";
 import { brandingUrl } from "@/lib/branding";
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeSizes } from "@/lib/logo-sizes";
 import { resolveTheme, sanitizeTheme } from "@/lib/theme-tokens";
 import { LogoEditor } from "./logo-editor";
 import { ThemeEditor } from "./theme-editor";
@@ -14,7 +15,11 @@ export const metadata: Metadata = { title: "Configurações" };
 export default async function ConfiguracoesPage() {
   await requireAdmin();
   const supabase = await createClient();
-  const { data } = await supabase.from("app_settings").select("theme, logo_path, logo_dark_path, updated_at").eq("id", 1).maybeSingle();
+  const { data } = await supabase
+    .from("app_settings")
+    .select("theme, logo_path, logo_dark_path, symbol_path, symbol_dark_path, logo_sizes, updated_at")
+    .eq("id", 1)
+    .maybeSingle();
   const theme = resolveTheme(sanitizeTheme(data?.theme));
 
   return (
@@ -25,8 +30,21 @@ export default async function ConfiguracoesPage() {
         title="Configurações"
         description="Identidade visual do sistema: cores dos modos claro e escuro e logomarca. As mudanças valem para todas as pessoas e todas as telas."
       />
-      <Card title="Logomarca" description="Aparece no topo do menu lateral, acima do nome Onboarding, e na tela de login." icon={ImageIcon}>
-        <LogoEditor light={brandingUrl(data?.logo_path)} dark={brandingUrl(data?.logo_dark_path)} sidebar={{ light: theme.light["sidebar-bg"], dark: theme.dark["sidebar-bg"] }} />
+      <Card
+        title="Logomarca e símbolo"
+        description="Logo no topo do menu aberto e no login; símbolo no menu recolhido. Ajuste o tamanho de cada uma dentro dos limites, mantendo a proporção."
+        icon={ImageIcon}
+      >
+        <LogoEditor
+          urls={{
+            logo: brandingUrl(data?.logo_path),
+            logo_dark: brandingUrl(data?.logo_dark_path),
+            symbol: brandingUrl(data?.symbol_path),
+            symbol_dark: brandingUrl(data?.symbol_dark_path),
+          }}
+          sizes={sanitizeSizes(data?.logo_sizes)}
+          sidebar={{ light: theme.light["sidebar-bg"], dark: theme.dark["sidebar-bg"] }}
+        />
       </Card>
       <Card title="Cores" description="Escolha as cores de cada elemento para o modo claro e para o modo escuro. A prévia mostra o resultado antes de salvar." icon={Palette}>
         <ThemeEditor initial={theme} />

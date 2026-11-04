@@ -11,3 +11,6 @@ export function parseTheme(v: string | undefined | null): Theme {
 export function themeAttr(t: Theme): "light" | "dark" | undefined {
   return t === "claro" ? "light" : t === "escuro" ? "dark" : undefined;
 }
+
+/** Cookie com a preferência de menu recolhido ("compacto") ou aberto. */
+export const MENU_COOKIE = "menu";

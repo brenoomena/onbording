@@ -314,4 +314,27 @@ run("Etapa 2 · trilhas, conteúdos, matrículas e progresso", () => {
     const log = await asSystem(db.pool, (q) => q("select count(*)::int n from audit_log where table_name = 'app_settings' and actor_id = $1", [admin]));
     expect(log.rows[0].n).toBe(1);
   });
+
+  it("símbolo e tamanhos das logos: limites validados no banco e só o admin altera", async () => {
+    await asUser(db.pool, admin, (q) =>
+      q(`update app_settings set logo_sizes = '{"logo":{"w":175,"h":44},"symbol":{"w":36,"h":36}}'::jsonb,
+         symbol_path = 'logo/11111111-2222-3333-4444-555555555555.webp'`),
+    );
+    for (const bad of [
+      '{"logo":{"w":300,"h":44}}',
+      '{"logo":{"w":175,"h":10}}',
+      '{"symbol":{"w":60,"h":60}}',
+      '{"symbol":{"w":20,"h":36}}',
+      '{"logo":{"w":175.5,"h":44}}',
+      '{"outro":{"w":100,"h":40}}',
+      '{"logo":{"w":175,"h":44,"x":1}}',
+    ]) {
+      await expect(asUser(db.pool, admin, (q) => q("update app_settings set logo_sizes = $1::jsonb", [bad]))).rejects.toThrow(/check constraint/);
+    }
+    const upd = await asUser(db.pool, sup, (q) => q(`update app_settings set logo_sizes = '{}'::jsonb returning id`));
+    expect(upd.rowCount).toBe(0);
+    const b = await asUser(db.pool, null, (q) => q("select public.get_branding() b"));
+    expect(b.rows[0].b.logo_sizes.symbol).toEqual({ w: 36, h: 36 });
+    expect(b.rows[0].b.symbol_path).toMatch(/^logo\//);
+  });
 });

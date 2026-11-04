@@ -272,6 +272,8 @@ await step("admin cria perfil personalizado e define permissões", async () => {
 await step("admin muda o perfil do supervisor e o menu dele muda", async () => {
   await A.goto(`${BASE}/colaboradores?q=sergio`);
   await A.getByRole("link", { name: "Sérgio Supervisor" }).click();
+  await A.waitForURL(/colaboradores\/[0-9a-f-]{36}$/);
+  await A.getByRole("heading", { name: "Sérgio Supervisor" }).waitFor();
   await A.getByRole("link", { name: "Editar" }).click();
   await A.waitForURL(/editar$/);
   await A.selectOption("#role_id", { label: "Recursos Humanos" });
@@ -293,6 +295,7 @@ await step("perfil RH (não administrador) não acessa perfis, configurações n
     assert.equal(r.status(), 403, path);
   }
   await sergio.page.goto(`${BASE}/colaboradores?q=carla`);
+  await sergio.page.getByRole("heading", { name: "Colaboradores" }).waitFor();
   await sergio.page.getByRole("link", { name: "Editar" }).first().click();
   await sergio.page.waitForURL(/editar$/);
   assert.equal(await sergio.page.getByText("Permissões por módulo e ação").count(), 0);

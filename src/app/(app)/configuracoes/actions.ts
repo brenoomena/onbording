@@ -7,6 +7,7 @@ import { friendlyError } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_THEME, TOKEN_KEYS, sanitizeTheme, type ThemeConfig } from "@/lib/theme-tokens";
 import type { ActionState } from "@/lib/action-state";
+import { LOGO_SLOTS, defaultSize, fromWidth, sanitizeSizes, type LogoSlot } from "@/lib/logo-sizes";
 
 const LOGO_PATH = /^logo\/[0-9a-f-]{36}\.(png|webp|jpg)$/;
 
@@ -41,19 +42,54 @@ export async function saveTheme(_: ActionState, fd: FormData): Promise<ActionSta
   return { ok: "Cores salvas e aplicadas a todo o sistema." };
 }
 
-/** Grava (ou remove) a logomarca de uma das variantes e apaga o arquivo anterior. */
-export async function setLogo(variant: "light" | "dark", path: string | null): Promise<ActionState> {
+const COLUMN: Record<LogoSlot, "logo_path" | "logo_dark_path" | "symbol_path" | "symbol_dark_path"> = {
+  logo: "logo_path",
+  logo_dark: "logo_dark_path",
+  symbol: "symbol_path",
+  symbol_dark: "symbol_dark_path",
+};
+
+function isSlot(v: unknown): v is LogoSlot {
+  return typeof v === "string" && (LOGO_SLOTS as readonly string[]).includes(v);
+}
+
+/**
+ * Grava (ou remove) a imagem de uma variante e apaga o arquivo anterior.
+ * Ao enviar, já define o tamanho padrão a partir da proporção da imagem.
+ */
+export async function setLogo(slot: LogoSlot, path: string | null, ratio?: number): Promise<ActionState> {
   const denied = await denyUnlessAdmin();
   if (denied) return denied;
+  if (!isSlot(slot)) return { error: "Variante de logomarca inválida." };
   if (path !== null && !LOGO_PATH.test(path)) return { error: "Arquivo de logomarca inválido." };
-  const column = variant === "dark" ? "logo_dark_path" : "logo_path";
+  const column = COLUMN[slot];
   const supabase = await createClient();
-  const { data: before } = await supabase.from("app_settings").select("logo_path, logo_dark_path").eq("id", 1).maybeSingle();
-  const { data, error } = await supabase.from("app_settings").update({ [column]: path }).eq("id", 1).select("id");
+  const { data: before } = await supabase.from("app_settings").select("logo_path, logo_dark_path, symbol_path, symbol_dark_path, logo_sizes").eq("id", 1).maybeSingle();
+  const sizes = { ...sanitizeSizes(before?.logo_sizes) };
+  if (path && ratio && ratio > 0 && Number.isFinite(ratio)) sizes[slot] = defaultSize(slot, ratio);
+  else if (!path) delete sizes[slot];
+  const { data, error } = await supabase.from("app_settings").update({ [column]: path, logo_sizes: sizes }).eq("id", 1).select("id");
   if (error) return { error: friendlyError(error) };
   if (!data?.length) return { error: "Somente administradores podem alterar a logomarca." };
-  const old = before?.[column as "logo_path" | "logo_dark_path"];
+  const old = before?.[column];
   if (old && old !== path) await supabase.storage.from("branding").remove([old]);
   refreshBranding();
-  return { ok: path ? "Logomarca atualizada." : "Logomarca removida." };
+  return { ok: path ? "Imagem atualizada." : "Imagem removida." };
+}
+
+/** Ajusta o tamanho de exibição mantendo a proporção e os limites mínimo e máximo. */
+export async function setLogoSize(slot: LogoSlot, width: number, ratio: number): Promise<ActionState> {
+  const denied = await denyUnlessAdmin();
+  if (denied) return denied;
+  if (!isSlot(slot)) return { error: "Variante de logomarca inválida." };
+  if (!(ratio > 0) || !Number.isFinite(ratio) || !Number.isFinite(width)) return { error: "Tamanho inválido." };
+  const size = fromWidth(slot, ratio, width);
+  const supabase = await createClient();
+  const { data: before } = await supabase.from("app_settings").select("logo_sizes").eq("id", 1).maybeSingle();
+  const sizes = { ...sanitizeSizes(before?.logo_sizes), [slot]: size };
+  const { data, error } = await supabase.from("app_settings").update({ logo_sizes: sizes }).eq("id", 1).select("id");
+  if (error) return { error: friendlyError(error) };
+  if (!data?.length) return { error: "Somente administradores podem alterar a logomarca." };
+  refreshBranding();
+  return { ok: `Tamanho salvo: ${size.w} × ${size.h} px.` };
 }

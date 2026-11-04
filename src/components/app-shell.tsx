@@ -7,15 +7,16 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Avatar } from "@/components/avatar";
 import { ModuleIcon } from "@/components/icons";
 import { cx } from "@/components/ui";
+import { sizeStyle, type BrandImage } from "@/lib/branding";
 import { sectionFor, type MenuGroup } from "@/lib/permissions";
+import { MENU_COOKIE } from "@/lib/theme";
 
-export const MENU_COOKIE = "menu";
 
 interface ShellProps {
   groups: MenuGroup[];
   user: { name: string; role: string; avatarPath: string | null };
-  /** Logo para o fundo do menu em cada modo (null = identidade padrão). */
-  logo: { light: string | null; dark: string | null };
+  /** Logo (menu aberto) e símbolo (menu recolhido) para o fundo do menu em cada modo. */
+  logo: { light: BrandImage | null; dark: BrandImage | null; symbolLight: BrandImage | null; symbolDark: BrandImage | null };
   compact: boolean;
   children: ReactNode;
 }
@@ -203,8 +204,11 @@ function Brand({ logo, mini }: { logo: ShellProps["logo"]; mini: boolean }) {
       Onbording
     </span>
   );
-  const hasLogo = logo.light || logo.dark;
-  if (!hasLogo) {
+  // Menu recolhido: símbolo da marca; sem símbolo, a logo reduzida para caber.
+  const light = mini ? logo.symbolLight ?? logo.light : logo.light;
+  const dark = mini ? logo.symbolDark ?? logo.dark : logo.dark;
+  const usingSymbol = mini && !!(logo.symbolLight || logo.symbolDark);
+  if (!light && !dark) {
     return (
       <Link href="/painel" className={cx("grid justify-items-center gap-2.5", mini ? "" : "w-full")}>
         <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand text-[15px] font-bold text-on-brand">I</span>
@@ -212,19 +216,25 @@ function Brand({ logo, mini }: { logo: ShellProps["logo"]; mini: boolean }) {
       </Link>
     );
   }
-  const img = (src: string | null, cls: string) =>
-    src && (
+  const img = (im: BrandImage | null, cls: string) =>
+    im && (
       <span className={cls}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt="Logomarca" className={cx("mx-auto object-contain", mini ? "h-8 w-11" : "h-auto w-[175px] max-w-full")} />
+        <img
+          src={im.src}
+          alt="Logomarca"
+          className="mx-auto max-w-full object-contain"
+          style={mini && !usingSymbol ? { width: 44, height: 32 } : sizeStyle(im, usingSymbol ? "symbol" : "logo")}
+        />
       </span>
     );
+  const same = light?.src === dark?.src && light?.size?.w === dark?.size?.w && light?.size?.h === dark?.size?.h;
   return (
     <Link href="/painel" className={cx("grid min-w-0 justify-items-center gap-2.5", !mini && "w-full")}>
-      {logo.light === logo.dark ? img(logo.light, "block") : (
+      {same ? img(light, "block") : (
         <>
-          {img(logo.light, "only-light")}
-          {img(logo.dark, "only-dark")}
+          {img(light ?? dark, "only-light")}
+          {img(dark ?? light, "only-dark")}
         </>
       )}
       {!mini && tag}

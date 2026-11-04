@@ -96,3 +96,28 @@ describe("tema personalizado", () => {
     expect(isDark("#ffffff")).toBe(false);
   });
 });
+
+import { defaultSize, fromHeight, fromWidth, sanitizeSizes, sizeRange } from "@/lib/logo-sizes";
+
+describe("tamanho das logos", () => {
+  it("faixa da logo respeita os limites absolutos e a proporção", () => {
+    // Logo 4:1 → largura 80–220, altura 20–55
+    expect(sizeRange("logo", 4)).toEqual({ wMin: 80, wMax: 220, hMin: 20, hMax: 55 });
+    // Logo 2:1 → altura limita: largura 80–160 (h 40–80)
+    expect(sizeRange("logo", 2)).toEqual({ wMin: 80, wMax: 160, hMin: 40, hMax: 80 });
+  });
+  it("não deixa passar do mínimo nem do máximo e mantém a proporção", () => {
+    expect(fromWidth("logo", 4, 500)).toEqual({ w: 220, h: 55 });
+    expect(fromWidth("logo", 4, 10)).toEqual({ w: 80, h: 20 });
+    expect(fromHeight("logo", 4, 30)).toEqual({ w: 120, h: 30 });
+    expect(fromWidth("symbol", 1, 100)).toEqual({ w: 52, h: 52 });
+    expect(fromWidth("symbol", 1, 1)).toEqual({ w: 24, h: 24 });
+  });
+  it("tamanho padrão: logo com 175px de largura, símbolo com 36px de altura", () => {
+    expect(defaultSize("logo", 4)).toEqual({ w: 175, h: 44 });
+    expect(defaultSize("symbol", 1)).toEqual({ w: 36, h: 36 });
+  });
+  it("descarta tamanhos fora dos limites ou de variantes desconhecidas", () => {
+    expect(sanitizeSizes({ logo: { w: 175, h: 44 }, symbol: { w: 99, h: 99 }, outro: { w: 1, h: 1 } })).toEqual({ logo: { w: 175, h: 44 } });
+  });
+});

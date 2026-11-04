@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { getBranding, logoFor } from "@/lib/branding";
+import { getBranding, logoFor, sizeStyle } from "@/lib/branding";
 import { resolveTheme } from "@/lib/theme-tokens";
 
 export async function AuthShell({ title, description, children }: { title: string; description?: ReactNode; children: ReactNode }) {
@@ -14,9 +14,9 @@ export async function AuthShell({ title, description, children }: { title: strin
           {light || dark ? (
             <div className="grid gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              {light && <span className={dark && dark !== light ? "only-light" : "block"}><img src={light} alt="Logomarca" className="max-h-14 w-auto max-w-[220px] object-contain" /></span>}
+              {light && <span className={dark && dark.src !== light.src ? "only-light" : "block"}><img src={light.src} alt="Logomarca" className="max-w-full object-contain" style={sizeStyle(light, "logo")} /></span>}
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              {dark && dark !== light && <span className="only-dark"><img src={dark} alt="Logomarca" className="max-h-14 w-auto max-w-[220px] object-contain" /></span>}
+              {dark && dark.src !== light?.src && <span className="only-dark"><img src={dark.src} alt="Logomarca" className="max-w-full object-contain" style={sizeStyle(dark, "logo")} /></span>}
               <Wordmark textOnly />
             </div>
           ) : (
