@@ -216,7 +216,7 @@ function Brand({ logo, mini }: { logo: ShellProps["logo"]; mini: boolean }) {
     src && (
       <span className={cls}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt="Logomarca" className={cx("mx-auto object-contain", mini ? "h-8 w-11" : "max-h-9 w-auto max-w-[150px]")} />
+        <img src={src} alt="Logomarca" className={cx("mx-auto object-contain", mini ? "h-8 w-11" : "h-auto w-[175px] max-w-full")} />
       </span>
     );
   return (
