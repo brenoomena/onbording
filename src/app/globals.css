@@ -90,3 +90,7 @@ h3 {
 .modal-drawer { animation: modal-slide 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
 .modal-center { animation: modal-pop 200ms cubic-bezier(0.2, 0.8, 0.2, 1); }
 .in-modal .hide-in-modal { display: none; }
+
+/* Seta do aviso "Objetivo e orientações": balanço curto e espaçado. */
+@keyframes hint-bob { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(2.5px); } }
+.hint-bob { animation: hint-bob 1.8s ease-in-out infinite; }

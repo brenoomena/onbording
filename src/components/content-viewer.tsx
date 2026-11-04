@@ -1,5 +1,7 @@
 "use client";
 
+import { ArrowDown } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Markdown } from "@/components/markdown";
 import { Alert, buttonVariants, cx } from "@/components/ui";
 import { embedUrl, isVideoEmbed, type ContentRow } from "@/lib/learning";
@@ -112,9 +114,9 @@ export function ContentViewer({
 }
 
 /** Objetivo e orientações do conteúdo, mostrado logo abaixo do conteúdo central. */
-export function ObjectiveNote({ text }: { text: string }) {
+export function ObjectiveNote({ text, id }: { text: string; id?: string }) {
   return (
-    <section aria-label="Objetivo e orientações" className="rounded-xl border border-line bg-surface px-5 py-4">
+    <section id={id} aria-label="Objetivo e orientações" className="scroll-mt-24 rounded-xl border border-line bg-surface px-5 py-4">
       <h2 className="mb-1.5 text-[13px] font-semibold uppercase tracking-[0.05em] text-muted">Objetivo e orientações</h2>
       <Markdown size="sm">{text}</Markdown>
     </section>
@@ -126,6 +128,56 @@ function AccessNote({ note }: { note: string }) {
     <div className="rounded-lg border border-accent/30 bg-accent-soft px-4 py-3 text-[14px]">
       <p className="font-semibold">Como acessar</p>
       <Markdown size="sm" className="mt-1 break-words">{note}</Markdown>
+    </div>
+  );
+}
+
+/**
+ * Aviso flutuante "Objetivo e orientações ↓": aparece preso ao rodapé da tela
+ * só enquanto a seção alvo está abaixo da área visível; some quando ela entra
+ * na tela. Fica logo antes da seção (posição sticky), então acompanha a
+ * largura da coluna de conteúdo. Clicar rola suavemente até a seção.
+ */
+export function ObjectiveHint({ targetId }: { targetId: string }) {
+  const [below, setBelow] = useState(false);
+  useEffect(() => {
+    const el = document.getElementById(targetId);
+    if (!el) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        clearTimeout(timer);
+        const hidden = !e.isIntersecting && e.boundingClientRect.top > 0;
+        // Pequena espera ao aparecer, para não piscar durante o carregamento.
+        if (hidden) timer = setTimeout(() => setBelow(true), 500);
+        else setBelow(false);
+      },
+      { rootMargin: "0px 0px -40px 0px" },
+    );
+    io.observe(el);
+    return () => {
+      clearTimeout(timer);
+      io.disconnect();
+    };
+  }, [targetId]);
+
+  return (
+    <div className="pointer-events-none sticky bottom-5 z-10 -mt-6 flex h-0 items-start justify-center">
+      <button
+        type="button"
+        tabIndex={below ? 0 : -1}
+        aria-hidden={!below}
+        onClick={() => document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+        className={cx(
+          "group flex -translate-y-full items-center gap-2 rounded-full border border-line bg-surface/90 py-1.5 pl-3.5 pr-1.5 text-[12.5px] font-medium text-ink shadow-[0_8px_24px_rgba(0,0,0,0.12)] backdrop-blur transition-all duration-300 hover:border-brand/50 hover:shadow-[0_10px_28px_rgba(0,0,0,0.16)]",
+          below ? "pointer-events-auto opacity-100" : "translate-y-0 opacity-0",
+        )}
+      >
+        Objetivo e orientações
+        <span aria-hidden className="grid h-6 w-6 place-items-center rounded-full bg-brand text-on-brand">
+          <ArrowDown size={14} strokeWidth={2.4} className="hint-bob" />
+        </span>
+      </button>
     </div>
   );
 }

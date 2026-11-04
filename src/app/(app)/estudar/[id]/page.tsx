@@ -4,7 +4,7 @@ import { Markdown } from "@/components/markdown";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/forms";
-import { ContentViewer, ObjectiveNote } from "@/components/content-viewer";
+import { ContentViewer, ObjectiveHint, ObjectiveNote } from "@/components/content-viewer";
 import { StudyTracker } from "@/components/study-tracker";
 import { Alert, Badge, PageHeader, buttonVariants, formatDate, KIND_TONE } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
@@ -130,7 +130,12 @@ export default async function EstudarPage({
         )}
       </article>
 
-      {content.objective && <ObjectiveNote text={content.objective} />}
+      {content.objective && (
+        <>
+          <ObjectiveHint targetId="objetivo" />
+          <ObjectiveNote id="objetivo" text={content.objective} />
+        </>
+      )}
 
       {nav.trackId && (
         <nav aria-label="Navegação da trilha" className="flex flex-wrap items-center justify-between gap-2">
