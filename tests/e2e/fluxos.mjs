@@ -87,7 +87,7 @@ await step("senha curta é recusada no login inicial", async () => {
 });
 
 await step("admin vê todos os menus", async () => {
-  assert.deepEqual(await menu(A), ["Painel", "Minhas trilhas", "Materiais", "Trilhas", "Conteúdos", "Colaboradores", "Áreas", "Cargos", "Níveis", "Perfis de acesso", "Configurações", "Auditoria"]);
+  assert.deepEqual(await menu(A), ["Painel", "Minhas trilhas", "Materiais", "Trilhas", "Conteúdos", "Colaboradores", "Acompanhamento", "Áreas", "Cargos", "Níveis", "Perfis de acesso", "Configurações", "Auditoria"]);
   await A.screenshot({ path: `${SHOTS}/01-painel-admin.png`, fullPage: true });
 });
 
@@ -234,7 +234,7 @@ await step("colaboradora troca o próprio nome", async () => {
 const sergio = await newUser();
 await step("supervisor aceita convite e vê apenas a própria equipe", async () => {
   await acceptInvite(sergio.page, "sergio@implantta.com.br", PASS);
-  assert.deepEqual(await menu(sergio.page), ["Painel", "Minhas trilhas", "Materiais", "Minha equipe"]);
+  assert.deepEqual(await menu(sergio.page), ["Painel", "Minhas trilhas", "Materiais", "Minha equipe", "Acompanhamento"]);
   await sergio.page.goto(`${BASE}/colaboradores`);
   assert.deepEqual(await sergio.page.locator("tbody tr td:first-child a").allInnerTexts(), ["Carla C. Souza"]);
   await sergio.page.screenshot({ path: `${SHOTS}/07-minha-equipe.png`, fullPage: true });

@@ -118,10 +118,13 @@ export default async function PainelPage() {
   const people = (recentes.data ?? []) as unknown as ProfileRow[];
 
   // Aprendizagem no alcance do usuário (o banco limita à equipe ou a todos).
+  // Mesmas regras do Acompanhamento: sem a própria pessoa, sem inativos e sem trilhas arquivadas.
   const { data: enr } = await supabase
     .from("enrollments")
-    .select("status, due_date, profile_id")
-    .neq("profile_id", me.userId);
+    .select("status, due_date, profile_id, profile:profiles!inner(status), track:tracks!inner(status)")
+    .neq("profile_id", me.userId)
+    .neq("profile.status", "inativo")
+    .neq("track.status", "arquivado");
   const learning = (enr ?? []) as { status: "nao_iniciada" | "em_andamento" | "concluida"; due_date: string | null; profile_id: string }[];
   const today = todayBR();
   const late = learning.filter((e) => e.status !== "concluida" && e.due_date && e.due_date < today).length;

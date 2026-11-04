@@ -327,6 +327,23 @@ run("Etapa 2 · trilhas, conteúdos, matrículas e progresso", () => {
     expect(r2.rows[0].n).toBeGreaterThan(0);
   });
 
+  it("acompanhamento: progresso.ver lê cadastro e matrículas de todos; sem ela, não", async () => {
+    const analista = await createPerson(db.pool, { name: "Analista de RH", email: "analista.rh@implantta.com.br", role: "colaborador" });
+    const before = await asUser(db.pool, analista, (q) => q("select count(*)::int n from profiles where id = $1", [vendedor]));
+    expect(before.rows[0].n).toBe(0);
+    await asUser(db.pool, admin, (q) => q("insert into user_permissions (profile_id, permission_key, allowed) values ($1, 'progresso.ver', true)", [analista]));
+    const p = await asUser(db.pool, analista, (q) => q("select count(*)::int n from profiles where id = $1", [vendedor]));
+    expect(p.rows[0].n).toBe(1);
+    const e = await asUser(db.pool, analista, (q) => q("select count(*)::int n from enrollments where profile_id = $1", [vendedor]));
+    expect(e.rows[0].n).toBeGreaterThan(0);
+    // Só leitura: continua sem poder alterar matrículas.
+    const upd = await asUser(db.pool, analista, (q) => q("update enrollments set due_date = '2030-01-01' where profile_id = $1 returning id", [vendedor]));
+    expect(upd.rowCount).toBe(0);
+    await asUser(db.pool, admin, (q) => q("delete from user_permissions where profile_id = $1", [analista]));
+    const after = await asUser(db.pool, analista, (q) => q("select count(*)::int n from profiles where id = $1", [vendedor]));
+    expect(after.rows[0].n).toBe(0);
+  });
+
   // ------------------------------------------------- identidade visual
 
   it("configurações visuais: só o admin lê e altera; cores inválidas são recusadas; tema público via função", async () => {

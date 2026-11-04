@@ -12,8 +12,7 @@ import {
   ShieldCheck,
   UserRound,
   Users,
-  type LucideIcon,
-} from "lucide-react";
+  type LucideIcon, ChartColumnIncreasing } from "lucide-react";
 import type { IconName } from "@/lib/permissions";
 
 /** Ícones dos módulos (menu, barra superior e cabeçalhos). Um só lugar para manter o padrão. */
@@ -30,6 +29,7 @@ export const MODULE_ICONS: Record<IconName, LucideIcon> = {
   perfis: ShieldCheck,
   configuracoes: Palette,
   auditoria: History,
+  acompanhamento: ChartColumnIncreasing,
   "meu-perfil": UserRound,
 };
 

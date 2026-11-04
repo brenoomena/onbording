@@ -64,7 +64,7 @@ describe("menu por permissão", () => {
 
   it("supervisor vê 'Minha equipe'", () => {
     const items = visibleMenu(new Set([P.painelVer, P.equipeVer]), false).flatMap((g) => g.items.map((i) => i.label));
-    expect(items).toEqual(["Painel", "Minhas trilhas", "Materiais", "Minha equipe"]);
+    expect(items).toEqual(["Painel", "Minhas trilhas", "Materiais", "Minha equipe", "Acompanhamento"]);
   });
 
   it("quem tem todas as permissões, mas não é administrador, não vê perfis nem configurações", () => {
@@ -76,7 +76,12 @@ describe("menu por permissão", () => {
 
   it("administrador vê todos os menus", () => {
     const items = visibleMenu(new Set(Object.values(P)), true).flatMap((g) => g.items.map((i) => i.label));
-    expect(items).toEqual(["Painel", "Minhas trilhas", "Materiais", "Trilhas", "Conteúdos", "Colaboradores", "Áreas", "Cargos", "Níveis", "Perfis de acesso", "Configurações", "Auditoria"]);
+    expect(items).toEqual(["Painel", "Minhas trilhas", "Materiais", "Trilhas", "Conteúdos", "Colaboradores", "Acompanhamento", "Áreas", "Cargos", "Níveis", "Perfis de acesso", "Configurações", "Auditoria"]);
+  });
+
+  it("acompanhamento aparece com progresso.ver, mesmo sem ver colaboradores", () => {
+    const items = visibleMenu(new Set([P.progressoVer]), false).flatMap((g) => g.items.map((i) => i.label));
+    expect(items).toEqual(["Minhas trilhas", "Materiais", "Acompanhamento"]);
   });
 
   it("estrutura aparece com qualquer uma das ações", () => {
