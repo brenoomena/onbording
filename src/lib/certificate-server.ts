@@ -19,9 +19,12 @@ export async function validationUrl(code: string): Promise<string> {
   return `${await siteOrigin()}${validationPath(code)}`;
 }
 
-/** Logo (versão para fundo claro) e assinatura usadas no certificado. */
+/** Logo do certificado (a própria ou a da Marca, versão para fundo claro) e assinatura. */
 export function certificateImages(b: Branding): { logoUrl: string | null; signatureUrl: string | null } {
-  return { logoUrl: logoFor(b, "#ffffff")?.src ?? null, signatureUrl: brandingUrl(b.certificate.signaturePath) };
+  return {
+    logoUrl: brandingUrl(b.certificate.logoPath) ?? logoFor(b, "#ffffff")?.src ?? null,
+    signatureUrl: brandingUrl(b.certificate.signaturePath),
+  };
 }
 
 export const CERT_COLUMNS = "id, code, profile_id, track_id, person_name, track_name, hours, average_score, completed_at, issued_at";

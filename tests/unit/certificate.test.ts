@@ -35,3 +35,14 @@ describe("certificado", () => {
     expect(titleScale("Certificado de excelência em vendas")).toBeLessThan(0.6);
   });
 });
+
+describe("certificado: modelos e logo própria", () => {
+  it("aceita só modelos conhecidos e limita o tamanho da logo", () => {
+    expect(sanitizeCertificate({ model: "moderno", logoHeight: 200, logoPath: "logo/0b7c1f7e-1111-4222-8333-944455556666.png" })).toEqual({
+      model: "moderno",
+      logoHeight: 70,
+      logoPath: "logo/0b7c1f7e-1111-4222-8333-944455556666.png",
+    });
+    expect(sanitizeCertificate({ model: "constructor", logoPath: "https://x.com/a.png" })).toEqual({});
+  });
+});

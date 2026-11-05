@@ -124,6 +124,31 @@ await step("novos efeitos, área do efeito e fonte/tamanho dos textos", async ()
   await m.screenshot({ path: `${SHOTS}/11-celular-44px.png` });
 });
 
+await step("cor própria de cada texto e largura da logo", async () => {
+  await A.goto(`${BASE}/configuracoes?secao=login`);
+  await A.getByText("Prévia ao vivo").waitFor();
+  const auto = A.locator("#lg-headline-color").locator("xpath=../..").getByLabel("Automática");
+  await auto.uncheck();
+  await A.locator("#lg-headline-color").fill("#ffcc00");
+  await A.locator("#lg-title-color").locator("xpath=../..").getByLabel("Automática").uncheck();
+  await A.locator("#lg-title-color").fill("#00ff88");
+  await A.getByLabel("Usar o tamanho definido em Marca").uncheck();
+  await A.locator("#lg-logo-w").fill("330");
+  await A.getByRole("button", { name: "Salvar página de login" }).click();
+  await A.getByText("Página de login salva").first().waitFor();
+  await A.keyboard.press("Escape");
+  const p = await newPage();
+  await p.goto(`${BASE}/login`);
+  const head = p.locator("main p").filter({ hasText: /time|aqui/ }).first();
+  await head.waitFor();
+  assert.equal(await head.evaluate((el) => getComputedStyle(el).color), "rgb(255, 204, 0)");
+  assert.equal(await p.getByRole("heading").first().evaluate((el) => getComputedStyle(el).color), "rgb(0, 255, 136)");
+  const fs30 = await p.getByText("Onboarding Implantta").first().evaluate((el) => getComputedStyle(el).fontSize);
+  assert.equal(fs30, "30px");
+  await p.waitForTimeout(800);
+  await p.screenshot({ path: `${SHOTS}/12-cores-textos.png` });
+});
+
 await step("restaurar padrão volta ao degradê #14afcc", async () => {
   await A.getByRole("button", { name: "Restaurar padrão" }).click();
   await A.getByRole("button", { name: "Salvar página de login" }).click();

@@ -134,7 +134,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
             >
               <CertificateEditor
                 initial={certificate}
-                logoUrl={logoFor(brand, "#ffffff")?.src ?? null}
+                brandLogoUrl={logoFor(brand, "#ffffff")?.src ?? null}
                 storageBase={`${publicEnv.supabaseUrl.replace(/\/$/, "")}/storage/v1/object/public/branding`}
                 validationBase={await siteOrigin()}
               />

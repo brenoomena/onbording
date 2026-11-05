@@ -132,6 +132,39 @@ await step("admin edita o modelo em Configurações › Certificado e a mudança
   await V.getByText("Breno Omena").waitFor();
 });
 
+await step("modelos de certificado e logo própria (PDF de cada modelo)", async () => {
+  const A = await open("breno@implantta.com.br");
+  // Logo de teste (PNG gerado na hora).
+  const sharp = (await import("/home/claude/onbording/node_modules/sharp/dist/index.cjs")).default;
+  const logoPng = `${SHOTS}/logo-teste.png`;
+  await sharp({ create: { width: 480, height: 120, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+    .composite([{ input: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="480" height="120"><rect x="0" y="10" width="100" height="100" rx="22" fill="#14afcc"/><text x="120" y="82" font-family="Arial" font-weight="700" font-size="64" fill="#0a2550">ACME</text></svg>'), top: 0, left: 0 }])
+    .png()
+    .toFile(logoPng);
+  await A.goto(`${BASE}/configuracoes?secao=certificado`);
+  await A.getByText("Prévia ao vivo (dados de exemplo)").waitFor();
+  await A.locator("#ct-body").fill("concluiu a trilha {trilha}, com carga horária de {carga}, em {data}.");
+  await A.locator("label", { hasText: "Enviar logo própria" }).locator("input[type=file]").setInputFiles(logoPng);
+  await A.waitForTimeout(2500);
+  await A.screenshot({ path: `${SHOTS}/dbg-logo.png`, fullPage: true });
+  await A.getByRole("button", { name: "Usar a da Marca" }).waitFor({ timeout: 8000 });
+  await A.locator("#ct-logo-h").fill("60");
+  for (const [label, key] of [["Clássico", "classico"], ["Moderno", "moderno"], ["Elegante", "elegante"], ["Minimalista", "minimalista"], ["Faixas", "faixa"]]) {
+    await A.locator(`input[name=ct-model][value=${key}]`).check({ force: true });
+    await A.getByRole("button", { name: "Salvar certificado" }).click();
+    await A.getByText("Modelo do certificado salvo").first().waitFor();
+    await A.keyboard.press("Escape");
+    const ex = await A.request.get(`${BASE}/configuracoes/certificado/exemplo`);
+    fs.writeFileSync(`${SHOTS}/m-${key}.pdf`, await ex.body());
+    execFileSync("pdftoppm", ["-png", "-r", "60", "-singlefile", `${SHOTS}/m-${key}.pdf`, `${SHOTS}/m-${key}`]);
+    await A.locator("div[role=img]").first().screenshot({ path: `${SHOTS}/v-${key}.png` });
+  }
+  const saved = (await rest("app_settings?select=certificate_theme"))[0].certificate_theme;
+  assert.equal(saved.model, "faixa");
+  assert.match(saved.logoPath, /^logo\/[0-9a-f-]{36}\.png$/);
+  await A.screenshot({ path: `${SHOTS}/07-config-modelos.png`, fullPage: true });
+});
+
 await step("gestor vê o link do certificado nas matrículas da trilha", async () => {
   const A = await open("breno@implantta.com.br");
   await A.goto(`${BASE}/trilhas/${track.id}/matriculas`);

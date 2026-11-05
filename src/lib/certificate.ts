@@ -5,6 +5,7 @@
  */
 
 export type NameStyle = "serifada" | "sem_serifa";
+export type CertModel = "classico" | "moderno" | "elegante" | "minimalista" | "faixa";
 
 export interface CertificateTheme {
   title: string;
@@ -24,6 +25,11 @@ export interface CertificateTheme {
   signerName: string;
   signerRole: string;
   signaturePath: string | null;
+  model: CertModel;
+  /** Logomarca só do certificado (PNG); sem ela, usa a logo da Marca. */
+  logoPath: string | null;
+  /** Altura da logo no certificado, em pontos. */
+  logoHeight: number;
 }
 
 export const DEFAULT_CERTIFICATE: CertificateTheme = {
@@ -42,6 +48,9 @@ export const DEFAULT_CERTIFICATE: CertificateTheme = {
   signerName: "",
   signerRole: "",
   signaturePath: null,
+  model: "classico",
+  logoPath: null,
+  logoHeight: 50,
 };
 
 export const CERT_LIMITS = { title: 40, subtitle: 60, intro: 80, body: 400, scoreText: 120, signerName: 80, signerRole: 80 } as const;
@@ -68,6 +77,9 @@ export function sanitizeCertificate(raw: unknown): Partial<CertificateTheme> {
   }
   if (r.nameStyle === "serifada" || r.nameStyle === "sem_serifa") out.nameStyle = r.nameStyle;
   if (r.signaturePath === null || (typeof r.signaturePath === "string" && SIGNATURE.test(r.signaturePath))) out.signaturePath = r.signaturePath as string | null;
+  if (r.logoPath === null || (typeof r.logoPath === "string" && SIGNATURE.test(r.logoPath))) out.logoPath = r.logoPath as string | null;
+  if (typeof r.model === "string" && Object.hasOwn(CERT_MODELS, r.model)) out.model = r.model as CertModel;
+  if (typeof r.logoHeight === "number" && Number.isFinite(r.logoHeight)) out.logoHeight = Math.round(Math.min(70, Math.max(20, r.logoHeight)));
   return out;
 }
 
@@ -185,7 +197,7 @@ export const LAYOUT = {
   frameOuter: 16,
   frameInner: 25,
   corner: 120,
-  logo: { y: 58, maxW: 190, maxH: 50 },
+  logo: { cy: 83 },
   title: { y: 150, size: 34, spacing: 6 },
   subtitle: { y: 174, size: 12.5, spacing: 3 },
   intro: { y: 222, size: 13 },
@@ -209,4 +221,125 @@ export function qrPath(modules: { size: number; get: (r: number, c: number) => n
 export function titleScale(title: string): number {
   const n = [...title].length;
   return n <= 20 ? 1 : Math.max(0.55, 20 / n);
+}
+
+
+/** Cor de uma forma: do tema (primary, accent, ink) ou fixa (#rrggbb). */
+export type Paint = "primary" | "accent" | "ink" | `#${string}`;
+export type Shape =
+  | { kind: "rect"; x: number; y: number; w: number; h: number; fill?: Paint; stroke?: Paint; sw?: number }
+  | { kind: "path"; d: string; fill: Paint };
+
+export interface CertModelSpec {
+  label: string;
+  hint: string;
+  paper: string;
+  /** Formas decorativas, em pontos com o y a partir do topo (como no SVG). */
+  shapes: Shape[];
+  /** Centro e meia largura da área dos textos. */
+  cx: number;
+  half: number;
+  signCx: number;
+  verifyRight: number;
+  qrX: number;
+}
+
+const W = PAGE.w;
+const H = PAGE.h;
+const diamond = (x: number, y: number, r: number) => `M${x} ${y - r}L${x + r} ${y}L${x} ${y + r}L${x - r} ${y}Z`;
+
+export const CERT_MODELS: Record<CertModel, CertModelSpec> = {
+  classico: {
+    label: "Clássico",
+    hint: "Moldura dupla e cantos em diagonal",
+    paper: "#ffffff",
+    shapes: [
+      { kind: "rect", x: 16, y: 16, w: W - 32, h: H - 32, stroke: "primary", sw: 2.2 },
+      { kind: "rect", x: 25, y: 25, w: W - 50, h: H - 50, stroke: "accent", sw: 0.7 },
+      { kind: "path", d: `M${W - 120} 0H${W}V120Z`, fill: "primary" },
+      { kind: "path", d: `M${W - 74.4} 0H${W}V74.4Z`, fill: "accent" },
+      { kind: "path", d: `M0 ${H - 120}L120 ${H}H0Z`, fill: "primary" },
+      { kind: "path", d: `M0 ${H - 74.4}L74.4 ${H}H0Z`, fill: "accent" },
+    ],
+    cx: W / 2,
+    half: 330,
+    signCx: 232,
+    verifyRight: 676,
+    qrX: 690,
+  },
+  moderno: {
+    label: "Moderno",
+    hint: "Faixa lateral na cor principal",
+    paper: "#ffffff",
+    shapes: [
+      { kind: "rect", x: 0, y: 0, w: 228, h: H, fill: "primary" },
+      { kind: "rect", x: 228, y: 0, w: 7, h: H, fill: "accent" },
+      { kind: "path", d: `M0 ${H - 170}L228 ${H - 60}V${H}H0Z`, fill: "accent" },
+      { kind: "rect", x: 40, y: 44, w: 54, h: 4, fill: "accent" },
+      { kind: "rect", x: 264, y: 30, w: W - 294, h: H - 60, stroke: "primary", sw: 0.6 },
+    ],
+    cx: 538,
+    half: 262,
+    signCx: 390,
+    verifyRight: 714,
+    qrX: 728,
+  },
+  elegante: {
+    label: "Elegante",
+    hint: "Papel creme, moldura tripla e losangos",
+    paper: "#fbf7ee",
+    shapes: [
+      { kind: "rect", x: 18, y: 18, w: W - 36, h: H - 36, stroke: "primary", sw: 1.2 },
+      { kind: "rect", x: 26, y: 26, w: W - 52, h: H - 52, stroke: "accent", sw: 3 },
+      { kind: "rect", x: 34, y: 34, w: W - 68, h: H - 68, stroke: "primary", sw: 0.5 },
+      { kind: "path", d: diamond(26, 26, 11), fill: "accent" },
+      { kind: "path", d: diamond(W - 26, 26, 11), fill: "accent" },
+      { kind: "path", d: diamond(26, H - 26, 11), fill: "accent" },
+      { kind: "path", d: diamond(W - 26, H - 26, 11), fill: "accent" },
+      { kind: "path", d: diamond(W / 2, 34, 5), fill: "primary" },
+      { kind: "path", d: diamond(W / 2, H - 34, 5), fill: "primary" },
+    ],
+    cx: W / 2,
+    half: 320,
+    signCx: 246,
+    verifyRight: 662,
+    qrX: 676,
+  },
+  minimalista: {
+    label: "Minimalista",
+    hint: "Sem moldura, linhas finas no topo e na base",
+    paper: "#ffffff",
+    shapes: [
+      { kind: "rect", x: 0, y: 0, w: W, h: 8, fill: "primary" },
+      { kind: "rect", x: 0, y: 8, w: W, h: 3, fill: "accent" },
+      { kind: "rect", x: 0, y: H - 8, w: W, h: 8, fill: "primary" },
+    ],
+    cx: W / 2,
+    half: 340,
+    signCx: 232,
+    verifyRight: 690,
+    qrX: 704,
+  },
+  faixa: {
+    label: "Faixas",
+    hint: "Faixas largas no topo e na base",
+    paper: "#ffffff",
+    shapes: [
+      { kind: "rect", x: 0, y: 0, w: W, h: 40, fill: "primary" },
+      { kind: "rect", x: 0, y: 40, w: W, h: 5, fill: "accent" },
+      { kind: "rect", x: 0, y: H - 34, w: W, h: 34, fill: "primary" },
+      { kind: "rect", x: 0, y: H - 39, w: W, h: 5, fill: "accent" },
+      { kind: "path", d: `M${W - 220} 0H${W}V40H${W - 180}Z`, fill: "accent" },
+      { kind: "path", d: `M0 ${H - 34}H200L170 ${H}H0Z`, fill: "accent" },
+    ],
+    cx: W / 2,
+    half: 340,
+    signCx: 232,
+    verifyRight: 690,
+    qrX: 704,
+  },
+};
+
+export function paint(p: Paint, t: Pick<CertificateTheme, "primary" | "accent" | "ink">): string {
+  return p === "primary" ? t.primary : p === "accent" ? t.accent : p === "ink" ? t.ink : p;
 }

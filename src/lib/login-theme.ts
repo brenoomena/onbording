@@ -51,6 +51,13 @@ export interface LoginTheme {
   titleSize: number;
   subtitleFont: LoginFont;
   subtitleSize: number;
+  /** Cor própria de cada texto; vazio = automática (cor dos textos ou do cartão). */
+  headlineColor: string;
+  taglineColor: string;
+  titleColor: string;
+  subtitleColor: string;
+  /** Largura da logo em px (a altura acompanha); 0 = tamanho definido em Marca. */
+  logoWidth: number;
 }
 
 export const DEFAULT_LOGIN: LoginTheme = {
@@ -79,7 +86,14 @@ export const DEFAULT_LOGIN: LoginTheme = {
   titleSize: 18,
   subtitleFont: "padrao",
   subtitleSize: 13.5,
+  headlineColor: "",
+  taglineColor: "",
+  titleColor: "",
+  subtitleColor: "",
+  logoWidth: 0,
 };
+
+export const LOGO_WIDTH = { min: 60, max: 420 } as const;
 
 export const LOGIN_EFFECT_LABEL: Record<LoginEffect, string> = {
   linhas: "Linhas de luz na grade",
@@ -176,10 +190,14 @@ export function sanitizeLogin(raw: unknown): Partial<LoginTheme> {
   const intensity = int(r.intensity, 1, 10);
   if (intensity !== undefined) out.intensity = intensity;
   if (typeof r.effect === "string" && Object.hasOwn(LOGIN_EFFECT_LABEL, r.effect)) out.effect = r.effect as LoginEffect;
+  if (r.logoWidth === 0) out.logoWidth = 0;
+  else if (typeof r.logoWidth === "number" && Number.isFinite(r.logoWidth)) out.logoWidth = Math.round(Math.min(LOGO_WIDTH.max, Math.max(LOGO_WIDTH.min, r.logoWidth)));
   if (typeof r.effectArea === "string" && Object.hasOwn(LOGIN_AREA_LABEL, r.effectArea)) out.effectArea = r.effectArea as LoginArea;
   for (const k of TEXT_KEYS) {
     const f = r[`${k}Font`];
     if (typeof f === "string" && Object.hasOwn(LOGIN_FONTS, f)) out[`${k}Font`] = f as LoginFont;
+    const c = r[`${k}Color`];
+    if (c === "" || (typeof c === "string" && HEX.test(c))) out[`${k}Color`] = (c as string).toLowerCase();
     const size = r[`${k}Size`];
     if (typeof size === "number" && Number.isFinite(size)) {
       const lim = TEXT_SIZE[k];

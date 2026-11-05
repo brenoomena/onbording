@@ -154,8 +154,12 @@ export async function saveCertificateTheme(_: ActionState, fd: FormData): Promis
   const { data, error } = await supabase.from("app_settings").update({ certificate_theme: diffCertificate(clean) }).eq("id", 1).select("id");
   if (error) return { error: friendlyError(error) };
   if (!data?.length) return { error: "Somente administradores podem alterar o certificado." };
-  const old = sanitizeCertificate(before?.certificate_theme).signaturePath;
-  if (old && old !== (clean.signaturePath ?? null)) await supabase.storage.from("branding").remove([old]);
+  const prev = sanitizeCertificate(before?.certificate_theme);
+  const removed = [
+    prev.signaturePath && prev.signaturePath !== (clean.signaturePath ?? null) ? prev.signaturePath : null,
+    prev.logoPath && prev.logoPath !== (clean.logoPath ?? null) ? prev.logoPath : null,
+  ].filter((x): x is string => !!x);
+  if (removed.length) await supabase.storage.from("branding").remove(removed);
   refreshBranding();
   return { ok: "Modelo do certificado salvo. Vale para todos os certificados, inclusive os já emitidos." };
 }

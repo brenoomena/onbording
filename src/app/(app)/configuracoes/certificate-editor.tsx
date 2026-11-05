@@ -5,7 +5,16 @@ import { useRef, useState } from "react";
 import { CertificateView } from "@/components/certificate-view";
 import { ActionForm, FormBar, SubmitButton } from "@/components/forms";
 import { Alert, Field, Input, Textarea, buttonVariants, cx } from "@/components/ui";
-import { CERT_LIMITS, DEFAULT_CERTIFICATE, SAMPLE_CERTIFICATE, diffCertificate, type CertificateTheme, type NameStyle } from "@/lib/certificate";
+import {
+  CERT_LIMITS,
+  CERT_MODELS,
+  DEFAULT_CERTIFICATE,
+  SAMPLE_CERTIFICATE,
+  diffCertificate,
+  type CertModel,
+  type CertificateTheme,
+  type NameStyle,
+} from "@/lib/certificate";
 import { createClient } from "@/lib/supabase/client";
 import { saveCertificateTheme } from "./actions";
 
@@ -18,10 +27,10 @@ const MARKERS: [string, string][] = [
   ["{nome}", "nome da pessoa"],
 ];
 
-/** Imagem da assinatura em PNG (mantém a transparência), com no máximo 900 px de largura. */
-async function toPng(file: File): Promise<Blob> {
+/** Imagem em PNG (mantém a transparência), reduzida para caber em maxW × maxH. */
+async function toPng(file: File, maxW = 900, maxH = 300): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, 900 / bitmap.width, 300 / bitmap.height);
+  const scale = Math.min(1, maxW / bitmap.width, maxH / bitmap.height);
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(bitmap.width * scale));
   canvas.height = Math.max(1, Math.round(bitmap.height * scale));
@@ -37,46 +46,50 @@ async function toPng(file: File): Promise<Blob> {
 
 export function CertificateEditor({
   initial,
-  logoUrl,
+  brandLogoUrl,
   storageBase,
   validationBase,
 }: {
   initial: CertificateTheme;
-  logoUrl: string | null;
+  /** Logo da Marca (usada quando o certificado não tem logo própria). */
+  brandLogoUrl: string | null;
   /** Endereço público do bucket "branding" (para mostrar a assinatura enviada). */
   storageBase: string;
   validationBase: string;
 }) {
   const [t, setT] = useState<CertificateTheme>(initial);
-  const [upload, setUpload] = useState<{ busy: boolean; error?: string }>({ busy: false });
+  const [upload, setUpload] = useState<{ busy: "" | "signaturePath" | "logoPath"; error?: string; key?: "signaturePath" | "logoPath" }>({ busy: "" });
   const file = useRef<HTMLInputElement>(null);
+  const logoFile = useRef<HTMLInputElement>(null);
   const body = useRef<HTMLTextAreaElement>(null);
   const set = <K extends keyof CertificateTheme>(k: K, v: CertificateTheme[K]) => setT((x) => ({ ...x, [k]: v }));
   const custom = Object.keys(diffCertificate(t)).length;
   const signatureUrl = t.signaturePath ? `${storageBase}/${t.signaturePath}` : null;
+  const ownLogoUrl = t.logoPath ? `${storageBase}/${t.logoPath}` : null;
+  const logoUrl = ownLogoUrl ?? brandLogoUrl;
 
-  async function onSignature(f: File | undefined) {
+  async function onImage(f: File | undefined, key: "signaturePath" | "logoPath", input: HTMLInputElement | null) {
     if (!f) return;
     if (!["image/png", "image/jpeg", "image/webp"].includes(f.type)) {
-      setUpload({ busy: false, error: "Envie uma imagem PNG, JPG ou WebP. PNG com fundo transparente fica melhor." });
+      setUpload({ busy: "", key, error: "Envie uma imagem PNG, JPG ou WebP. PNG com fundo transparente fica melhor." });
       return;
     }
     if (f.size > 5 * 1024 * 1024) {
-      setUpload({ busy: false, error: "A imagem passa de 5 MB." });
+      setUpload({ busy: "", key, error: "A imagem passa de 5 MB." });
       return;
     }
-    setUpload({ busy: true });
+    setUpload({ busy: key });
     try {
-      const blob = await toPng(f);
+      const blob = key === "logoPath" ? await toPng(f, 1200, 400) : await toPng(f);
       const path = `logo/${crypto.randomUUID()}.png`;
       const { error } = await createClient().storage.from("branding").upload(path, blob, { contentType: "image/png" });
       if (error) throw error;
-      set("signaturePath", path);
-      setUpload({ busy: false });
+      set(key, path);
+      setUpload({ busy: "" });
     } catch {
-      setUpload({ busy: false, error: "Não foi possível enviar a imagem. Tente de novo." });
+      setUpload({ busy: "", key, error: "Não foi possível enviar a imagem. Tente de novo." });
     } finally {
-      if (file.current) file.current.value = "";
+      if (input) input.value = "";
     }
   }
 
@@ -98,7 +111,7 @@ export function CertificateEditor({
       <FormBar info={custom ? `${custom} ${custom === 1 ? "ajuste personalizado" : "ajustes personalizados"}` : "Usando o modelo padrão"}>
         <button
           type="button"
-          onClick={() => setT({ ...DEFAULT_CERTIFICATE, signaturePath: t.signaturePath })}
+          onClick={() => setT({ ...DEFAULT_CERTIFICATE, signaturePath: t.signaturePath, logoPath: t.logoPath })}
           className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-medium text-muted hover:bg-sunken hover:text-ink"
         >
           <RotateCcw size={15} aria-hidden /> Restaurar padrão
@@ -122,8 +135,40 @@ export function CertificateEditor({
             className="mx-auto w-full max-w-[920px]"
           />
         </div>
-        {!logoUrl && <p className="text-[12px] text-muted">Sem logomarca cadastrada: o certificado sai sem logo. Cadastre em Marca.</p>}
       </div>
+
+      <fieldset className="grid gap-2">
+        <legend className="mb-1.5 text-[13px] font-semibold">Modelo</legend>
+        <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(170px,1fr))]">
+          {(Object.keys(CERT_MODELS) as CertModel[]).map((k) => {
+            const m = CERT_MODELS[k];
+            const on = t.model === k;
+            return (
+              <label
+                key={k}
+                className={cx(
+                  "grid cursor-pointer gap-2 rounded-xl border p-2.5 transition-colors",
+                  on ? "border-brand bg-accent-soft/60 ring-2 ring-brand/30" : "border-line hover:border-accent/40",
+                )}
+              >
+                <input type="radio" name="ct-model" value={k} checked={on} onChange={() => set("model", k)} className="sr-only" />
+                <CertificateView
+                  theme={{ ...t, model: k, showQr: false }}
+                  data={SAMPLE_CERTIFICATE}
+                  logoUrl={logoUrl}
+                  signatureUrl={signatureUrl}
+                  validationUrl=""
+                  className="pointer-events-none w-full"
+                />
+                <span className="px-0.5 leading-tight">
+                  <span className={cx("block text-[13px] font-semibold", on && "text-accent")}>{m.label}</span>
+                  <span className="block text-[11.5px] text-muted">{m.hint}</span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
 
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <Group title="Textos">
@@ -187,6 +232,40 @@ export function CertificateEditor({
             </fieldset>
           </Group>
 
+          <Group title="Logomarca do certificado">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="grid h-16 w-44 place-items-center rounded-lg border border-dashed border-line bg-white p-1.5">
+                {logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={logoUrl} alt="Logomarca do certificado" className="max-h-full max-w-full object-contain" />
+                ) : (
+                  <span className="text-[12px] text-slate-400">Sem logo</span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <label className={cx(buttonVariants.secondary, "cursor-pointer py-1.5 text-[13px]")}>
+                  <ImageUp size={15} aria-hidden /> {upload.busy === "logoPath" ? "Enviando…" : ownLogoUrl ? "Trocar logo" : "Enviar logo própria"}
+                  <input ref={logoFile} type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => onImage(e.target.files?.[0], "logoPath", logoFile.current)} disabled={!!upload.busy} />
+                </label>
+                {ownLogoUrl && (
+                  <button type="button" onClick={() => set("logoPath", null)} className={cx(buttonVariants.ghost, "py-1.5 text-[13px] text-danger")}>
+                    <Trash2 size={15} aria-hidden /> Usar a da Marca
+                  </button>
+                )}
+              </div>
+            </div>
+            <p className="text-[12px] text-muted">
+              {ownLogoUrl ? "Logo própria do certificado." : brandLogoUrl ? "Usando a logomarca da Marca (versão para fundo claro)." : "Sem logo própria e sem logomarca na Marca: o certificado sai sem logo."} Só vale depois de salvar.
+            </p>
+            <div className="grid gap-1.5">
+              <label htmlFor="ct-logo-h" className="flex items-center justify-between text-[13px] font-medium">
+                Tamanho da logo <span className="font-mono text-[12px] text-muted">{Math.round((t.logoHeight / 50) * 100)}%</span>
+              </label>
+              {upload.error && upload.key === "logoPath" && <Alert>{upload.error}</Alert>}
+              <input id="ct-logo-h" type="range" min={20} max={70} value={t.logoHeight} onChange={(e) => set("logoHeight", Number(e.target.value))} className="w-full accent-[rgb(var(--brand))]" />
+            </div>
+          </Group>
+
           <Group title="Assinatura">
             <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(180px,1fr))]">
               <Field label="Nome de quem assina" htmlFor="ct-signer">
@@ -207,8 +286,8 @@ export function CertificateEditor({
               </div>
               <div className="flex flex-wrap gap-2">
                 <label className={cx(buttonVariants.secondary, "cursor-pointer py-1.5 text-[13px]")}>
-                  <ImageUp size={15} aria-hidden /> {upload.busy ? "Enviando…" : signatureUrl ? "Trocar imagem" : "Enviar imagem da assinatura"}
-                  <input ref={file} type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => onSignature(e.target.files?.[0])} disabled={upload.busy} />
+                  <ImageUp size={15} aria-hidden /> {upload.busy === "signaturePath" ? "Enviando…" : signatureUrl ? "Trocar imagem" : "Enviar imagem da assinatura"}
+                  <input ref={file} type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => onImage(e.target.files?.[0], "signaturePath", file.current)} disabled={!!upload.busy} />
                 </label>
                 {signatureUrl && (
                   <button type="button" onClick={() => set("signaturePath", null)} className={cx(buttonVariants.ghost, "py-1.5 text-[13px] text-danger")}>
@@ -218,7 +297,7 @@ export function CertificateEditor({
               </div>
             </div>
             <p className="text-[12px] text-muted">PNG com fundo transparente fica melhor. A imagem só vale depois de salvar.</p>
-            {upload.error && <Alert>{upload.error}</Alert>}
+            {upload.error && upload.key === "signaturePath" && <Alert>{upload.error}</Alert>}
           </Group>
         </div>
       </div>

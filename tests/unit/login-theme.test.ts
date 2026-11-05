@@ -46,3 +46,11 @@ describe("login-theme: efeitos, área e fontes", () => {
     expect(url).toBe("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap");
   });
 });
+
+describe("login-theme: cor de cada texto e largura da logo", () => {
+  it("cor vazia é automática; largura 0 é o tamanho da Marca", () => {
+    expect(sanitizeLogin({ headlineColor: "#FFCC00", titleColor: "", subtitleColor: "vermelho", logoWidth: 999 })).toEqual({ headlineColor: "#ffcc00", titleColor: "", logoWidth: 420 });
+    expect(sanitizeLogin({ logoWidth: 0 })).toEqual({ logoWidth: 0 });
+    expect(sanitizeLogin({ logoWidth: 10 })).toEqual({ logoWidth: 60 });
+  });
+});

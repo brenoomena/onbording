@@ -12,6 +12,7 @@ import {
   LOGIN_CARD_LABEL,
   LOGIN_EFFECT_LABEL,
   LOGIN_FONTS,
+  LOGO_WIDTH,
   TEXT_LIMITS,
   TEXT_SIZE,
   diffLogin,
@@ -59,6 +60,22 @@ export function LoginEditor({ initial, logo, domainHint }: { initial: LoginTheme
 
       <div className="grid items-start gap-6 xl:grid-cols-2">
         <div className="grid content-start gap-4">
+          <Group title="Logomarca" hint="A logomarca vem de Configurações › Marca (versão para fundo escuro, quando houver). Aqui você ajusta o tamanho, sempre proporcional.">
+            <label className="flex items-center gap-2 text-[13px]">
+              <input
+                type="checkbox"
+                checked={t.logoWidth === 0}
+                onChange={(e) => set("logoWidth", e.target.checked ? 0 : logo?.style.width ?? 200)}
+                className="h-4 w-4 accent-[rgb(var(--brand))]"
+              />
+              Usar o tamanho definido em Marca
+            </label>
+            {t.logoWidth !== 0 && (
+              <Range id="lg-logo-w" label="Largura da logo (a altura acompanha)" value={t.logoWidth} min={LOGO_WIDTH.min} max={LOGO_WIDTH.max} step={5} suffix="px" onChange={(v) => set("logoWidth", v)} />
+            )}
+            {!logo && <p className="text-[12px] text-muted">Sem logomarca cadastrada: o ajuste vale para o nome “Onboarding Implantta”.</p>}
+          </Group>
+
           <Group title="Fundo degradê" hint="Do canto inicial ao final, passando pela cor do meio.">
             <div className="flex flex-wrap gap-2">
               {PRESETS.map((p) => {
@@ -220,6 +237,7 @@ function TextStyle({
   const lim = TEXT_SIZE[k];
   const fontKey = `${k}Font` as const;
   const sizeKey = `${k}Size` as const;
+  const colorKey = `${k}Color` as const;
   return (
     <div className="grid gap-2 rounded-lg border border-line/70 bg-sunken/30 p-3">
       <Field label={lim.label} htmlFor={`lg-${k}`} hint={hint}>
@@ -245,6 +263,39 @@ function TextStyle({
           </Select>
         </div>
         <Range id={`lg-${k}-size`} label="Tamanho" value={t[sizeKey]} min={lim.min} max={lim.max} step={k === "subtitle" ? 0.5 : 1} suffix="px" onChange={(v) => set(sizeKey, v)} />
+        <OptionalColor
+          id={`lg-${k}-color`}
+          value={t[colorKey]}
+          fallback={k === "headline" || k === "tagline" ? t.textColor : t.card === "claro" ? "#0f172a" : t.card === "escuro" ? "#e6edf7" : t.textColor}
+          onChange={(v) => set(colorKey, v)}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Cor própria do texto ou "automática" (segue a cor dos textos / do cartão). */
+function OptionalColor({ id, value, fallback, onChange }: { id: string; value: string; fallback: string; onChange: (v: string) => void }) {
+  const auto = !value;
+  return (
+    <div className="grid gap-1.5">
+      <span className="flex items-center justify-between text-[12.5px] font-medium text-muted">
+        <label htmlFor={id}>Cor</label>
+        <label className="flex items-center gap-1.5 text-[12px] font-normal">
+          <input type="checkbox" checked={auto} onChange={(e) => onChange(e.target.checked ? "" : fallback)} className="h-3.5 w-3.5 accent-[rgb(var(--brand))]" />
+          Automática
+        </label>
+      </span>
+      <div className={cx("flex items-center gap-2", auto && "opacity-50")}>
+        <input
+          id={id}
+          type="color"
+          value={value || fallback}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-8 w-10 shrink-0 cursor-pointer rounded-lg border border-line bg-surface p-0.5"
+          aria-label="Cor do texto"
+        />
+        <span className="font-mono text-[12px] uppercase text-muted">{auto ? "automática" : value}</span>
       </div>
     </div>
   );

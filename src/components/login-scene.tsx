@@ -32,7 +32,10 @@ export function LoginScene({
   children: ReactNode;
 }) {
   const fonts = fontsUrl(t);
-  const text = (k: "headline" | "tagline" | "title" | "subtitle"): CSSProperties => ({ fontFamily: fontFamily(t[`${k}Font`]) });
+  const text = (k: "headline" | "tagline" | "title" | "subtitle"): CSSProperties => ({
+    fontFamily: fontFamily(t[`${k}Font`]),
+    ...(t[`${k}Color`] ? { color: t[`${k}Color`], opacity: 1 } : {}),
+  });
   return (
     <div
       className={cx("relative isolate overflow-hidden", contained ? "h-full" : "min-h-dvh")}
@@ -54,9 +57,14 @@ export function LoginScene({
           <div className="grid justify-items-center gap-4 text-center">
             {logo ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={logo.src} alt="Logomarca" className="max-w-full object-contain drop-shadow-[0_2px_12px_rgba(0,0,0,0.18)]" style={logo.style} />
+              <img
+                src={logo.src}
+                alt="Logomarca"
+                className="max-w-full object-contain drop-shadow-[0_2px_12px_rgba(0,0,0,0.18)]"
+                style={t.logoWidth ? { width: t.logoWidth, height: "auto" } : logo.style}
+              />
             ) : (
-              <span className="flex items-center gap-2 text-[17px] font-semibold">
+              <span className="flex items-center gap-2 text-[17px] font-semibold" style={t.logoWidth ? { fontSize: Math.round(t.logoWidth / 11) } : undefined}>
                 <span aria-hidden className="grid h-8 w-8 place-items-center rounded-lg bg-white/15 font-mono text-[14px] font-bold ring-1 ring-white/30">
                   I
                 </span>

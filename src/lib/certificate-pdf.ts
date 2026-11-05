@@ -2,7 +2,9 @@ import "server-only";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
 import QRCode from "qrcode";
 import {
+  CERT_MODELS,
   LAYOUT,
+  paint,
   PAGE,
   fillText,
   scoreSegments,
@@ -64,17 +66,17 @@ interface Fonts {
   mono: PDFFont;
 }
 
-function centered(page: PDFPage, font: PDFFont, text: string, y: number, size: number, c: ReturnType<typeof rgb>, spacing = 0) {
+function centered(page: PDFPage, font: PDFFont, text: string, y: number, size: number, c: ReturnType<typeof rgb>, spacing = 0, cx = PAGE.w / 2) {
   const s = safe(font, text);
   if (!spacing) {
     const w = font.widthOfTextAtSize(s, size);
-    page.drawText(s, { x: (PAGE.w - w) / 2, y: PAGE.h - y, size, font, color: c });
+    page.drawText(s, { x: cx - w / 2, y: PAGE.h - y, size, font, color: c });
     return;
   }
   // Letras espaçadas: desenha uma a uma.
   const chars = [...s];
   const total = chars.reduce((acc, ch) => acc + font.widthOfTextAtSize(ch, size), 0) + spacing * (chars.length - 1);
-  let x = (PAGE.w - total) / 2;
+  let x = cx - total / 2;
   for (const ch of chars) {
     page.drawText(ch, { x, y: PAGE.h - y, size, font, color: c });
     x += font.widthOfTextAtSize(ch, size) + spacing;
@@ -82,7 +84,7 @@ function centered(page: PDFPage, font: PDFFont, text: string, y: number, size: n
 }
 
 /** Parágrafo centralizado com trechos em negrito; devolve o y depois da última linha. */
-function paragraph(page: PDFPage, fonts: Fonts, segs: Segment[], y: number, size: number, lh: number, maxW: number, ink: ReturnType<typeof rgb>, strongColor: ReturnType<typeof rgb>): number {
+function paragraph(page: PDFPage, fonts: Fonts, segs: Segment[], y: number, size: number, lh: number, maxW: number, ink: ReturnType<typeof rgb>, strongColor: ReturnType<typeof rgb>, cx = PAGE.w / 2): number {
   type Word = { text: string; strong: boolean; w: number; space: number };
   const words: Word[] = [];
   for (const seg of segs) {
@@ -113,7 +115,7 @@ function paragraph(page: PDFPage, fonts: Fonts, segs: Segment[], y: number, size
   if (cur.length) lines.push(cur);
   for (const line of lines) {
     const lw = line.reduce((acc, w, i) => acc + w.w + (i < line.length - 1 ? w.space : 0), 0);
-    let x = (PAGE.w - lw) / 2;
+    let x = cx - lw / 2;
     for (const w of line) {
       page.drawText(w.text, { x, y: PAGE.h - y, size, font: w.strong ? fonts.bold : fonts.regular, color: w.strong ? strongColor : ink });
       x += w.w + w.space;
@@ -150,45 +152,54 @@ export async function certificatePdf(opts: {
   const muted = color(t.ink, 0.62);
   const L = LAYOUT;
 
-  // Molduras.
-  const o = L.frameOuter;
-  const i = L.frameInner;
-  page.drawRectangle({ x: o, y: o, width: PAGE.w - 2 * o, height: PAGE.h - 2 * o, borderColor: primary, borderWidth: 2.2 });
-  page.drawRectangle({ x: i, y: i, width: PAGE.w - 2 * i, height: PAGE.h - 2 * i, borderColor: accent, borderWidth: 0.7 });
+  const M = CERT_MODELS[t.model] ?? CERT_MODELS.classico;
+  const cx = M.cx;
+  const textW = Math.min(L.body.maxW, 2 * M.half - 20);
 
-  // Cantos decorativos (superior direito e inferior esquerdo).
-  const c = L.corner;
-  page.drawSvgPath(`M ${PAGE.w - c} 0 L ${PAGE.w} 0 L ${PAGE.w} ${c} Z`, { x: 0, y: PAGE.h, color: primary });
-  page.drawSvgPath(`M ${PAGE.w - c * 0.62} 0 L ${PAGE.w} 0 L ${PAGE.w} ${c * 0.62} Z`, { x: 0, y: PAGE.h, color: accent });
-  page.drawSvgPath(`M 0 ${PAGE.h - c} L ${c} ${PAGE.h} L 0 ${PAGE.h} Z`, { x: 0, y: PAGE.h, color: primary });
-  page.drawSvgPath(`M 0 ${PAGE.h - c * 0.62} L ${c * 0.62} ${PAGE.h} L 0 ${PAGE.h} Z`, { x: 0, y: PAGE.h, color: accent });
+  // Papel e formas do modelo.
+  if (M.paper !== "#ffffff") page.drawRectangle({ x: 0, y: 0, width: PAGE.w, height: PAGE.h, color: color(M.paper) });
+  for (const sh of M.shapes) {
+    if (sh.kind === "rect") {
+      page.drawRectangle({
+        x: sh.x,
+        y: PAGE.h - sh.y - sh.h,
+        width: sh.w,
+        height: sh.h,
+        ...(sh.fill ? { color: color(paint(sh.fill, t)) } : {}),
+        ...(sh.stroke ? { borderColor: color(paint(sh.stroke, t)), borderWidth: sh.sw ?? 1 } : {}),
+      });
+    } else {
+      page.drawSvgPath(sh.d, { x: 0, y: PAGE.h, color: color(paint(sh.fill, t)) });
+    }
+  }
+
   if (opts.logo) {
     try {
       const img = await pdf.embedPng(opts.logo);
-      const s = fit(img, L.logo.maxW, L.logo.maxH);
-      page.drawImage(img, { x: (PAGE.w - s.w) / 2, y: PAGE.h - L.logo.y - s.h + (L.logo.maxH - s.h) / 2, width: s.w, height: s.h });
+      const s = fit(img, t.logoHeight * 4, t.logoHeight);
+      page.drawImage(img, { x: cx - s.w / 2, y: PAGE.h - (L.logo.cy - s.h / 2) - s.h, width: s.w, height: s.h });
     } catch {
       /* logo inválida: segue sem ela */
     }
   }
 
   const ts = titleScale(t.title);
-  centered(page, fonts.bold, t.title.toUpperCase(), L.title.y, L.title.size * ts, primary, L.title.spacing * ts);
-  if (t.subtitle) centered(page, fonts.bold, t.subtitle.toUpperCase(), L.subtitle.y, L.subtitle.size, accent, L.subtitle.spacing);
-  if (t.intro) centered(page, fonts.regular, t.intro, L.intro.y, L.intro.size, muted);
+  centered(page, fonts.bold, t.title.toUpperCase(), L.title.y, L.title.size * ts * (M.half < 300 ? 0.85 : 1), primary, L.title.spacing * ts, cx);
+  if (t.subtitle) centered(page, fonts.bold, t.subtitle.toUpperCase(), L.subtitle.y, L.subtitle.size, accent, L.subtitle.spacing, cx);
+  if (t.intro) centered(page, fonts.regular, t.intro, L.intro.y, L.intro.size, muted, 0, cx);
   // Nome: reduz até caber.
   let nameSize = L.name.size;
   const name = safe(fonts.name, d.person_name);
-  while (nameSize > 18 && fonts.name.widthOfTextAtSize(name, nameSize) > 640) nameSize -= 1;
-  centered(page, fonts.name, name, L.name.y, nameSize, primary);
-  page.drawLine({ start: { x: (PAGE.w - L.rule.w) / 2, y: PAGE.h - L.rule.y }, end: { x: (PAGE.w + L.rule.w) / 2, y: PAGE.h - L.rule.y }, thickness: 1, color: accent });
+  while (nameSize > 18 && fonts.name.widthOfTextAtSize(name, nameSize) > 2 * M.half - 20) nameSize -= 1;
+  centered(page, fonts.name, name, L.name.y, nameSize, primary, 0, cx);
+  page.drawLine({ start: { x: cx - L.rule.w / 2, y: PAGE.h - L.rule.y }, end: { x: cx + L.rule.w / 2, y: PAGE.h - L.rule.y }, thickness: 1, color: accent });
 
-  let y = paragraph(page, fonts, fillText(t.body, d, t), L.body.y, L.body.size, L.body.line, L.body.maxW, ink, primary);
+  let y = paragraph(page, fonts, fillText(t.body, d, t), L.body.y, L.body.size, L.body.line, textW, ink, primary, cx);
   const score = scoreSegments(d, t);
-  if (score) paragraph(page, fonts, score, y + 4, L.body.size - 1, L.body.line, L.body.maxW, muted, primary);
+  if (score) paragraph(page, fonts, score, y + 4, L.body.size - 1, L.body.line, textW, muted, primary, cx);
 
   // Assinatura.
-  const sg = L.sign;
+  const sg = { ...L.sign, cx: M.signCx };
   if (opts.signature) {
     try {
       const img = await pdf.embedPng(opts.signature);
@@ -209,7 +220,7 @@ export async function certificatePdf(opts: {
   }
 
   // Validação.
-  const v = L.verify;
+  const v = { right: M.verifyRight, qr: { ...L.verify.qr, x: M.qrX } };
   const right = t.showQr ? v.right : v.qr.x + v.qr.size;
   const lines: [string, number, PDFFont, ReturnType<typeof rgb>, number][] = [
     ["CÓDIGO DE VALIDAÇÃO", 8, fonts.bold, muted, 476],
