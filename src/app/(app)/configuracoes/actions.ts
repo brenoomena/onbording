@@ -7,6 +7,7 @@ import { friendlyError } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_THEME, TOKEN_KEYS, sanitizeTheme, type ThemeConfig } from "@/lib/theme-tokens";
 import type { ActionState } from "@/lib/action-state";
+import { diffLogin, sanitizeLogin } from "@/lib/login-theme";
 import { LOGO_SLOTS, defaultSize, fromWidth, sanitizeSizes, type LogoSlot } from "@/lib/logo-sizes";
 
 const LOGO_PATH = /^logo\/[0-9a-f-]{36}\.(png|webp|jpg)$/;
@@ -110,4 +111,24 @@ export async function setFavicon(path: string | null): Promise<ActionState> {
   if (old && old !== path) await supabase.storage.from("branding").remove([old]);
   refreshBranding();
   return { ok: path ? "Favicon atualizado. Pode levar alguns instantes para aparecer na aba do navegador." : "Favicon removido; voltou o ícone padrão." };
+}
+
+/** Salva a aparência da página de login (só o que difere do padrão). Somente Administrador. */
+export async function saveLoginTheme(_: ActionState, fd: FormData): Promise<ActionState> {
+  const denied = await denyUnlessAdmin();
+  if (denied) return denied;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(String(fd.get("login") ?? "{}"));
+  } catch {
+    return { error: "Não foi possível ler a configuração enviada." };
+  }
+  const clean = sanitizeLogin(parsed);
+  if (clean.title !== undefined && clean.title.length < 2) return { error: "Escreva o título do cartão de entrada." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("app_settings").update({ login_theme: diffLogin(clean) }).eq("id", 1).select("id");
+  if (error) return { error: friendlyError(error) };
+  if (!data?.length) return { error: "Somente administradores podem alterar a página de login." };
+  refreshBranding();
+  return { ok: "Página de login salva. Ela já aparece assim para todos." };
 }

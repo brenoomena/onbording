@@ -46,3 +46,8 @@ export function decideAccess(
 export function safeNext(next: string | null | undefined): string {
   return next && next.startsWith("/") && !next.startsWith("//") ? next : "/painel";
 }
+
+/** Frase abaixo do botão de login. */
+export function domainHint(domain: string | undefined | null) {
+  return domain ? `Use a conta Google @${domain} cadastrada pelo seu gestor.` : "Use a conta Google do e-mail cadastrado pelo seu gestor.";
+}
