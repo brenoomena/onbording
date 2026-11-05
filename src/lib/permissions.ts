@@ -19,6 +19,7 @@ export const P = {
   conteudosEditar: "conteudos.editar",
   conteudosExcluir: "conteudos.excluir",
   progressoVer: "progresso.ver",
+  avaliacoesCorrigir: "avaliacoes.corrigir",
   auditoriaVer: "auditoria.ver",
 } as const;
 
@@ -64,7 +65,7 @@ export const MENU: MenuGroup[] = [
       { href: "/trilhas", label: "Trilhas", icon: "trilhas", anyOf: [P.trilhasVer] },
       { href: "/conteudos", label: "Conteúdos", icon: "conteudos", anyOf: [P.conteudosVer] },
       { href: "/colaboradores", label: "Colaboradores", icon: "colaboradores", anyOf: [P.colaboradoresVer, P.equipeVer] },
-      { href: "/acompanhamento", label: "Acompanhamento", icon: "acompanhamento", anyOf: [P.progressoVer, P.equipeVer] },
+      { href: "/acompanhamento", label: "Acompanhamento", icon: "acompanhamento", anyOf: [P.progressoVer, P.equipeVer, P.avaliacoesCorrigir] },
     ],
   },
   {

@@ -11,6 +11,7 @@ import { loadStructure } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { deleteContent, saveContent } from "../actions";
 import { ContentForm } from "../content-form";
+import type { QuizQuestion } from "@/lib/quiz";
 import { loadContentFormData } from "../form-data";
 
 export const metadata: Metadata = { title: "Conteúdo" };
@@ -23,14 +24,18 @@ export default async function ConteudoPage({ params, searchParams }: { params: P
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const supabase = await createClient();
-  const [{ data: content }, { data: rules }, { data: uses }, structure, { owners, categories, tracks }] = await Promise.all([
+  const [{ data: content }, { data: rules }, { data: uses }, structure, { owners, categories, tracks }, { data: qs }] = await Promise.all([
     supabase.from("contents").select("*").eq("id", id).maybeSingle(),
     supabase.from("audience_rules").select("area_id, position_id, level_id").eq("content_id", id),
     supabase.from("module_items").select("module:modules(id, title, track:tracks(id, name))").eq("content_id", id),
     loadStructure(),
     loadContentFormData(),
+    supabase.from("quiz_questions").select("id, kind, prompt, explanation, points, options").eq("content_id", id).order("position"),
   ]);
   if (!content) notFound();
+  const quizQuestions = ((qs ?? []) as { id: string; kind: QuizQuestion["kind"]; prompt: string; explanation: string | null; points: number; options: QuizQuestion["options"] }[]).map(
+    (q) => ({ key: q.id, kind: q.kind, prompt: q.prompt, explanation: q.explanation ?? "", points: q.points, options: q.options }),
+  );
   const c = content as ContentRow;
   const usedIn = ((uses ?? []) as unknown as { module: { title: string; track: { id: string; name: string } } }[]).map((u) => u.module);
 
@@ -83,6 +88,7 @@ export default async function ConteudoPage({ params, searchParams }: { params: P
           tracks={tracks}
           readOnly={!canEdit}
           modulesCount={usedIn.filter((m) => m.track.id === c.track_id).length}
+          quizQuestions={quizQuestions}
         />
       </Card>
     </>

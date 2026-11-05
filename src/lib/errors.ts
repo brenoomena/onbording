@@ -15,6 +15,8 @@ export function friendlyError(err: DbError | null | undefined, fallback = "Não 
     case "23514":
       // Travas de negócio (ex.: conteúdo de outra trilha) chegam com mensagem própria.
       if (err.message?.includes("contents_track_or_library")) return "Escolha a trilha do conteúdo ou marque-o como material da Biblioteca.";
+      if (err.message?.includes("contents_quiz_in_track")) return "Avaliação fica sempre dentro de uma trilha: não pode ir para a Biblioteca.";
+      if (err.message?.includes("quiz_questions_options_check")) return "Confira as alternativas das perguntas: cada pergunta precisa de alternativas preenchidas e da resposta correta marcada.";
       return err.message && !err.message.includes("violates check constraint")
         ? err.message
         : "Algum campo está fora do formato esperado. Confira os dados e tente de novo.";

@@ -19,7 +19,8 @@ export async function GET(req: NextRequest) {
 
   const sp = Object.fromEntries(req.nextUrl.searchParams.entries());
   const f = parseFilters(sp);
-  const vista = parseVista(sp.vista);
+  const parsed = parseVista(sp.vista);
+  const vista = parsed === "correcoes" ? "pessoas" : parsed;
   const today = todayBR();
   const [data, structure, supervisors] = await Promise.all([
     loadAcompanhamento(me, f, today),

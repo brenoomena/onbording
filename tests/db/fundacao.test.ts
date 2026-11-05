@@ -110,7 +110,7 @@ run("Etapa 1 · banco, permissões e RLS", () => {
     const s = await asUser(db.pool, sup, (q) => q("select array_agg(k order by k) ks from public.my_permissions() k"));
     const total = await asSystem(db.pool, (q) => q("select count(*)::int n from permissions"));
     expect(a.rows[0].n).toBe(total.rows[0].n);
-    expect(s.rows[0].ks).toEqual(["equipe.ver", "painel.ver"]);
+    expect(s.rows[0].ks).toEqual(["avaliacoes.corrigir", "equipe.ver", "painel.ver"]);
   });
 
   // ------------------------------------------------------ escrita

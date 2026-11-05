@@ -11,10 +11,10 @@ import {
 import type { PersonOption, Structure } from "@/lib/queries";
 import type { AcompanhamentoData } from "./load";
 
-export type Vista = "pessoas" | "trilhas" | "atencao";
+export type Vista = "pessoas" | "trilhas" | "atencao" | "correcoes";
 
 export function parseVista(v: unknown): Vista {
-  return v === "trilhas" || v === "atencao" ? v : "pessoas";
+  return v === "trilhas" || v === "atencao" || v === "correcoes" ? v : "pessoas";
 }
 
 type Kind = "text" | "number" | "percent" | "date";
@@ -26,7 +26,7 @@ export interface Sheet {
 
 /** Planilha da visão atual, já com os filtros aplicados. */
 export function buildSheet(
-  vista: Vista,
+  vista: Exclude<Vista, "correcoes">,
   data: AcompanhamentoData,
   structure: Structure,
   supervisors: PersonOption[],

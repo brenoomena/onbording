@@ -114,7 +114,7 @@ export const contentSchema = z
     title: z.string({ error: "Informe o título." }).min(3, "O título precisa de pelo menos 3 caracteres.").max(160),
     description: nullableText(1000),
     category: nullableText(60),
-    kind: z.enum(["texto", "link", "video", "arquivo"], { error: "Escolha o formato." }),
+    kind: z.enum(["texto", "link", "video", "arquivo", "avaliacao"], { error: "Escolha o formato." }),
     body: nullableText(100_000),
     url: z
       .url({ protocol: /^https?$/, error: "Informe um endereço que comece com https://" })
@@ -136,6 +136,20 @@ export const contentSchema = z
       .transform((v) => v ?? null),
     owner_id: z.uuid().optional().transform((v) => v ?? null),
     status: z.enum(["rascunho", "publicado", "arquivado"]),
+    passing_score: z.coerce
+      .number({ error: "Nota mínima inválida." })
+      .int("Use um número inteiro.")
+      .min(0, "A nota mínima vai de 0 a 100.")
+      .max(100, "A nota mínima vai de 0 a 100.")
+      .optional()
+      .transform((v) => v ?? 70),
+    max_attempts: z.coerce
+      .number({ error: "Limite de tentativas inválido." })
+      .int("Use um número inteiro.")
+      .min(1, "Use de 1 a 20 tentativas, ou deixe em branco para ilimitadas.")
+      .max(20, "Use de 1 a 20 tentativas, ou deixe em branco para ilimitadas.")
+      .optional()
+      .transform((v) => v ?? null),
   })
   .superRefine((v, ctx) => {
     if (v.kind === "texto" && !v.body) ctx.addIssue({ code: "custom", path: ["body"], message: "Escreva o texto do conteúdo." });

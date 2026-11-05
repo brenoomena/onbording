@@ -1,7 +1,7 @@
 /** Tipos, rótulos e utilitários do módulo de aprendizagem (Etapa 2). */
 
 export type PublishStatus = "rascunho" | "publicado" | "arquivado";
-export type ContentKind = "texto" | "link" | "video" | "arquivo";
+export type ContentKind = "texto" | "link" | "video" | "arquivo" | "avaliacao";
 export type EnrollmentStatus = "nao_iniciada" | "em_andamento" | "concluida";
 
 export const PUBLISH_LABEL: Record<PublishStatus, string> = {
@@ -15,6 +15,7 @@ export const KIND_LABEL: Record<ContentKind, string> = {
   link: "Link externo",
   video: "Vídeo",
   arquivo: "Arquivo",
+  avaliacao: "Avaliação",
 };
 
 export const ENROLLMENT_LABEL: Record<EnrollmentStatus, string> = {
@@ -44,6 +45,9 @@ export interface ContentRow {
   /** Trilha a que o conteúdo pertence (null = só Biblioteca). */
   track_id: string | null;
   status: PublishStatus;
+  /** Avaliação: nota mínima (%) e limite de tentativas (null = ilimitadas). */
+  passing_score: number;
+  max_attempts: number | null;
   updated_at: string;
 }
 

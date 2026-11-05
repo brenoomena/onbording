@@ -8,6 +8,7 @@ import { friendlyError } from "@/lib/errors";
 import { P } from "@/lib/permissions";
 import { fromZod, formObject, type ActionState } from "@/lib/action-state";
 import { contentSchema, parseAudience } from "@/lib/validation";
+import { parseQuiz } from "@/lib/quiz";
 
 export async function saveContent(_: ActionState, fd: FormData): Promise<ActionState> {
   const denied = await denyUnless(fd.get("id") ? P.conteudosEditar : P.conteudosCriar);
@@ -16,10 +17,20 @@ export async function saveContent(_: ActionState, fd: FormData): Promise<ActionS
   const parsed = contentSchema.safeParse(raw);
   if (!parsed.success) return fromZod(parsed.error);
   const id = String(fd.get("id") ?? "");
-  const isLibrary = fd.get("is_library") === "on";
+  const isQuiz = parsed.data.kind === "avaliacao";
+  // Avaliação: perguntas vêm do editor; só existe dentro de uma trilha.
+  const quiz = isQuiz ? parseQuiz(fd.get("quiz")) : null;
+  if (quiz && !quiz.ok) return { error: quiz.error, fieldErrors: { quiz: quiz.error } };
+  if (quiz?.ok && parsed.data.status === "publicado" && quiz.questions.length === 0) {
+    return { error: "Cadastre ao menos uma pergunta antes de publicar a avaliação.", fieldErrors: { quiz: "Cadastre ao menos uma pergunta." } };
+  }
+  const isLibrary = !isQuiz && fd.get("is_library") === "on";
   // Trilha a que o conteúdo pertence; sem trilha, só como material da Biblioteca.
   const trackRaw = String(fd.get("track_id") ?? "");
   const trackId = /^[0-9a-f-]{36}$/i.test(trackRaw) ? trackRaw : null;
+  if (isQuiz && !trackId && !id) {
+    return { error: "A avaliação precisa estar numa trilha.", fieldErrors: { track_id: "Escolha a trilha da avaliação." } };
+  }
   if (!trackId && !isLibrary && !id) {
     return { error: "Escolha a trilha do conteúdo.", fieldErrors: { track_id: "Escolha a trilha ou marque como material da Biblioteca." } };
   }
@@ -39,6 +50,8 @@ export async function saveContent(_: ActionState, fd: FormData): Promise<ActionS
     mime_type: d.kind === "arquivo" ? d.mime_type : null,
     is_library: isLibrary,
     track_id: trackId,
+    passing_score: isQuiz ? d.passing_score : 70,
+    max_attempts: isQuiz ? d.max_attempts : null,
   };
   // Conteúdo existente: a trilha só muda pelo "Mover de trilha" (ação própria).
   const update: Partial<typeof row> = { ...row };
@@ -62,6 +75,14 @@ export async function saveContent(_: ActionState, fd: FormData): Promise<ActionS
     const { data, error } = await supabase.from("contents").insert(row).select("id").single();
     if (error) return { error: friendlyError(error) };
     contentId = data.id;
+  }
+
+  if (quiz?.ok) {
+    const { error } = await supabase.rpc("save_quiz_questions", { p_content: contentId, p_questions: quiz.questions });
+    if (error) return { error: friendlyError(error, "Não foi possível salvar as perguntas.") };
+  } else if (id) {
+    // Deixou de ser avaliação: as perguntas não fazem mais sentido.
+    await supabase.from("quiz_questions").delete().eq("content_id", contentId);
   }
 
   // Público da biblioteca: substitui as regras.

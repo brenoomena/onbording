@@ -12,7 +12,7 @@ export const PUBLISH_TONE = { rascunho: "orange", publicado: "ok", arquivado: "s
 export const ENROLLMENT_TONE = { nao_iniciada: "silver", em_andamento: "blue", concluida: "ok" } as const satisfies Record<string, Tone>;
 
 /** Tipo de material: cada formato com uma cor. */
-export const KIND_TONE = { texto: "indigo", link: "teal", video: "pink", arquivo: "violet" } as const satisfies Record<string, Tone>;
+export const KIND_TONE = { texto: "indigo", link: "teal", video: "pink", arquivo: "violet", avaliacao: "gold" } as const satisfies Record<string, Tone>;
 
 /** Nível do cargo: Júnior azul, Pleno prata, Sênior dourado; outros nomes em azul-violeta. */
 export function levelTone(name: string | null | undefined): Tone {

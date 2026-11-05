@@ -2,6 +2,7 @@ import {
   AlarmClock,
   ChartColumnIncreasing,
   CheckCircle2,
+  ClipboardCheck,
   Download,
   Filter,
   GraduationCap,
@@ -29,6 +30,7 @@ import {
   buttonVariants,
   cx,
   formatDate,
+  formatDateTime,
   ENROLLMENT_TONE,
 } from "@/components/ui";
 import {
@@ -52,6 +54,8 @@ import { todayBR } from "@/lib/learning";
 import { P } from "@/lib/permissions";
 import { loadStructure, loadSupervisorOptions } from "@/lib/queries";
 import { loadTrack } from "../trilhas/[id]/load";
+import { createClient } from "@/lib/supabase/server";
+import { PageNotice } from "@/components/forms";
 import { DueDateForm } from "./due-date-form";
 import { parseVista, type Vista } from "./export";
 import { loadAcompanhamento } from "./load";
@@ -91,7 +95,7 @@ function since(iso: string | null | undefined, today: string): string {
 }
 
 export default async function AcompanhamentoPage({ searchParams }: { searchParams: Promise<SP> }) {
-  const me = await requirePermission(P.progressoVer, P.equipeVer);
+  const me = await requirePermission(P.progressoVer, P.equipeVer, P.avaliacoesCorrigir);
   const sp = await searchParams;
   const f = parseFilters(sp);
   const vista = parseVista(sp.vista);
@@ -103,6 +107,24 @@ export default async function AcompanhamentoPage({ searchParams }: { searchParam
     loadStructure(),
     can(me, P.progressoVer) ? loadSupervisorOptions() : Promise.resolve([]),
   ]);
+  // Avaliações aguardando correção, no alcance de quem corrige (o banco limita).
+  const canGrade = can(me, P.avaliacoesCorrigir);
+  const { data: pendRows } = canGrade
+    ? await (await createClient())
+        .from("quiz_attempts")
+        .select("id, submitted_at, score, profile_id, profile:profiles!quiz_attempts_profile_id_fkey(full_name, email), content:contents(title, track_id)")
+        .eq("status", "em_correcao")
+        .order("submitted_at")
+    : { data: [] };
+  const corrections = ((pendRows ?? []) as unknown as {
+    id: string;
+    submitted_at: string;
+    score: number;
+    profile_id: string;
+    profile: { full_name: string; email: string } | null;
+    content: { title: string; track_id: string | null } | null;
+  }[]).filter((c) => c.profile_id !== me.userId);
+  const corrigida = sp.aviso === "aprovada" || sp.aviso === "reprovada" ? sp.aviso : null;
   const s = summarize(data.rows, today);
   const people = byPerson(data.rows, data.people, data.tracks, data.activity, data.seconds, data.lastByPerson, today, f.parado);
   const tracks = byTrack(data.rows, data.tracks, data.activity, today, f.parado);
@@ -131,6 +153,7 @@ export default async function AcompanhamentoPage({ searchParams }: { searchParam
   }
 
   const exportHref = (formato: "csv" | "xlsx") => hrefWith(f, vista, { vista, formato }, "/acompanhamento/exportar");
+  const correctionsTab = canGrade ? [{ key: "correcoes" as const, label: "Correções", icon: ClipboardCheck, count: corrections.length }] : [];
   const person = (id: string, name: string) =>
     canOpenPerson ? (
       <Link href={`/colaboradores/${id}`} className="font-medium text-heading hover:text-accent">
@@ -152,7 +175,7 @@ export default async function AcompanhamentoPage({ searchParams }: { searchParam
             : "Progresso de todos nas trilhas: quem está em dia, quem está atrasado e onde as pessoas param."
         }
         actions={
-          <div className="flex flex-wrap gap-2">
+          vista === "correcoes" ? undefined : <div className="flex flex-wrap gap-2">
             <a href={exportHref("xlsx")} className={buttonVariants.secondary} download>
               <Download size={16} aria-hidden /> Excel
             </a>
@@ -291,6 +314,7 @@ export default async function AcompanhamentoPage({ searchParams }: { searchParam
             { key: "pessoas", label: "Pessoas", icon: Users, count: people.length },
             { key: "trilhas", label: "Trilhas", icon: Route, count: tracks.length },
             { key: "atencao", label: "Atenção", icon: TriangleAlert, count: alerts.length },
+            ...correctionsTab,
           ] as const
         ).map((t) => {
           const on = t.key === vista;
@@ -309,7 +333,7 @@ export default async function AcompanhamentoPage({ searchParams }: { searchParam
               <span
                 className={cx(
                   "rounded-full px-1.5 text-[11px] tabular-nums",
-                  t.key === "atencao" && t.count ? "bg-danger-soft text-danger" : on ? "bg-surface text-ink" : "bg-sunken",
+                  (t.key === "atencao" || t.key === "correcoes") && t.count ? "bg-danger-soft text-danger" : on ? "bg-surface text-ink" : "bg-sunken",
                 )}
               >
                 {t.count}
@@ -319,7 +343,52 @@ export default async function AcompanhamentoPage({ searchParams }: { searchParam
         })}
       </nav>
 
-      {data.rows.length === 0 ? (
+      {corrigida && (
+        <PageNotice
+          tone={corrigida === "aprovada" ? "ok" : "warn"}
+          message={`Correção salva: ${corrigida === "aprovada" ? "aprovada" : "não atingiu a nota mínima"} com ${typeof sp.nota === "string" ? sp.nota : "?"}%.`}
+        />
+      )}
+      {vista === "correcoes" ? (
+        corrections.length === 0 ? (
+          <EmptyState icon={CheckCircle2} title="Nenhuma avaliação aguardando correção">
+            Quando alguém enviar uma avaliação com resposta aberta, ela aparece aqui para você corrigir.
+          </EmptyState>
+        ) : (
+          <Table>
+            <thead>
+              <tr>
+                <th>Colaborador</th>
+                <th>Avaliação</th>
+                <th>Enviada em</th>
+                <th className="text-right">Objetivas</th>
+                <th aria-label="Ações" />
+              </tr>
+            </thead>
+            <tbody>
+              {corrections.map((c) => (
+                <tr key={c.id}>
+                  <td className="min-w-[200px]">
+                    {person(c.profile_id, c.profile?.full_name ?? "Colaborador")}
+                    <p className="text-[12px] text-muted">{c.profile?.email}</p>
+                  </td>
+                  <td className="min-w-[180px] text-[13.5px]">
+                    {c.content?.title}
+                    {c.content?.track_id && <p className="text-[12px] text-muted">{data.tracks.get(c.content.track_id)?.name}</p>}
+                  </td>
+                  <td className="whitespace-nowrap text-[13px]">{formatDateTime(c.submitted_at)}</td>
+                  <td className="text-right tabular-nums text-[13px]">{Math.round(Number(c.score))}%</td>
+                  <td className="whitespace-nowrap text-right">
+                    <Link href={`/acompanhamento/correcao/${c.id}`} className={cx(buttonVariants.primary, "py-1.5 text-[13px]")}>
+                      <ClipboardCheck size={15} aria-hidden /> Corrigir
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        )
+      ) : data.rows.length === 0 ? (
         <EmptyState icon={ChartColumnIncreasing} title={filtered ? "Nenhuma matrícula com esses filtros" : "Ainda não há matrículas para acompanhar"}>
           {filtered
             ? "Ajuste ou limpe os filtros para ver mais resultados."

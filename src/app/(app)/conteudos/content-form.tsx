@@ -12,6 +12,8 @@ import type { PersonOption, Structure } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
 import type { TrackOption } from "./form-data";
 import { MoveContent } from "./move-content";
+import { QuizEditor } from "./quiz-editor";
+import type { QuizQuestion } from "@/lib/quiz";
 
 const MAX_BYTES = 50 * 1024 * 1024;
 
@@ -27,6 +29,7 @@ export function ContentForm({
   readOnly = false,
   modulesCount = 0,
   inTrack,
+  quizQuestions = [],
 }: {
   action: (s: ActionState, fd: FormData) => Promise<ActionState>;
   content?: ContentRow;
@@ -47,6 +50,8 @@ export function ContentForm({
    * a aba de origem em vez de abrir a página do conteúdo.
    */
   inTrack?: { extra?: ReactNode; tab: string };
+  /** Perguntas atuais (quando o conteúdo é uma avaliação). */
+  quizQuestions?: QuizQuestion[];
 }) {
   const [kind, setKind] = useState<ContentKind>(content?.kind ?? "link");
   const [library, setLibrary] = useState(content?.is_library ?? false);
@@ -133,7 +138,7 @@ export function ContentForm({
                 {content?.track_id && !tracks.some((t) => t.id === content.track_id) && (
                   <option value={content.track_id}>Trilha arquivada</option>
                 )}
-                <option value="biblioteca">Biblioteca (sem trilha)</option>
+                <option value="biblioteca" disabled={kind === "avaliacao"}>Biblioteca (sem trilha){kind === "avaliacao" ? " · não vale para avaliação" : ""}</option>
               </Select>
               {content && !readOnly && (
                 <MoveContent
@@ -173,7 +178,17 @@ export function ContentForm({
                       kind === k ? "border-brand bg-accent-soft text-accent" : "border-line bg-surface",
                     )}
                   >
-                    <input type="radio" name="kind" value={k} checked={kind === k} onChange={() => setKind(k)} className="sr-only" />
+                    <input
+                      type="radio"
+                      name="kind"
+                      value={k}
+                      checked={kind === k}
+                      onChange={() => {
+                        setKind(k);
+                        if (k === "avaliacao" && !content && track === "biblioteca") setTrack("");
+                      }}
+                      className="sr-only"
+                    />
                     {KIND_LABEL[k]}
                   </label>
                 ))}
@@ -242,6 +257,16 @@ export function ContentForm({
                   {e.storage_path && <p className="text-[12px] text-danger">{e.storage_path}</p>}
                 </div>
               )}
+
+              {kind === "avaliacao" && (
+                <QuizEditor
+                  initial={quizQuestions}
+                  passingScore={content?.passing_score ?? 70}
+                  maxAttempts={content?.max_attempts ?? null}
+                  error={e.quiz ?? e.passing_score ?? e.max_attempts}
+                  disabled={readOnly}
+                />
+              )}
             </fieldset>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -264,7 +289,7 @@ export function ContentForm({
               <RichTextarea id={inTrack ? "conteudo-objective" : "objective"} name="objective" rows={5} defaultValue={content?.objective ?? ""} maxLength={4000} />
             </Field>
 
-            <fieldset className="grid gap-3 rounded-xl border border-line p-4">
+            {kind !== "avaliacao" && <fieldset className="grid gap-3 rounded-xl border border-line p-4">
               <legend className="px-1 text-[13px] font-semibold">Biblioteca de materiais</legend>
               <label className="flex items-start gap-3 text-[14px]">
                 <input
@@ -290,7 +315,7 @@ export function ContentForm({
                   emptyHint="Sem público definido, ninguém vê na biblioteca. Adicione um público; deixe os campos em branco para liberar a todos."
                 />
               )}
-            </fieldset>
+            </fieldset>}
             </fieldset>
           </>
         );

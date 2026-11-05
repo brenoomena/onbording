@@ -1,4 +1,4 @@
-import { FileText, Lock } from "lucide-react";
+import { ClipboardCheck, FileText, Lock } from "lucide-react";
 import type { Metadata } from "next";
 import { Markdown } from "@/components/markdown";
 import Link from "next/link";
@@ -6,6 +6,8 @@ import { notFound } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { ContentViewer, ObjectiveHint, ObjectiveNote } from "@/components/content-viewer";
 import { StudyTracker } from "@/components/study-tracker";
+import { QuizRunner } from "@/components/quiz-runner";
+import type { LearnerQuiz } from "@/lib/quiz";
 import { Alert, Badge, PageHeader, buttonVariants, formatDate, KIND_TONE } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { KIND_LABEL, formatMinutes, itemStates, type ContentRow } from "@/lib/learning";
@@ -66,6 +68,16 @@ export default async function EstudarPage({
   }
   const q = nav.trackId ? `?trilha=${nav.trackId}` : "";
 
+  // Avaliação: prova e situação vêm do banco, sem gabarito.
+  const isQuiz = content.kind === "avaliacao";
+  let quiz: LearnerQuiz | null = null;
+  let quizError: string | null = null;
+  if (isQuiz && !(nav.locked && !preview)) {
+    const { data: qz, error: qe } = await supabase.rpc("get_quiz", { p_content: id });
+    if (qe) quizError = qe.message;
+    else quiz = qz as LearnerQuiz;
+  }
+
   if (nav.locked && !preview) {
     return (
       <>
@@ -82,7 +94,7 @@ export default async function EstudarPage({
       {/* Cabeçalho compacto: título, etiquetas e a ação de concluir numa faixa só, para o conteúdo ganhar espaço. */}
       <header className="sticky top-[68px] z-10 flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-xl border border-line bg-surface/95 px-3.5 py-2.5 shadow-[0_4px_14px_rgba(0,0,0,0.05)] backdrop-blur sm:px-4">
         <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-icon-bg text-icon">
-          <FileText size={18} strokeWidth={1.9} />
+          {isQuiz ? <ClipboardCheck size={18} strokeWidth={1.9} /> : <FileText size={18} strokeWidth={1.9} />}
         </span>
         <div className="min-w-0 flex-1">
           <p className="flex min-w-0 items-center gap-1 text-[11.5px] font-medium text-muted">
@@ -104,13 +116,16 @@ export default async function EstudarPage({
             </span>
           </div>
         </div>
+        {!preview && isQuiz && quiz && !done && (
+          <Badge tone={quiz.pending ? "blue" : "gold"}>{quiz.pending ? "Aguardando correção" : `Nota mínima ${quiz.passing_score}%`}</Badge>
+        )}
         {!preview &&
           (done ? (
             <span className="flex items-center gap-2">
               <Badge tone="ok">Concluído em {formatDate(mine?.completed_at)}</Badge>
               {nav.next && <Link href={`/estudar/${nav.next}${q}`} className={buttonVariants.primary}>Próximo →</Link>}
             </span>
-          ) : (
+          ) : isQuiz ? null : (
             <ActionForm action={completeContent}>
               <input type="hidden" name="content_id" value={id} />
               <input type="hidden" name="mode" value={content.kind === "link" ? "externa_declarada" : "confirmada"} />
@@ -124,7 +139,15 @@ export default async function EstudarPage({
       {content.description && <Markdown>{content.description}</Markdown>}
 
       <article className="rounded-xl border border-line bg-surface p-5 sm:p-7">
-        <ContentViewer content={content} fileUrl={fileUrl} />
+        {isQuiz ? (
+          quiz ? (
+            <QuizRunner contentId={id} quiz={quiz} preview={preview} nextHref={nav.next ? `/estudar/${nav.next}${q}` : undefined} />
+          ) : (
+            <Alert>{quizError ?? "Não foi possível abrir a avaliação."}</Alert>
+          )
+        ) : (
+          <ContentViewer content={content} fileUrl={fileUrl} />
+        )}
         {content.kind === "link" && (
           <p className="mt-4 text-[13px] text-muted">Quando terminar, volte aqui e marque como concluído no botão acima.</p>
         )}
