@@ -1,9 +1,9 @@
 "use client";
 
-import { ChevronRight, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Waypoints, X } from "lucide-react";
+import { ChevronDown, ChevronRight, LogOut, Menu, PanelLeftClose, PanelLeftOpen, UserRound, Waypoints, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Avatar } from "@/components/avatar";
 import { NoticeHost } from "@/components/forms";
 import { ModuleIcon } from "@/components/icons";
@@ -94,39 +94,6 @@ export function AppShell({ groups, user, logo, compact: initialCompact, children
           ))}
         </nav>
 
-        <div className={cx("grid gap-1 border-t border-sidebar-text/10 px-3 py-3", mini && "px-2")}>
-          <Link
-            href="/meu-perfil"
-            title="Meu perfil"
-            aria-current={pathname.startsWith("/meu-perfil") ? "page" : undefined}
-            className={cx(
-              "flex min-w-0 items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-sidebar-active-bg/60",
-              mini && "justify-center px-0",
-              pathname.startsWith("/meu-perfil") && "bg-sidebar-active-bg",
-            )}
-          >
-            <Avatar name={user.name} path={user.avatarPath} size={34} />
-            {!mini && (
-              <span className="min-w-0">
-                <span className="block truncate text-[13px] font-semibold text-sidebar-active-text">{user.name}</span>
-                <span className="block truncate text-[12px] text-sidebar-muted">{user.role}</span>
-              </span>
-            )}
-          </Link>
-          <form action="/sair" method="post">
-            <button
-              type="submit"
-              title="Sair"
-              className={cx(
-                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-sidebar-text/75 hover:bg-sidebar-active-bg/60 hover:text-sidebar-active-text",
-                mini && "justify-center px-0",
-              )}
-            >
-              <LogOut size={17} aria-hidden />
-              {!mini && "Sair"}
-            </button>
-          </form>
-        </div>
       </div>
     );
   };
@@ -180,13 +147,7 @@ export function AppShell({ groups, user, logo, compact: initialCompact, children
               <p className="text-[14px] font-semibold text-heading">Onboarding</p>
             )}
           </div>
-          <Link href="/meu-perfil" className="ml-auto flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-sunken">
-            <span className="hidden text-right leading-tight sm:block">
-              <span className="block text-[13px] font-semibold text-heading">{user.name}</span>
-              <span className="block text-[11.5px] text-muted">{user.role}</span>
-            </span>
-            <Avatar name={user.name} path={user.avatarPath} size={32} />
-          </Link>
+          <UserMenu user={user} />
         </header>
 
         <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
@@ -244,5 +205,102 @@ function Brand({ logo, mini }: { logo: ShellProps["logo"]; mini: boolean }) {
       )}
       {!mini && tag}
     </Link>
+  );
+}
+
+/**
+ * Nome e perfil no topo: ao passar o mouse (ou clicar/tocar) abre o menu com
+ * Meu perfil e Sair. Fecha ao sair com o mouse, com Esc ou clicando fora.
+ */
+function UserMenu({ user }: { user: ShellProps["user"] }) {
+  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  const box = useRef<HTMLDivElement>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const menuId = useId();
+
+  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (box.current && !box.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        box.current?.querySelector<HTMLButtonElement>("button[aria-haspopup]")?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  // Mouse: abre ao passar e fecha com um pequeno atraso (dá tempo de chegar ao menu).
+  const enter = (e: React.PointerEvent) => {
+    if (e.pointerType !== "mouse") return;
+    if (timer.current) clearTimeout(timer.current);
+    setOpen(true);
+  };
+  const leave = (e: React.PointerEvent) => {
+    if (e.pointerType !== "mouse") return;
+    timer.current = setTimeout(() => setOpen(false), 180);
+  };
+
+  return (
+    <div ref={box} className="relative ml-auto" onPointerEnter={enter} onPointerLeave={leave}>
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={menuId}
+        onClick={(e) => {
+          // Com o mouse o menu já abriu ao passar por cima: o clique só o mantém aberto.
+          if ((e.nativeEvent as PointerEvent).pointerType === "mouse") setOpen(true);
+          else setOpen((o) => !o);
+        }}
+        className={cx("flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-sunken", open && "bg-sunken")}
+      >
+        <span className="hidden text-right leading-tight sm:block">
+          <span className="block text-[13px] font-semibold text-heading">{user.name}</span>
+          <span className="block text-[11.5px] text-muted">{user.role}</span>
+        </span>
+        <Avatar name={user.name} path={user.avatarPath} size={32} />
+        <ChevronDown size={15} aria-hidden className={cx("text-muted transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div
+          id={menuId}
+          role="menu"
+          aria-label="Minha conta"
+          className="absolute right-0 top-full z-30 mt-1 w-60 overflow-hidden rounded-xl border border-line bg-surface p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.14)]"
+        >
+          <div className="border-b border-line px-3 pb-2.5 pt-2 sm:hidden">
+            <p className="truncate text-[13px] font-semibold text-heading">{user.name}</p>
+            <p className="truncate text-[12px] text-muted">{user.role}</p>
+          </div>
+          <Link
+            href="/meu-perfil"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13.5px] font-medium text-ink hover:bg-sunken"
+          >
+            <UserRound size={16} aria-hidden className="text-icon" /> Meu perfil
+          </Link>
+          <form action="/sair" method="post">
+            <button
+              type="submit"
+              role="menuitem"
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13.5px] font-medium text-danger hover:bg-danger-soft"
+            >
+              <LogOut size={16} aria-hidden /> Sair
+            </button>
+          </form>
+        </div>
+      )}
+    </div>
   );
 }

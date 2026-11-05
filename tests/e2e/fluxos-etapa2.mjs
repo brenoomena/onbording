@@ -366,7 +366,7 @@ await step("trilha opcional aparece como disponível e a vendedora se inscreve",
 
 await step("meu perfil: tema escolhido fica salvo e menu mostra as iniciais", async () => {
   await V.goto(`${BASE}/meu-perfil`);
-  assert.equal((await V.locator("aside a[title='Meu perfil'] span[aria-hidden]").first().innerText()).trim(), "VV");
+  assert.equal((await V.locator("header button[aria-haspopup=menu] span[aria-hidden]").first().innerText()).trim(), "VV");
   await V.screenshot({ path: `${SHOTS}/12-meu-perfil.png`, fullPage: true });
   await V.getByRole("radio", { name: /Escuro/ }).click();
   assert.equal(await V.evaluate(() => document.documentElement.dataset.theme), "dark");

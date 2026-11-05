@@ -63,7 +63,8 @@ async function logout(page) {
   // Fecha uma janela de ver/editar que esteja aberta por cima do menu.
   if (await page.locator(".in-modal").count()) await page.keyboard.press("Escape");
   await page.locator(".in-modal").waitFor({ state: "detached" });
-  await page.locator("aside button", { hasText: "Sair" }).click();
+  await page.locator("header button[aria-haspopup=menu]").click();
+  await page.getByRole("menuitem", { name: "Sair" }).click();
   await page.waitForURL(/\/login/);
 }
 
