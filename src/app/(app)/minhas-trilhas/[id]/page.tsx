@@ -1,4 +1,4 @@
-import { Route } from "lucide-react";
+import { Award, Download, Route } from "lucide-react";
 import type { Metadata } from "next";
 import { Markdown } from "@/components/markdown";
 import Link from "next/link";
@@ -8,6 +8,7 @@ import { Badge, EmptyState, PageHeader, cx, formatDate, ENROLLMENT_TONE } from "
 import { requireUser } from "@/lib/auth";
 import { ENROLLMENT_LABEL, KIND_LABEL, isOverdue, itemStates } from "@/lib/learning";
 import { loadEnrollmentsOf, loadProgressOf } from "@/lib/my-learning";
+import { createClient } from "@/lib/supabase/server";
 import { loadTrack } from "../../trilhas/[id]/load";
 
 export const metadata: Metadata = { title: "Trilha" };
@@ -26,7 +27,13 @@ export default async function MinhaTrilhaPage({ params }: { params: Promise<{ id
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
-  const [loaded, enrollments, progress] = await Promise.all([loadTrack(id), loadEnrollmentsOf(me.userId), loadProgressOf(me.userId)]);
+  const supabase = await createClient();
+  const [loaded, enrollments, progress, { data: cert }] = await Promise.all([
+    loadTrack(id),
+    loadEnrollmentsOf(me.userId),
+    loadProgressOf(me.userId),
+    supabase.from("certificates").select("id, code").eq("profile_id", me.userId).eq("track_id", id).maybeSingle(),
+  ]);
   if (!loaded) notFound();
   const { track } = loaded;
   // Colaboradores só veem conteúdos publicados; gestores veem tudo, mas aqui mostramos a visão de quem estuda.
@@ -52,6 +59,25 @@ export default async function MinhaTrilhaPage({ params }: { params: Promise<{ id
         }
       />
       {track.description && <Markdown size="sm">{track.description}</Markdown>}
+      {cert && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-ok/30 bg-ok-soft/60 px-4 py-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-surface text-ok">
+            <Award size={20} aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[14px] font-semibold text-heading">Trilha concluída: seu certificado está pronto</p>
+            <p className="text-[12.5px] text-muted">Código de validação {cert.code}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/certificados/${cert.id}`} className="rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] font-medium hover:bg-sunken">
+              Ver certificado
+            </Link>
+            <a href={`/certificados/${cert.id}/pdf`} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-[13px] font-semibold text-on-brand hover:bg-brand/85">
+              <Download size={14} aria-hidden /> Baixar PDF
+            </a>
+          </div>
+        </div>
+      )}
       {enrollment ? (
         <div className="grid gap-3 rounded-xl border border-line bg-surface p-4 sm:grid-cols-[1fr_auto] sm:items-center">
           <ProgressBar value={Number(enrollment.progress_percent)} label="Seu progresso" />

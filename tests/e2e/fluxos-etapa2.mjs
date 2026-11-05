@@ -390,7 +390,7 @@ await step("confirmação de exclusão abre em janela e pode ser cancelada", asy
 });
 
 await step("admin personaliza a cor primária e ela vale para todos; volta ao padrão", async () => {
-  await A.goto(`${BASE}/configuracoes`);
+  await A.goto(`${BASE}/configuracoes?secao=cores`);
   await A.getByRole("heading", { name: "Configurações" }).waitFor();
   await A.screenshot({ path: `${SHOTS}/16-configuracoes.png`, fullPage: true });
   await A.getByLabel("Código da cor: Primária (botões)").fill("#ff6600");

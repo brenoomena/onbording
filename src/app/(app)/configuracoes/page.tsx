@@ -1,4 +1,4 @@
-import { AppWindow, ImageIcon, LogIn, Palette, Settings, type LucideIcon } from "lucide-react";
+import { AppWindow, Award, ImageIcon, LogIn, Palette, Settings, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Card, PageHeader, cx } from "@/components/ui";
@@ -9,6 +9,9 @@ import { publicEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { sanitizeSizes } from "@/lib/logo-sizes";
 import { resolveLogin, sanitizeLogin } from "@/lib/login-theme";
+import { resolveCertificate, sanitizeCertificate } from "@/lib/certificate";
+import { siteOrigin } from "@/lib/certificate-server";
+import { CertificateEditor } from "./certificate-editor";
 import { resolveTheme, sanitizeTheme } from "@/lib/theme-tokens";
 import { FaviconEditor } from "./favicon-editor";
 import { LoginEditor } from "./login-editor";
@@ -17,12 +20,13 @@ import { ThemeEditor } from "./theme-editor";
 
 export const metadata: Metadata = { title: "Configurações" };
 
-type Secao = "marca" | "cores" | "login";
+type Secao = "marca" | "cores" | "login" | "certificado";
 
 const SECOES: { key: Secao; label: string; hint: string; icon: LucideIcon }[] = [
   { key: "marca", label: "Marca", hint: "Logomarca, símbolo e favicon", icon: ImageIcon },
   { key: "cores", label: "Cores do sistema", hint: "Modos claro e escuro", icon: Palette },
   { key: "login", label: "Página de login", hint: "Fundo, efeito, textos e botão", icon: LogIn },
+  { key: "certificado", label: "Certificado", hint: "Modelo, assinatura e validação", icon: Award },
 ];
 
 /** Identidade visual do sistema. Exclusivo do perfil Administrador (rota, ações e banco). */
@@ -33,27 +37,27 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
   const supabase = await createClient();
   const { data } = await supabase
     .from("app_settings")
-    .select("theme, logo_path, logo_dark_path, symbol_path, symbol_dark_path, favicon_path, logo_sizes, login_theme, updated_at")
+    .select("theme, logo_path, logo_dark_path, symbol_path, symbol_dark_path, favicon_path, logo_sizes, login_theme, certificate_theme, updated_at")
     .eq("id", 1)
     .maybeSingle();
   const theme = resolveTheme(sanitizeTheme(data?.theme));
   const login = resolveLogin(sanitizeLogin(data?.login_theme));
+  const certificate = resolveCertificate(sanitizeCertificate(data?.certificate_theme));
 
   // Mesma escolha de logo da página de login (versão para fundo escuro, se houver).
   const sizes = sanitizeSizes(data?.logo_sizes);
-  const loginLogo = logoFor(
-    {
-      theme: {},
-      logoPath: data?.logo_path ?? null,
-      logoDarkPath: data?.logo_dark_path ?? null,
-      symbolPath: null,
-      symbolDarkPath: null,
-      faviconPath: null,
-      sizes,
-      login,
-    },
-    login.to,
-  );
+  const brand = {
+    theme: {},
+    logoPath: data?.logo_path ?? null,
+    logoDarkPath: data?.logo_dark_path ?? null,
+    symbolPath: null,
+    symbolDarkPath: null,
+    faviconPath: null,
+    sizes,
+    login,
+    certificate,
+  };
+  const loginLogo = logoFor(brand, login.to);
 
   return (
     <>
@@ -120,6 +124,20 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
           {secao === "cores" && (
             <Card title="Cores do sistema" description="Escolha as cores de cada elemento para o modo claro e para o modo escuro. A prévia mostra o resultado antes de salvar." icon={Palette}>
               <ThemeEditor initial={theme} />
+            </Card>
+          )}
+          {secao === "certificado" && (
+            <Card
+              title="Certificado"
+              description="Emitido automaticamente quando a pessoa conclui uma trilha. O modelo vale para todos os certificados, inclusive os já emitidos; os dados de cada um (nome, trilha, data, carga e média) ficam guardados como na conclusão."
+              icon={Award}
+            >
+              <CertificateEditor
+                initial={certificate}
+                logoUrl={logoFor(brand, "#ffffff")?.src ?? null}
+                storageBase={`${publicEnv.supabaseUrl.replace(/\/$/, "")}/storage/v1/object/public/branding`}
+                validationBase={await siteOrigin()}
+              />
             </Card>
           )}
           {secao === "login" && (

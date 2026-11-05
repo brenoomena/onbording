@@ -38,7 +38,7 @@ export default async function MatriculasPage({ params }: { params: Promise<{ id:
   const contentIds = modules.flatMap((m) => m.items.map((i) => i.content.id));
 
   const supabase = await createClient();
-  const [{ data }, { data: people }, { data: time }] = await Promise.all([
+  const [{ data }, { data: people }, { data: time }, { data: certs }] = await Promise.all([
     supabase
       .from("enrollments")
       .select("id, origin, due_date, status, progress_percent, assigned_at, completed_at, profile:profiles(id, full_name, area:areas(name), position:positions(name))")
@@ -48,7 +48,9 @@ export default async function MatriculasPage({ params }: { params: Promise<{ id:
     contentIds.length
       ? supabase.from("content_progress").select("profile_id, active_seconds").in("content_id", contentIds)
       : Promise.resolve({ data: [] as { profile_id: string; active_seconds: number }[] }),
+    supabase.from("certificates").select("id, profile_id").eq("track_id", id),
   ]);
+  const certOf = new Map(((certs ?? []) as { id: string; profile_id: string }[]).map((c) => [c.profile_id, c.id]));
   const rows = (data ?? []) as unknown as Row[];
   const enrolledIds = new Set(rows.map((r) => r.profile.id));
   const candidates = ((people ?? []) as { id: string; full_name: string }[]).filter((p) => !enrolledIds.has(p.id));
@@ -101,6 +103,11 @@ export default async function MatriculasPage({ params }: { params: Promise<{ id:
                   <td>
                     <Badge tone={overdue ? "danger" : tone[r.status]}>{overdue ? "Em atraso" : ENROLLMENT_LABEL[r.status]}</Badge>
                     {r.completed_at && <p className="mt-1 text-[12px] text-muted">em {formatDate(r.completed_at)}</p>}
+                    {certOf.get(r.profile.id) && (
+                      <Link href={`/certificados/${certOf.get(r.profile.id)}`} className="mt-1 inline-block text-[12px] font-medium text-accent hover:underline">
+                        Ver certificado
+                      </Link>
+                    )}
                   </td>
                   <td className="text-[13px] tabular-nums">{formatMinutes(seconds.get(r.profile.id))}</td>
                   <td>

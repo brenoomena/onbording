@@ -60,6 +60,7 @@ export interface TrackRow {
   recommended_level_id: string | null;
   is_mandatory: boolean;
   deadline_days: number | null;
+  certificate_hours: number | null;
   is_sequential: boolean;
   status: PublishStatus;
   published_at: string | null;

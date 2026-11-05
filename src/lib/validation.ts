@@ -174,6 +174,12 @@ export const trackSchema = z.object({
     .max(365, "Use no máximo 365 dias.")
     .optional()
     .transform((v) => v ?? null),
+  certificate_hours: z.coerce
+    .number({ error: "Carga horária inválida." })
+    .min(0.5, "Use pelo menos meia hora.")
+    .max(999, "Use no máximo 999 horas.")
+    .optional()
+    .transform((v) => (v === undefined ? null : Math.round(v * 2) / 2)),
 });
 
 export const moduleSchema = z.object({

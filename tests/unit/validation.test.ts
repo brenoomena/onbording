@@ -59,12 +59,12 @@ describe("chave de perfil", () => {
 describe("menu por permissão", () => {
   it("colaborador vê só painel e aprendizagem", () => {
     const items = visibleMenu(new Set([P.painelVer]), false).flatMap((g) => g.items.map((i) => i.label));
-    expect(items).toEqual(["Painel", "Minhas trilhas", "Materiais"]);
+    expect(items).toEqual(["Painel", "Minhas trilhas", "Materiais", "Certificados"]);
   });
 
   it("supervisor vê 'Minha equipe'", () => {
     const items = visibleMenu(new Set([P.painelVer, P.equipeVer]), false).flatMap((g) => g.items.map((i) => i.label));
-    expect(items).toEqual(["Painel", "Minhas trilhas", "Materiais", "Minha equipe", "Acompanhamento"]);
+    expect(items).toEqual(["Painel", "Minhas trilhas", "Materiais", "Certificados", "Minha equipe", "Acompanhamento"]);
   });
 
   it("quem tem todas as permissões, mas não é administrador, não vê perfis nem configurações", () => {
@@ -76,16 +76,16 @@ describe("menu por permissão", () => {
 
   it("administrador vê todos os menus", () => {
     const items = visibleMenu(new Set(Object.values(P)), true).flatMap((g) => g.items.map((i) => i.label));
-    expect(items).toEqual(["Painel", "Minhas trilhas", "Materiais", "Trilhas", "Conteúdos", "Colaboradores", "Acompanhamento", "Áreas", "Cargos", "Níveis", "Perfis de acesso", "Configurações", "Auditoria"]);
+    expect(items).toEqual(["Painel", "Minhas trilhas", "Materiais", "Certificados", "Trilhas", "Conteúdos", "Colaboradores", "Acompanhamento", "Áreas", "Cargos", "Níveis", "Perfis de acesso", "Configurações", "Auditoria"]);
   });
 
   it("acompanhamento aparece com progresso.ver, mesmo sem ver colaboradores", () => {
     const items = visibleMenu(new Set([P.progressoVer]), false).flatMap((g) => g.items.map((i) => i.label));
-    expect(items).toEqual(["Minhas trilhas", "Materiais", "Acompanhamento"]);
+    expect(items).toEqual(["Minhas trilhas", "Materiais", "Certificados", "Acompanhamento"]);
   });
 
   it("estrutura aparece com qualquer uma das ações", () => {
     const items = visibleMenu(new Set([P.estruturaExcluir]), false).flatMap((g) => g.items.map((i) => i.label));
-    expect(items).toEqual(["Minhas trilhas", "Materiais", "Áreas", "Cargos", "Níveis"]);
+    expect(items).toEqual(["Minhas trilhas", "Materiais", "Certificados", "Áreas", "Cargos", "Níveis"]);
   });
 });

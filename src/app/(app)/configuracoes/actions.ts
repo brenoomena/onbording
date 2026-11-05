@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_THEME, TOKEN_KEYS, sanitizeTheme, type ThemeConfig } from "@/lib/theme-tokens";
 import type { ActionState } from "@/lib/action-state";
 import { diffLogin, sanitizeLogin } from "@/lib/login-theme";
+import { diffCertificate, sanitizeCertificate } from "@/lib/certificate";
 import { LOGO_SLOTS, defaultSize, fromWidth, sanitizeSizes, type LogoSlot } from "@/lib/logo-sizes";
 
 const LOGO_PATH = /^logo\/[0-9a-f-]{36}\.(png|webp|jpg)$/;
@@ -131,4 +132,30 @@ export async function saveLoginTheme(_: ActionState, fd: FormData): Promise<Acti
   if (!data?.length) return { error: "Somente administradores podem alterar a página de login." };
   refreshBranding();
   return { ok: "Página de login salva. Ela já aparece assim para todos." };
+}
+
+/** Salva o modelo do certificado; apaga a imagem de assinatura trocada. Somente Administrador. */
+export async function saveCertificateTheme(_: ActionState, fd: FormData): Promise<ActionState> {
+  const denied = await denyUnlessAdmin();
+  if (denied) return denied;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(String(fd.get("certificate") ?? "{}"));
+  } catch {
+    return { error: "Não foi possível ler o modelo enviado." };
+  }
+  const clean = sanitizeCertificate(parsed);
+  if (clean.title !== undefined && clean.title.length < 2) return { error: "Escreva o título do certificado." };
+  if (clean.body !== undefined && !clean.body.includes("{trilha}")) {
+    return { error: "O texto precisa ter o marcador {trilha}, que é trocado pelo nome da trilha." };
+  }
+  const supabase = await createClient();
+  const { data: before } = await supabase.from("app_settings").select("certificate_theme").eq("id", 1).maybeSingle();
+  const { data, error } = await supabase.from("app_settings").update({ certificate_theme: diffCertificate(clean) }).eq("id", 1).select("id");
+  if (error) return { error: friendlyError(error) };
+  if (!data?.length) return { error: "Somente administradores podem alterar o certificado." };
+  const old = sanitizeCertificate(before?.certificate_theme).signaturePath;
+  if (old && old !== (clean.signaturePath ?? null)) await supabase.storage.from("branding").remove([old]);
+  refreshBranding();
+  return { ok: "Modelo do certificado salvo. Vale para todos os certificados, inclusive os já emitidos." };
 }

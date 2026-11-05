@@ -48,6 +48,14 @@ export function TrackForm({
               <Field label="Prazo de conclusão (dias)" htmlFor="deadline_days" hint="Contado a partir da matrícula ou do início do onboarding." error={e.deadline_days}>
                 <Input id="deadline_days" name="deadline_days" type="number" min={1} max={365} defaultValue={track?.deadline_days ?? ""} />
               </Field>
+              <Field
+                label="Carga horária do certificado (horas)"
+                htmlFor="certificate_hours"
+                hint="Em branco, usa a soma do tempo estimado dos conteúdos."
+                error={e.certificate_hours}
+              >
+                <Input id="certificate_hours" name="certificate_hours" type="number" min={0.5} max={999} step={0.5} defaultValue={track?.certificate_hours ?? ""} />
+              </Field>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="flex items-start gap-3 rounded-lg border border-line p-3 text-[14px]">
