@@ -1,5 +1,6 @@
 "use client";
 
+import { NotificationBell } from "@/components/notification-bell";
 import { ChevronDown, ChevronRight, LogOut, Menu, PanelLeftClose, PanelLeftOpen, UserRound, Waypoints, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -147,7 +148,10 @@ export function AppShell({ groups, user, logo, compact: initialCompact, children
               <p className="text-[14px] font-semibold text-heading">Onboarding</p>
             )}
           </div>
-          <UserMenu user={user} />
+          <div className="ml-auto flex items-center gap-1">
+            <NotificationBell />
+            <UserMenu user={user} />
+          </div>
         </header>
 
         <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
@@ -251,7 +255,7 @@ function UserMenu({ user }: { user: ShellProps["user"] }) {
   };
 
   return (
-    <div ref={box} className="relative ml-auto" onPointerEnter={enter} onPointerLeave={leave}>
+    <div ref={box} className="relative" onPointerEnter={enter} onPointerLeave={leave}>
       <button
         type="button"
         aria-haspopup="menu"
