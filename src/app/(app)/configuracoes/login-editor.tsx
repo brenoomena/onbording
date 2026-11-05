@@ -4,15 +4,24 @@ import { Monitor, RotateCcw, Smartphone } from "lucide-react";
 import { useState } from "react";
 import { ActionForm, FormBar, SubmitButton } from "@/components/forms";
 import { GOOGLE_BUTTON_CLASS, GoogleMark, LoginScene, googleButtonStyle, type SceneLogo } from "@/components/login-scene";
-import { Field, Input, Textarea, cx } from "@/components/ui";
+import { Field, Input, Select, Textarea, cx } from "@/components/ui";
 import {
+  AREA_MASK,
   DEFAULT_LOGIN,
+  LOGIN_AREA_LABEL,
   LOGIN_CARD_LABEL,
   LOGIN_EFFECT_LABEL,
+  LOGIN_FONTS,
   TEXT_LIMITS,
+  TEXT_SIZE,
   diffLogin,
+  fontFamily,
+  fontsUrl,
+  type LoginArea,
   type LoginCard,
   type LoginEffect,
+  type LoginFont,
+  type LoginTextKey,
   type LoginTheme,
 } from "@/lib/login-theme";
 import { saveLoginTheme } from "./actions";
@@ -82,30 +91,62 @@ export function LoginEditor({ initial, logo, domainHint }: { initial: LoginTheme
               ))}
             </div>
             {t.effect !== "nenhum" && (
-              <div className="grid gap-3 sm:grid-cols-[auto_1fr_1fr] sm:items-end xl:grid-cols-1 2xl:grid-cols-[auto_1fr_1fr]">
-                <Color id="lg-effect-color" label="Cor das linhas" value={t.effectColor} onChange={(v) => set("effectColor", v)} />
-                <Range id="lg-speed" label="Velocidade" value={t.speed} min={1} max={10} onChange={(v) => set("speed", v)} />
-                <Range id="lg-intensity" label="Intensidade" value={t.intensity} min={1} max={10} onChange={(v) => set("intensity", v)} />
-              </div>
+              <>
+                <div className="grid gap-3 sm:grid-cols-[auto_1fr_1fr] sm:items-end xl:grid-cols-1 2xl:grid-cols-[auto_1fr_1fr]">
+                  <Color id="lg-effect-color" label="Cor do efeito" value={t.effectColor} onChange={(v) => set("effectColor", v)} />
+                  <Range id="lg-speed" label="Velocidade" value={t.speed} min={1} max={10} onChange={(v) => set("speed", v)} />
+                  <Range id="lg-intensity" label="Intensidade" value={t.intensity} min={1} max={10} onChange={(v) => set("intensity", v)} />
+                </div>
+                <fieldset className="grid gap-2">
+                  <legend className="mb-1.5 text-[13px] font-medium">Onde o efeito aparece</legend>
+                  <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(150px,1fr))]">
+                    {(Object.keys(LOGIN_AREA_LABEL) as LoginArea[]).map((k) => {
+                      const mask = AREA_MASK[k];
+                      const on = t.effectArea === k;
+                      return (
+                        <label
+                          key={k}
+                          className={cx(
+                            "flex cursor-pointer items-center gap-2.5 rounded-lg border px-2.5 py-2 text-[12.5px]",
+                            on ? "border-brand bg-accent-soft/60 font-medium text-accent" : "border-line hover:border-accent/40",
+                          )}
+                        >
+                          <input type="radio" name="lg-area" checked={on} onChange={() => set("effectArea", k)} className="sr-only" />
+                          <span aria-hidden className="relative h-7 w-11 shrink-0 overflow-hidden rounded-md" style={{ background: `linear-gradient(135deg, ${t.from}, ${t.to})` }}>
+                            <span
+                              className="absolute inset-0"
+                              style={{
+                                backgroundImage: `repeating-linear-gradient(90deg, ${t.effectColor} 0 1px, transparent 1px 6px), repeating-linear-gradient(0deg, ${t.effectColor} 0 1px, transparent 1px 6px)`,
+                                opacity: 0.85,
+                                ...(mask ? { maskImage: mask, WebkitMaskImage: mask } : {}),
+                              }}
+                            />
+                          </span>
+                          {LOGIN_AREA_LABEL[k]}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              </>
             )}
           </Group>
 
-          <Group title="Textos" hint="Chamada acima do cartão e textos do cartão de entrada.">
-            <Field label="Chamada" htmlFor="lg-headline" hint="Deixe em branco para não mostrar.">
+          <Group title="Textos" hint="Conteúdo, fonte e tamanho de cada texto. A chamada diminui sozinha no celular.">
+            {fontsUrl(t) && <link rel="stylesheet" href={fontsUrl(t)!} />}
+            <TextStyle k="headline" t={t} set={set} hint="Deixe em branco para não mostrar.">
               <Input id="lg-headline" value={t.headline} maxLength={TEXT_LIMITS.headline} onChange={(e) => set("headline", e.target.value)} />
-            </Field>
-            <Field label="Frase de apoio" htmlFor="lg-tagline">
+            </TextStyle>
+            <TextStyle k="tagline" t={t} set={set}>
               <Textarea id="lg-tagline" rows={2} value={t.tagline} maxLength={TEXT_LIMITS.tagline} onChange={(e) => set("tagline", e.target.value)} />
-            </Field>
-            <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(180px,1fr))]">
-              <Field label="Título do cartão" htmlFor="lg-title">
-                <Input id="lg-title" value={t.title} maxLength={TEXT_LIMITS.title} required onChange={(e) => set("title", e.target.value)} />
-              </Field>
-              <Color id="lg-text" label="Cor dos textos sobre o fundo" value={t.textColor} onChange={(v) => set("textColor", v)} />
-            </div>
-            <Field label="Texto do cartão" htmlFor="lg-subtitle">
+            </TextStyle>
+            <TextStyle k="title" t={t} set={set}>
+              <Input id="lg-title" value={t.title} maxLength={TEXT_LIMITS.title} required onChange={(e) => set("title", e.target.value)} />
+            </TextStyle>
+            <TextStyle k="subtitle" t={t} set={set}>
               <Textarea id="lg-subtitle" rows={2} value={t.subtitle} maxLength={TEXT_LIMITS.subtitle} onChange={(e) => set("subtitle", e.target.value)} />
-            </Field>
+            </TextStyle>
+            <Color id="lg-text" label="Cor dos textos sobre o fundo" value={t.textColor} onChange={(v) => set("textColor", v)} />
           </Group>
 
           <Group title="Cartão e botão">
@@ -159,6 +200,53 @@ export function LoginEditor({ initial, logo, domainHint }: { initial: LoginTheme
         </div>
       </div>
     </ActionForm>
+  );
+}
+
+/** Um texto da página: conteúdo, fonte e tamanho. */
+function TextStyle({
+  k,
+  t,
+  set,
+  hint,
+  children,
+}: {
+  k: LoginTextKey;
+  t: LoginTheme;
+  set: <K extends keyof LoginTheme>(k: K, v: LoginTheme[K]) => void;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  const lim = TEXT_SIZE[k];
+  const fontKey = `${k}Font` as const;
+  const sizeKey = `${k}Size` as const;
+  return (
+    <div className="grid gap-2 rounded-lg border border-line/70 bg-sunken/30 p-3">
+      <Field label={lim.label} htmlFor={`lg-${k}`} hint={hint}>
+        {children}
+      </Field>
+      <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(180px,1fr))] sm:items-end">
+        <div className="grid gap-1.5">
+          <label htmlFor={`lg-${k}-font`} className="text-[12.5px] font-medium text-muted">
+            Fonte
+          </label>
+          <Select
+            id={`lg-${k}-font`}
+            value={t[fontKey]}
+            onChange={(e) => set(fontKey, e.target.value as LoginFont)}
+            className="py-1.5 text-[13px]"
+            style={{ fontFamily: fontFamily(t[fontKey]) }}
+          >
+            {(Object.keys(LOGIN_FONTS) as LoginFont[]).map((f) => (
+              <option key={f} value={f}>
+                {LOGIN_FONTS[f].label}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <Range id={`lg-${k}-size`} label="Tamanho" value={t[sizeKey]} min={lim.min} max={lim.max} step={k === "subtitle" ? 0.5 : 1} suffix="px" onChange={(v) => set(sizeKey, v)} />
+      </div>
+    </div>
   );
 }
 

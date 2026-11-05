@@ -84,6 +84,46 @@ await step("edita a página de login com prévia ao vivo e salva", async () => {
   await p.screenshot({ path: `${SHOTS}/06-login-noite.png` });
 });
 
+await step("novos efeitos, área do efeito e fonte/tamanho dos textos", async () => {
+  await A.goto(`${BASE}/configuracoes?secao=login`);
+  await A.getByText("Prévia ao vivo").waitFor();
+  const preview = A.locator("div.h-\\[640px\\]");
+  for (const [label, file] of [["Linhas passando (diagonal)", "fluxo"], ["Ondas", "ondas"], ["Luzes flutuantes", "bokeh"], ["Aurora (brilhos suaves)", "aurora"]]) {
+    await A.getByLabel(label).check();
+    await A.waitForTimeout(1500);
+    await preview.screenshot({ path: `${SHOTS}/08-efeito-${file}.png` });
+  }
+  await A.getByLabel("Ondas").check();
+  await A.getByText("Só o lado direito").click();
+  await A.locator("#lg-headline-font").selectOption("poppins");
+  await A.locator("#lg-headline-size").fill("44");
+  await A.locator("#lg-title-font").selectOption("playfair");
+  await A.locator("#lg-subtitle-size").fill("15");
+  await A.waitForTimeout(1200);
+  await A.screenshot({ path: `${SHOTS}/09-editor-textos.png`, fullPage: true });
+  await A.getByRole("button", { name: "Salvar página de login" }).click();
+  await A.getByText("Página de login salva").first().waitFor();
+  const p = await newPage();
+  await p.goto(`${BASE}/login`);
+  const head = p.getByText("Bem-vindo ao time");
+  await head.waitFor();
+  const st = await head.evaluate((el) => ({ f: getComputedStyle(el).fontFamily, s: getComputedStyle(el).fontSize }));
+  assert.match(st.f, /Poppins/);
+  assert.equal(st.s, "44px");
+  const tf = await p.getByRole("heading", { name: "Entrar na plataforma" }).evaluate((el) => getComputedStyle(el).fontFamily);
+  assert.match(tf, /Playfair/);
+  const mask = await p.locator("canvas").evaluate((el) => el.style.maskImage || el.style.webkitMaskImage);
+  assert.match(mask, /to left/);
+  await p.waitForTimeout(1500);
+  await p.screenshot({ path: `${SHOTS}/10-login-ondas-direita.png` });
+  const m = await newPage({ width: 390, height: 844 });
+  await m.goto(`${BASE}/login`);
+  await m.waitForTimeout(1000);
+  const overflow = await m.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  assert.ok(overflow <= 1, `rolagem lateral ${overflow}`);
+  await m.screenshot({ path: `${SHOTS}/11-celular-44px.png` });
+});
+
 await step("restaurar padrão volta ao degradê #14afcc", async () => {
   await A.getByRole("button", { name: "Restaurar padrão" }).click();
   await A.getByRole("button", { name: "Salvar página de login" }).click();

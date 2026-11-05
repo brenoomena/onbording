@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { LoginEffect } from "@/lib/login-theme";
+import { AREA_MASK, type LoginArea, type LoginEffect } from "@/lib/login-theme";
 
 interface Props {
   effect: LoginEffect;
@@ -10,6 +10,7 @@ interface Props {
   speed: number;
   /** 1 a 10 */
   intensity: number;
+  area?: LoginArea;
 }
 
 const GRID = 64;
@@ -20,7 +21,7 @@ const GRID = 64;
  * linhas; "constelacao": pontos que se movem e se ligam quando próximos.
  * Respeita "reduzir movimento" do sistema (mostra um quadro parado).
  */
-export function LoginBackdrop({ effect, color, speed, intensity }: Props) {
+export function LoginBackdrop({ effect, color, speed, intensity, area = "toda" }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -39,8 +40,18 @@ export function LoginBackdrop({ effect, color, speed, intensity }: Props) {
 
     type Beam = { horizontal: boolean; line: number; pos: number; len: number; dir: 1 | -1; v: number };
     type Dot = { x: number; y: number; vx: number; vy: number };
+    type Streak = { x: number; y: number; len: number; v: number; a: number; wdt: number };
+    type Wave = { y: number; amp: number; len: number; phase: number; v: number; a: number };
+    type Orb = { x: number; y: number; r: number; vx: number; vy: number; a: number; tw: number };
     let beams: Beam[] = [];
     let dots: Dot[] = [];
+    let streaks: Streak[] = [];
+    let waves: Wave[] = [];
+    let orbs: Orb[] = [];
+    let t0 = 0;
+    // Linhas passando: sobem da esquerda para a direita, inclinadas.
+    const ANG = -0.42;
+    const [ux, uy] = [Math.cos(ANG), Math.sin(ANG)];
     const velocity = 40 + speed * 28; // px/s
 
     const newBeam = (anywhere: boolean): Beam => {
@@ -65,6 +76,28 @@ export function LoginBackdrop({ effect, color, speed, intensity }: Props) {
       return { x: Math.random() * w, y: Math.random() * h, vx: Math.cos(a) * v, vy: Math.sin(a) * v };
     };
 
+    const newStreak = (anywhere: boolean): Streak => {
+      const len = 120 + Math.random() * 260;
+      // Começa fora da tela, na borda esquerda ou de baixo.
+      const fromLeft = Math.random() < h / (w + h);
+      const x = anywhere ? Math.random() * w : fromLeft ? -len : Math.random() * w;
+      const y = anywhere ? Math.random() * h : fromLeft ? Math.random() * h : h + len;
+      return { x, y, len, v: velocity * (1 + Math.random() * 1.2), a: 0.35 + Math.random() * 0.55, wdt: Math.random() < 0.3 ? 2 : 1.2 };
+    };
+    const newOrb = (anywhere: boolean, big = false): Orb => {
+      const r = big ? Math.max(w, h) * (0.25 + Math.random() * 0.2) : 8 + Math.random() * 46;
+      const v = big ? velocity / 4 : velocity / 5;
+      return {
+        x: Math.random() * w,
+        y: anywhere ? Math.random() * h : h + r,
+        r,
+        vx: (Math.random() - 0.5) * v,
+        vy: big ? (Math.random() - 0.5) * v : -(0.3 + Math.random()) * v,
+        a: big ? 0.18 + Math.random() * 0.16 : 0.18 + Math.random() * 0.3,
+        tw: Math.random() * Math.PI * 2,
+      };
+    };
+
     const resize = () => {
       const r = parent.getBoundingClientRect();
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -78,6 +111,20 @@ export function LoginBackdrop({ effect, color, speed, intensity }: Props) {
       const area = (w * h) / (1440 * 900);
       beams = Array.from({ length: Math.max(3, Math.round(intensity * 2.2 * Math.sqrt(area))) }, () => newBeam(true));
       dots = Array.from({ length: Math.max(12, Math.round(intensity * 10 * area)) }, newDot);
+      streaks = Array.from({ length: Math.max(8, Math.round(intensity * 4 * Math.sqrt(area))) }, () => newStreak(true));
+      const nWaves = 2 + Math.round(intensity / 2);
+      waves = Array.from({ length: nWaves }, (_, i) => ({
+        y: h * (0.45 + (0.45 * i) / Math.max(1, nWaves - 1)),
+        amp: 18 + Math.random() * 42,
+        len: 380 + Math.random() * 520,
+        phase: Math.random() * Math.PI * 2,
+        v: (0.25 + Math.random() * 0.35) * (0.4 + speed / 5),
+        a: 0.18 + (i / nWaves) * 0.35,
+      }));
+      orbs =
+        effect === "aurora"
+          ? Array.from({ length: 3 + Math.round(intensity / 4) }, () => newOrb(true, true))
+          : Array.from({ length: Math.max(14, Math.round(intensity * 4 * area)) }, () => newOrb(true));
     };
 
     const drawGrid = () => {
@@ -160,16 +207,90 @@ export function LoginBackdrop({ effect, color, speed, intensity }: Props) {
       }
     };
 
+    const drawStreaks = (dt: number) => {
+      for (let i = 0; i < streaks.length; i++) {
+        const s = streaks[i];
+        s.x += ux * s.v * dt;
+        s.y += uy * s.v * dt;
+        const tx = s.x - ux * s.len;
+        const ty = s.y - uy * s.len;
+        if (tx > w + 20 || ty < -20) {
+          streaks[i] = newStreak(false);
+          continue;
+        }
+        const g = ctx.createLinearGradient(tx, ty, s.x, s.y);
+        g.addColorStop(0, rgba(0));
+        g.addColorStop(1, rgba(Math.min(1, s.a * (0.6 + intensity * 0.06))));
+        ctx.strokeStyle = g;
+        ctx.lineWidth = s.wdt;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(tx, ty);
+        ctx.lineTo(s.x, s.y);
+        ctx.stroke();
+      }
+    };
+
+    const drawWaves = (dt: number) => {
+      ctx.lineWidth = 1.5;
+      for (const wv of waves) {
+        wv.phase += wv.v * dt * 2;
+        for (const off of [0, 14]) {
+          ctx.strokeStyle = rgba(wv.a * (off ? 0.45 : 1) * (0.5 + intensity * 0.06));
+          ctx.beginPath();
+          for (let x = -10; x <= w + 10; x += 8) {
+            const y =
+              wv.y + off +
+              Math.sin((x / wv.len) * Math.PI * 2 + wv.phase + off / 30) * wv.amp +
+              Math.sin((x / (wv.len * 0.47)) * Math.PI * 2 - wv.phase * 0.7) * wv.amp * 0.25;
+            if (x === -10) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+      }
+    };
+
+    const drawOrbs = (dt: number, now: number) => {
+      const big = effect === "aurora";
+      if (big) ctx.globalCompositeOperation = "lighter";
+      for (let i = 0; i < orbs.length; i++) {
+        const o = orbs[i];
+        o.x += o.vx * dt;
+        o.y += o.vy * dt;
+        if (big) {
+          if (o.x < -o.r * 0.5 || o.x > w + o.r * 0.5) o.vx *= -1;
+          if (o.y < -o.r * 0.5 || o.y > h + o.r * 0.5) o.vy *= -1;
+        } else if (o.y < -o.r - 10) {
+          orbs[i] = newOrb(false);
+          continue;
+        }
+        const pulse = 0.75 + 0.25 * Math.sin(now / 900 + o.tw);
+        const alpha = o.a * pulse * (big ? 0.6 + intensity * 0.06 : 0.5 + intensity * 0.07);
+        const g = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, o.r);
+        g.addColorStop(0, rgba(Math.min(1, alpha)));
+        g.addColorStop(big ? 1 : 0.7, rgba(big ? 0 : alpha * 0.35));
+        if (!big) g.addColorStop(1, rgba(0));
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalCompositeOperation = "source-over";
+    };
+
     const frame = (now: number) => {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
       ctx.clearRect(0, 0, w, h);
+      if (!t0) t0 = now;
       if (effect === "linhas") {
         drawGrid();
         drawBeams(dt);
-      } else {
-        drawDots(dt);
-      }
+      } else if (effect === "fluxo") drawStreaks(dt);
+      else if (effect === "ondas") drawWaves(dt);
+      else if (effect === "bokeh" || effect === "aurora") drawOrbs(dt, now);
+      else drawDots(dt);
       if (!reduce) raf = requestAnimationFrame(frame);
     };
 
@@ -187,5 +308,13 @@ export function LoginBackdrop({ effect, color, speed, intensity }: Props) {
   }, [effect, color, speed, intensity]);
 
   if (effect === "nenhum") return null;
-  return <canvas ref={ref} aria-hidden className="pointer-events-none absolute inset-0" />;
+  const mask = AREA_MASK[area];
+  return (
+    <canvas
+      ref={ref}
+      aria-hidden
+      className="pointer-events-none absolute inset-0"
+      style={mask ? { maskImage: mask, WebkitMaskImage: mask } : undefined}
+    />
+  );
 }

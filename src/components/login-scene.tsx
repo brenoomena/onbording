@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { LoginBackdrop } from "@/components/login-backdrop";
 import { cx } from "@/components/ui";
-import { CARD_CLASS, cardVars, gradientCss, type LoginTheme } from "@/lib/login-theme";
+import { CARD_CLASS, cardVars, fontFamily, fontsUrl, gradientCss, type LoginTheme } from "@/lib/login-theme";
 
 export interface SceneLogo {
   src: string;
@@ -31,6 +31,8 @@ export function LoginScene({
   contained?: boolean;
   children: ReactNode;
 }) {
+  const fonts = fontsUrl(t);
+  const text = (k: "headline" | "tagline" | "title" | "subtitle"): CSSProperties => ({ fontFamily: fontFamily(t[`${k}Font`]) });
   return (
     <div
       className={cx("relative isolate overflow-hidden", contained ? "h-full" : "min-h-dvh")}
@@ -44,9 +46,11 @@ export function LoginScene({
             "radial-gradient(55% 45% at 12% 0%, rgba(255,255,255,0.18), transparent 70%), radial-gradient(50% 40% at 100% 100%, rgba(0,0,0,0.28), transparent 70%)",
         }}
       />
-      <LoginBackdrop effect={t.effect} color={t.effectColor} speed={t.speed} intensity={t.intensity} />
+      {/* Folha do Google Fonts só com as fontes escolhidas; se falhar, vale a fonte padrão. */}
+      {fonts && <link rel="stylesheet" href={fonts} />}
+      <LoginBackdrop effect={t.effect} color={t.effectColor} speed={t.speed} intensity={t.intensity} area={t.effectArea} />
       <main className={cx("relative z-10 grid place-items-center px-4 py-10", contained ? "h-full" : "min-h-dvh")}>
-        <div className="grid w-full max-w-[420px] gap-7">
+        <div className={cx("grid w-full gap-7", t.headlineSize > 40 ? "max-w-[520px]" : "max-w-[420px]")}>
           <div className="grid justify-items-center gap-4 text-center">
             {logo ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -61,14 +65,31 @@ export function LoginScene({
             )}
             {hero && (t.headline || t.tagline) && (
               <div className="grid gap-2">
-                {t.headline && <p className="text-balance text-[28px] font-semibold leading-[1.15] tracking-tight sm:text-[32px]">{t.headline}</p>}
-                {t.tagline && <p className="text-balance text-[15px] leading-relaxed opacity-80">{t.tagline}</p>}
+                {t.headline && (
+                  <p
+                    className="text-balance font-semibold leading-[1.15] tracking-tight"
+                    style={{ ...text("headline"), fontSize: `clamp(${Math.round(t.headlineSize * 0.75)}px, 8vw, ${t.headlineSize}px)` }}
+                  >
+                    {t.headline}
+                  </p>
+                )}
+                {t.tagline && (
+                  <p className="text-balance leading-relaxed opacity-80" style={{ ...text("tagline"), fontSize: t.taglineSize }}>
+                    {t.tagline}
+                  </p>
+                )}
               </div>
             )}
           </div>
           <div className={cx("rounded-2xl border p-6 text-ink sm:p-7", CARD_CLASS[t.card])} style={cardVars(t) as CSSProperties}>
-            <h1 className="text-[18px] font-semibold tracking-tight text-heading">{title}</h1>
-            {description && <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted">{description}</p>}
+            <h1 className="font-semibold leading-snug tracking-tight text-heading" style={{ ...text("title"), fontSize: t.titleSize }}>
+              {title}
+            </h1>
+            {description && (
+              <p className="mt-1.5 leading-relaxed text-muted" style={{ ...text("subtitle"), fontSize: t.subtitleSize }}>
+                {description}
+              </p>
+            )}
             <div className="mt-5">{children}</div>
           </div>
         </div>
