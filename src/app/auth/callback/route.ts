@@ -1,25 +1,43 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { decideAccess, deniedFromProviderError, safeNext } from "@/lib/access";
 import { publicEnv } from "@/lib/env";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
-/** Retorno do login com Google. */
+/**
+ * Volta do login com Google. Só libera quem tem cadastro de colaborador
+ * ativo com o mesmo e-mail; qualquer outra conta é desconectada e, se foi
+ * criada agora sem cadastro, removida do login.
+ */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
-  const code = searchParams.get("code");
-  const nextParam = searchParams.get("next") ?? "/painel";
-  const next = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/painel";
+  const deny = (reason: string) => NextResponse.redirect(`${origin}/login?erro=${reason}`);
 
-  if (!code) return NextResponse.redirect(`${origin}/auth/erro?motivo=google`);
+  const providerError = searchParams.get("error") ?? searchParams.get("error_code");
+  if (providerError) return deny(deniedFromProviderError(providerError, searchParams.get("error_description")));
+
+  const code = searchParams.get("code");
+  if (!code) return deny("google");
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error || !data.user) return NextResponse.redirect(`${origin}/auth/erro?motivo=google`);
+  if (error || !data.user) return deny(error ? deniedFromProviderError(error.code ?? null, error.message) : "google");
 
-  const domain = publicEnv.googleDomain;
-  if (domain && !(data.user.email ?? "").toLowerCase().endsWith(`@${domain}`)) {
+  // Cadastro lido pela própria sessão (RLS: cada um lê o próprio cadastro).
+  const { data: profile } = await supabase.from("profiles").select("status").eq("id", data.user.id).maybeSingle();
+  const access = decideAccess(data.user.email, profile, publicEnv.googleDomain);
+  if (!access.ok) {
     await supabase.auth.signOut();
-    return NextResponse.redirect(`${origin}/auth/erro?motivo=dominio`);
+    // Conta criada pelo Google sem cadastro na plataforma: não fica guardada.
+    if (!profile) {
+      try {
+        await createAdminClient().auth.admin.deleteUser(data.user.id);
+      } catch {
+        // Sem a chave de serviço, a conta fica sem acesso de qualquer forma.
+      }
+    }
+    return deny(access.reason);
   }
 
-  return NextResponse.redirect(`${origin}${next}`);
+  return NextResponse.redirect(`${origin}${safeNext(searchParams.get("next"))}`);
 }

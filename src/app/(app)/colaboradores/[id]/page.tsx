@@ -9,7 +9,7 @@ import { can, isAdmin, requirePermission } from "@/lib/auth";
 import { P } from "@/lib/permissions";
 import { PROFILE_SELECT, type ProfileRow } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
-import { resendInvite, setProfileStatus } from "../actions";
+import { setProfileStatus } from "../actions";
 import { loadPersonPermissions } from "../load-permissions";
 import { LearningCard } from "./learning-card";
 
@@ -62,8 +62,10 @@ export default async function ColaboradorPage({
                 <Pencil size={16} aria-hidden /> Editar
               </Link>
             )}
-            {can(me, P.colaboradoresCriar) && person.status !== "inativo" && !person.last_access_at && (
-              <ActionButton action={resendInvite} hidden={{ id: person.id }} label="Reenviar convite" icon={<Mail size={15} aria-hidden />} pendingLabel="Enviando…" />
+            {person.status !== "inativo" && !person.last_access_at && (
+              <span className="inline-flex items-center gap-1.5 self-center rounded-full bg-sunken px-3 py-1 text-[12.5px] text-muted" title="Acesso liberado para a conta Google deste e-mail">
+                <Mail size={14} aria-hidden /> Ainda não entrou
+              </span>
             )}
             {canDeactivate &&
               (person.status === "inativo" ? (
@@ -83,7 +85,7 @@ export default async function ColaboradorPage({
           </div>
         }
       />
-      {aviso === "convidado" && <PageNotice message={`Colaborador cadastrado. O convite de acesso foi enviado para ${person.email}.`} />}
+      {(aviso === "cadastrado" || aviso === "convidado") && <PageNotice message={`Colaborador cadastrado. O acesso está liberado: ${person.email} já pode entrar com a conta Google desse e-mail.`} />}
 
       <div className="grid items-start gap-6 lg:grid-cols-[1fr_380px]">
         <Card title="Dados pessoais e profissionais" icon={IdCard}>

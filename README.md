@@ -99,7 +99,7 @@ tests/e2e/             Teste ponta a ponta dos fluxos no navegador
    - `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Supabase › Project Settings › API)
    - `SUPABASE_SERVICE_ROLE_KEY` (mesma tela; **secreta**, só no servidor)
    - `NEXT_PUBLIC_SITE_URL` (o mesmo endereço do Site URL)
-   - `NEXT_PUBLIC_LOGIN_GOOGLE=false` (até configurar o Google, abaixo)
+   - `NEXT_PUBLIC_GOOGLE_DOMAIN` (opcional): só aceita contas Google desse domínio, ex.: `implantta.com.br`. Vazio aceita qualquer conta Google, inclusive @gmail.com
 3. Faça o deploy.
 
 ### 3. Primeiro administrador
@@ -111,15 +111,16 @@ npm install
 node --env-file=.env.local node_modules/.bin/tsx scripts/criar-admin.ts seu.email@implantta.com.br "Seu Nome"
 ```
 
-A pessoa recebe o convite, cria a senha e entra como administradora. A partir daí, todo o cadastro é feito pela tela **Colaboradores**.
+O script libera o acesso para esse e-mail (sem senha e sem e-mail de convite). A pessoa entra com a conta Google dele. A partir daí, todo o cadastro é feito pela tela **Colaboradores**.
 
-### 4. Login com Google (opcional)
+### 4. Login com Google (obrigatório: é a única forma de entrar)
 
-1. O administrador do Google Workspace cria um cliente OAuth (tipo *Web*) no Google Cloud Console, com o redirect `https://SEU-PROJETO.supabase.co/auth/v1/callback`.
-2. No Supabase, em **Authentication › Sign In / Providers › Google**, informe o Client ID e o Secret.
-3. Na Vercel, defina `NEXT_PUBLIC_LOGIN_GOOGLE=true` e `NEXT_PUBLIC_GOOGLE_DOMAIN=implantta.com.br`.
+1. No Google Cloud Console, crie um cliente OAuth do tipo *Aplicativo da Web* com o URI de redirecionamento `https://SEU-PROJETO.supabase.co/auth/v1/callback`.
+2. No Supabase, em **Authentication › Sign In / Providers › Google**, ative e informe o Client ID e o Client Secret.
+3. Em **Authentication › Sign In / Providers**, desligue **Allow new users to sign up**: só entra quem foi cadastrado na plataforma.
+4. Em **Authentication › URL Configuration**, inclua `https://SEU-DOMINIO/auth/callback` nas Redirect URLs.
 
-Só entra quem já foi cadastrado. Uma conta Google de outro domínio é recusada.
+Como funciona: ao cadastrar um colaborador, a plataforma libera o login para aquele e-mail. No primeiro acesso com Google, o Supabase associa a conta Google a esse login (mesmo e-mail). Conta sem cadastro, desativada ou de outro domínio (se `NEXT_PUBLIC_GOOGLE_DOMAIN` estiver definido) é desconectada; conta criada sem cadastro é apagada.
 
 ## Rodar localmente
 

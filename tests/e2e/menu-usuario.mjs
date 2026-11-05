@@ -1,11 +1,10 @@
 import { chromium } from "playwright";
+import { entrar } from "./auth-helper.mjs";
 import assert from "node:assert/strict";
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1243/chrome-linux64/chrome", args: ["--no-proxy-server"] });
 const page = await (await browser.newContext({ locale: "pt-BR", viewport: { width: 1440, height: 900 } })).newPage();
 page.on("pageerror", (e) => console.log("[pageerror]", e.message));
-await page.goto("http://localhost:3000/login");
-await page.fill("#email", "breno@implantta.com.br"); await page.fill("#password", "SenhaForte!2026");
-await page.click("form button[type=submit]"); await page.waitForURL(/painel/);
+await entrar(page, "breno@implantta.com.br"); await page.waitForURL(/painel/);
 assert.equal(await page.locator("aside").getByText("Sair").count(), 0, "sem Sair no menu lateral");
 assert.equal(await page.locator("aside a[href='/meu-perfil']").count(), 0, "sem perfil no menu lateral");
 await page.screenshot({ path: "shots3/menu-1.png" });

@@ -22,7 +22,6 @@ async function main() {
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const site = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
   if (!url || !key) {
     console.error("Defina NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY.");
     process.exit(1);
@@ -36,14 +35,12 @@ async function main() {
     process.exit(1);
   }
 
+  // Libera o login para o e-mail (sem senha): a pessoa entra com a conta Google dele.
   let userId: string | undefined;
-  const invite = await supabase.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${site}/auth/confirm?next=/definir-senha`,
-    data: { full_name: fullName },
-  });
-  if (invite.data.user) {
-    userId = invite.data.user.id;
-    console.log(`Convite enviado para ${email}.`);
+  const created = await supabase.auth.admin.createUser({ email, email_confirm: true, user_metadata: { full_name: fullName } });
+  if (created.data.user) {
+    userId = created.data.user.id;
+    console.log(`Acesso liberado para ${email} (entrar com Google).`);
   } else {
     for (let page = 1; page <= 20 && !userId; page++) {
       const { data } = await supabase.auth.admin.listUsers({ page, perPage: 200 });
@@ -51,7 +48,7 @@ async function main() {
       if (!data || data.users.length < 200) break;
     }
     if (!userId) {
-      console.error(`Não foi possível convidar ${email}: ${invite.error?.message}`);
+      console.error(`Não foi possível liberar ${email}: ${created.error?.message}`);
       process.exit(1);
     }
     console.log(`${email} já tinha login; vinculando como administrador.`);

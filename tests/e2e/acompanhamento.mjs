@@ -2,6 +2,7 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { entrar } from "./auth-helper.mjs";
 
 const BASE = "http://localhost:3000";
 const API = "http://localhost:54321";
@@ -51,10 +52,7 @@ const login = async (email, viewport = { width: 1440, height: 900 }) => {
   const ctx = await browser.newContext({ locale: "pt-BR", viewport, acceptDownloads: true });
   const page = await ctx.newPage();
   page.on("pageerror", (e) => console.log("   [pageerror]", e.message.slice(0, 160)));
-  await page.goto(`${BASE}/login`);
-  await page.fill("#email", email);
-  await page.fill("#password", PASS);
-  await page.click("form button[type=submit]");
+  await entrar(page, email);
   await page.waitForURL(/\/painel/);
   return page;
 };

@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/recuperar-senha", "/auth/confirm", "/auth/callback", "/auth/erro"];
+const PUBLIC_PATHS = ["/login", "/recuperar-senha", "/definir-senha", "/auth/confirm", "/auth/callback", "/auth/erro"];
 
 /**
  * Marca as Server Actions disparadas de dentro de uma janela de rota

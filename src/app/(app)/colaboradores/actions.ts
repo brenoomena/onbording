@@ -5,15 +5,12 @@ import { revalidatePath } from "@/lib/revalidate";
 import { denyUnless, denyUnlessAdmin, requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { publicEnv } from "@/lib/env";
 import { friendlyError } from "@/lib/errors";
 import { P } from "@/lib/permissions";
 import { fromZod, formObject, type ActionState } from "@/lib/action-state";
 import { profileCreateSchema, profileUpdateSchema } from "@/lib/validation";
 
-const inviteRedirect = () => `${publicEnv.siteUrl}/auth/confirm?next=/definir-senha`;
-
-/** Procura um usuário de login já existente pelo e-mail (ex.: entrou com Google antes de ser cadastrado). */
+/** Procura um login já existente pelo e-mail (ex.: cadastro antigo, removido e refeito). */
 async function findAuthUserId(email: string): Promise<string | null> {
   const admin = createAdminClient();
   for (let page = 1; page <= 20; page++) {
@@ -37,28 +34,24 @@ export async function createProfile(_: ActionState, formData: FormData): Promise
   const { data: existing } = await supabase.from("profiles").select("id").ilike("email", email).maybeSingle();
   if (existing) return { error: "Já existe um colaborador com esse e-mail.", fieldErrors: { email: "E-mail já cadastrado." } };
 
-  // 1. Cria o login e envia o convite (única operação com a chave service_role).
+  // 1. Libera o login para este e-mail (única operação com a chave service_role).
+  //    Sem senha e sem e-mail de convite: a pessoa entra com a conta Google
+  //    desse e-mail e o Supabase associa o Google a este login (e-mail confirmado).
   const admin = createAdminClient();
   let userId: string | null = null;
   let createdNow = false;
-  const invite = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: inviteRedirect(),
-    data: { full_name: fields.full_name },
+  const created = await admin.auth.admin.createUser({
+    email,
+    email_confirm: true,
+    user_metadata: { full_name: fields.full_name },
   });
-  if (invite.data.user) {
-    userId = invite.data.user.id;
+  if (created.data.user) {
+    userId = created.data.user.id;
     createdNow = true;
-  } else if (invite.error?.code === "email_exists" || /already been registered/i.test(invite.error?.message ?? "")) {
+  } else if (created.error?.code === "email_exists" || /already been registered|already exists/i.test(created.error?.message ?? "")) {
     userId = await findAuthUserId(email);
   }
-  if (!userId) {
-    return {
-      error:
-        invite.error?.code === "over_email_send_rate_limit"
-          ? "Limite de envio de e-mails atingido. Aguarde alguns minutos ou configure um provedor de e-mail no Supabase."
-          : "Não foi possível enviar o convite. Confira o e-mail e a configuração de envio do Supabase.",
-    };
-  }
+  if (!userId) return { error: "Não foi possível liberar o acesso para este e-mail agora. Tente de novo em instantes." };
 
   // 2. Cria o cadastro com a sessão de quem está cadastrando (RLS e travas do banco valem).
   const { error } = await supabase.from("profiles").insert({ id: userId, email, ...fields });
@@ -68,7 +61,7 @@ export async function createProfile(_: ActionState, formData: FormData): Promise
   }
 
   await revalidatePath("/colaboradores");
-  return { redirectTo: `/colaboradores/${userId}?aviso=convidado` };
+  return { redirectTo: `/colaboradores/${userId}?aviso=cadastrado` };
 }
 
 export async function updateProfile(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -104,26 +97,6 @@ export async function setProfileStatus(_: ActionState, formData: FormData): Prom
   await revalidatePath("/colaboradores");
   await revalidatePath(`/colaboradores/${id}`);
   return { ok: status === "inativo" ? "Colaborador desativado." : "Colaborador reativado." };
-}
-
-export async function resendInvite(_: ActionState, formData: FormData): Promise<ActionState> {
-  const denied = await denyUnless(P.colaboradoresCriar, P.colaboradoresEditar);
-  if (denied) return denied;
-  const id = String(formData.get("id") ?? "");
-  const supabase = await createClient();
-  const { data: person } = await supabase.from("profiles").select("email, status").eq("id", id).maybeSingle();
-  if (!person) return { error: "Colaborador não encontrado." };
-  if (person.status === "inativo") return { error: "Reative o colaborador antes de reenviar o acesso." };
-
-  const admin = createAdminClient();
-  const invite = await admin.auth.admin.inviteUserByEmail(person.email, { redirectTo: inviteRedirect() });
-  if (invite.error) {
-    // Quem já aceitou o convite recebe um link para criar nova senha.
-    const reset = await supabase.auth.resetPasswordForEmail(person.email, { redirectTo: inviteRedirect() });
-    if (reset.error) return { error: "Não foi possível enviar o e-mail agora. Tente novamente em alguns minutos." };
-    return { ok: `Enviamos para ${person.email} um link para criar uma nova senha.` };
-  }
-  return { ok: `Convite reenviado para ${person.email}.` };
 }
 
 /**

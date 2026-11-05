@@ -7,7 +7,7 @@ import { PROFILE_SELECT, type ProfileRow } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { THEME_COOKIE, parseTheme } from "@/lib/theme";
-import { changeMyPassword, updateMyName } from "./actions";
+import { updateMyName } from "./actions";
 import { AvatarEditor } from "./avatar-editor";
 import { ThemePicker } from "./theme-picker";
 
@@ -62,16 +62,10 @@ export default async function MeuPerfilPage() {
               <div><SubmitButton>Salvar nome</SubmitButton></div>
             </ActionForm>
           </Card>
-          <Card title="Trocar senha">
-            <ActionForm action={changeMyPassword} resetOnSuccess>
-              <Field label="Nova senha" htmlFor="password" hint="Mínimo de 10 caracteres.">
-                <Input id="password" name="password" type="password" autoComplete="new-password" minLength={10} required />
-              </Field>
-              <Field label="Repita a nova senha" htmlFor="confirm">
-                <Input id="confirm" name="confirm" type="password" autoComplete="new-password" required />
-              </Field>
-              <div><SubmitButton>Trocar senha</SubmitButton></div>
-            </ActionForm>
+          <Card title="Acesso">
+            <p className="text-[13.5px] text-muted">
+              Você entra com a conta Google <strong className="text-ink">{p.email}</strong>. Não há senha na plataforma: a segurança é a da sua conta Google.
+            </p>
           </Card>
         </div>
       </div>

@@ -66,9 +66,9 @@ export function ProfileForm({
         const e = state.fieldErrors ?? {};
         return (
           <>
-            <FormBar info={mode === "create" ? "O convite de acesso é enviado por e-mail ao cadastrar." : "Cadastro do colaborador"}>
-              <SubmitButton pendingLabel={mode === "create" ? "Enviando convite…" : "Salvando…"}>
-                {mode === "create" ? "Cadastrar e enviar convite" : "Salvar alterações"}
+            <FormBar info={mode === "create" ? "Ao cadastrar, o acesso fica liberado para a conta Google deste e-mail." : "Cadastro do colaborador"}>
+              <SubmitButton pendingLabel={mode === "create" ? "Cadastrando…" : "Salvando…"}>
+                {mode === "create" ? "Cadastrar e liberar acesso" : "Salvar alterações"}
               </SubmitButton>
             </FormBar>
             {values.id && <input type="hidden" name="id" value={values.id} />}
@@ -83,7 +83,7 @@ export function ProfileForm({
                 label="E-mail corporativo"
                 htmlFor="email"
                 error={e.email}
-                hint={mode === "create" ? "O convite de acesso será enviado para este e-mail." : "O e-mail de acesso não pode ser alterado."}
+                hint={mode === "create" ? "A pessoa vai entrar com a conta Google deste e-mail (é o que libera o acesso)." : "O e-mail de acesso não pode ser alterado."}
               >
                 <Input
                   id="email"

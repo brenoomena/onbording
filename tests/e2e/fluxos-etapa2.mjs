@@ -2,6 +2,7 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { entrar } from "./auth-helper.mjs";
 
 const BASE = "http://localhost:3000";
 const SHOTS = "/var/tmp/sbstack/shots2";
@@ -39,11 +40,7 @@ const newUser = async (opts = {}) => {
   return { ctx, page };
 };
 async function accept(page, email) {
-  await page.goto(await inviteLink(email));
-  await page.waitForURL(/definir-senha/);
-  await page.fill("#password", "SenhaForte!2026");
-  await page.fill("#confirm", "SenhaForte!2026");
-  await page.click("button[type=submit]");
+  await entrar(page, email);
   await page.waitForURL(/\/painel/);
 }
 
@@ -91,8 +88,8 @@ await step("convida vendedora da área Contábil", async () => {
   await A.selectOption("#area_id", { label: "Contábil" });
   await A.selectOption("#position_id", { label: "Consultor Comercial" });
   await A.selectOption("#level_id", { label: "Júnior" });
-  await A.getByRole("button", { name: "Cadastrar e enviar convite" }).click();
-  await A.waitForURL(/aviso=convidado/);
+  await A.getByRole("button", { name: "Cadastrar e liberar acesso" }).click();
+  await A.waitForURL(/aviso=cadastrado/);
 });
 
 await step("cria conteúdo em texto com Markdown e publica", async () => {

@@ -1,13 +1,12 @@
 import { chromium } from "playwright";
+import { entrar } from "./auth-helper.mjs";
 const SK = process.env.SERVICE_KEY;
 const tr = await (await fetch("http://localhost:54321/rest/v1/tracks?select=id,name&name=eq.Onboarding%20Comercial", { headers: { apikey: SK, Authorization: `Bearer ${SK}` } })).json();
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1243/chrome-linux64/chrome", args: ["--no-proxy-server"] });
 const page = await (await browser.newContext({ locale: "pt-BR", viewport: { width: 1440, height: 900 } })).newPage();
 page.on("pageerror", (e) => console.log("[pageerror]", e.message));
 page.on("console", (m) => m.type() === "error" && console.log("[console]", m.text().slice(0, 200)));
-await page.goto("http://localhost:3000/login");
-await page.fill("#email", "breno@implantta.com.br"); await page.fill("#password", "SenhaForte!2026");
-await page.click("form button[type=submit]"); await page.waitForURL(/painel/);
+await entrar(page, "breno@implantta.com.br"); await page.waitForURL(/painel/);
 await page.goto("http://localhost:3000/trilhas");
 await page.locator(`a[href="/trilhas/${tr[0].id}"]`).first().click();
 await page.getByRole("dialog").getByRole("tab", { name: /Estrutura/ }).waitFor();

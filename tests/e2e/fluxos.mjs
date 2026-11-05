@@ -2,6 +2,7 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { ADMIN_HEADERS, BASE as _B, authUserId, cookieClient, entrar } from "./auth-helper.mjs";
 
 const BASE = "http://localhost:3000";
 const SHOTS = "/var/tmp/sbstack/shots";
@@ -43,21 +44,27 @@ const newUser = async (opts = {}) => {
 };
 const menu = async (page) => (await page.locator("aside nav a").allInnerTexts()).map((s) => s.trim());
 
-async function acceptInvite(page, email, password) {
-  const link = await lastLinkFor(email, "invite");
-  await page.goto(link);
-  await page.waitForURL(/definir-senha/);
-  await page.fill("#password", password);
-  await page.fill("#confirm", password);
-  await page.click("button[type=submit]");
+// Acesso só com Google: nos testes, a sessão é colocada direto (ver auth-helper.mjs).
+async function acceptInvite(page, email) {
+  await entrar(page, email);
   await page.waitForURL(/\/painel/);
 }
-async function login(page, email, password) {
-  await page.goto(`${BASE}/login`);
-  await page.fill("#email", email);
-  await page.fill("#password", password);
-  await page.click("form button[type=submit]");
+async function login(page, email) {
+  await entrar(page, email);
   await page.waitForURL(/\/painel/);
+}
+/**
+ * Volta real do login (rota /auth/callback) para uma conta qualquer: usa um
+ * link mágico do Supabase no lugar do Google, que não existe no teste local.
+ */
+async function voltaDoLogin(page, email) {
+  const { sb, cookies } = cookieClient();
+  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: `${BASE}/auth/callback`, shouldCreateUser: false } });
+  if (error) throw new Error(error.message);
+  // O GoTrue local monta o link sem o prefixo /auth/v1 do gateway.
+  const link = (await lastLinkFor(email, "magiclink")).replace("localhost:54321/verify", "localhost:54321/auth/v1/verify");
+  await page.context().addCookies(cookies());
+  await page.goto(link);
 }
 async function logout(page) {
   // Fecha uma janela de ver/editar que esteja aberta por cima do menu.
@@ -72,18 +79,23 @@ const PASS = "SenhaForte!2026";
 const admin = await newUser();
 let A = admin.page;
 
-await step("admin aceita o convite e define a senha", async () => {
-  await acceptInvite(A, "breno@implantta.com.br", PASS);
+await step("admin entra: o acesso foi liberado pelo cadastro", async () => {
+  await acceptInvite(A, "breno@implantta.com.br");
   assert.match(await A.locator("h1").innerText(), /Olá, Breno/);
 });
 
-await step("senha curta é recusada no login inicial", async () => {
+await step("login só com Google: sem campo de senha", async () => {
   const { page } = await newUser();
   await page.goto(`${BASE}/login`);
-  await page.fill("#email", "breno@implantta.com.br");
-  await page.fill("#password", "errada");
-  await page.click("form button[type=submit]");
-  await page.getByText("E-mail ou senha incorretos").waitFor();
+  await page.getByRole("button", { name: "Entrar com Google" }).waitFor();
+  assert.equal(await page.locator("input[type=password], #email").count(), 0);
+  // Conta Google sem cadastro: o Supabase recusa (cadastro aberto desligado) e a tela explica.
+  await page.goto(`${BASE}/auth/callback?error=access_denied&error_code=signup_disabled&error_description=Signups+not+allowed+for+this+instance`);
+  await page.waitForURL(/\/login\?erro=nao-liberado/);
+  await page.getByText("não tem acesso liberado").waitFor();
+  await page.goto(`${BASE}/auth/callback?error=access_denied&error_description=The+user+denied+access`);
+  await page.getByText("foi cancelado").waitFor();
+  await page.screenshot({ path: `${SHOTS}/00-login-google.png` });
   await page.context().close();
 });
 
@@ -140,17 +152,18 @@ await step("cria cargo com níveis Júnior e Pleno", async () => {
   await A.screenshot({ path: `${SHOTS}/03-cargos.png`, fullPage: true });
 });
 
-await step("cadastra supervisor com perfil Supervisor e envia convite", async () => {
+await step("cadastra supervisor com perfil Supervisor e libera o acesso", async () => {
   await A.goto(`${BASE}/colaboradores/novo`);
   await A.fill("#full_name", "Sérgio Supervisor");
   await A.fill("#email", "sergio@implantta.com.br");
   await A.selectOption("#area_id", { label: "Contábil" });
   await A.selectOption("#role_id", { label: "Supervisor" });
   await A.selectOption("#status", "ativo");
-  await A.getByRole("button", { name: "Cadastrar e enviar convite" }).click();
-  await A.waitForURL(/colaboradores\/[0-9a-f-]{36}\?aviso=convidado/);
-  await A.getByText("O convite de acesso foi enviado").waitFor();
-  assert.equal(await mailCount("sergio@implantta.com.br"), 1);
+  await A.getByRole("button", { name: "Cadastrar e liberar acesso" }).click();
+  await A.waitForURL(/colaboradores\/[0-9a-f-]{36}\?aviso=cadastrado/);
+  await A.getByText("O acesso está liberado").waitFor();
+  assert.equal(await mailCount("sergio@implantta.com.br"), 0, "sem e-mail de convite");
+  assert.ok(await authUserId("sergio@implantta.com.br"), "login liberado para o e-mail");
 });
 
 await step("formulário de colaborador filtra cargo pela área e nível pelo cargo", async () => {
@@ -170,7 +183,7 @@ await step("recusa onboarding antes da admissão sem apagar o que foi digitado",
   await A.selectOption("#supervisor_id", { label: "Sérgio Supervisor" });
   await A.fill("#admission_date", "2026-11-03");
   await A.fill("#onboarding_start_date", "2026-11-01");
-  await A.getByRole("button", { name: "Cadastrar e enviar convite" }).click();
+  await A.getByRole("button", { name: "Cadastrar e liberar acesso" }).click();
   await A.getByText("O onboarding não pode começar antes da admissão.").first().waitFor();
   assert.equal(await A.inputValue("#full_name"), "Carla Colaboradora");
   assert.equal(await mailCount("carla@implantta.com.br"), 0);
@@ -179,8 +192,8 @@ await step("recusa onboarding antes da admissão sem apagar o que foi digitado",
 
 await step("cadastra colaboradora com área, cargo, nível e supervisor", async () => {
   await A.fill("#onboarding_start_date", "2026-11-03");
-  await A.getByRole("button", { name: "Cadastrar e enviar convite" }).click();
-  await A.waitForURL(/aviso=convidado/);
+  await A.getByRole("button", { name: "Cadastrar e liberar acesso" }).click();
+  await A.waitForURL(/aviso=cadastrado/);
   await A.getByRole("dialog").getByRole("button", { name: "OK" }).click();
   await A.locator("dd", { hasText: "Júnior" }).waitFor();
 });
@@ -189,7 +202,7 @@ await step("e-mail duplicado é recusado", async () => {
   await A.goto(`${BASE}/colaboradores/novo`);
   await A.fill("#full_name", "Carla Duplicada");
   await A.fill("#email", "CARLA@implantta.com.br");
-  await A.getByRole("button", { name: "Cadastrar e enviar convite" }).click();
+  await A.getByRole("button", { name: "Cadastrar e liberar acesso" }).click();
   await A.getByText("Já existe um colaborador com esse e-mail.").waitFor();
 });
 
@@ -208,8 +221,8 @@ await step("lista filtra por área e por status", async () => {
 
 // ----------------------------------------------------------- colaboradora
 const carla = await newUser();
-await step("colaboradora aceita convite e vê só o próprio painel", async () => {
-  await acceptInvite(carla.page, "carla@implantta.com.br", PASS);
+await step("colaboradora entra e vê só o próprio painel", async () => {
+  await acceptInvite(carla.page, "carla@implantta.com.br");
   assert.deepEqual(await menu(carla.page), ["Painel", "Minhas trilhas", "Materiais"]);
   await carla.page.getByText("Consultor Comercial").waitFor();
   await carla.page.getByText("Sérgio Supervisor").waitFor();
@@ -233,8 +246,8 @@ await step("colaboradora troca o próprio nome", async () => {
 
 // ----------------------------------------------------------- supervisor
 const sergio = await newUser();
-await step("supervisor aceita convite e vê apenas a própria equipe", async () => {
-  await acceptInvite(sergio.page, "sergio@implantta.com.br", PASS);
+await step("supervisor entra e vê apenas a própria equipe", async () => {
+  await acceptInvite(sergio.page, "sergio@implantta.com.br");
   assert.deepEqual(await menu(sergio.page), ["Painel", "Minhas trilhas", "Materiais", "Minha equipe", "Acompanhamento"]);
   await sergio.page.goto(`${BASE}/colaboradores`);
   assert.deepEqual(await sergio.page.locator("tbody tr td:first-child a").allInnerTexts(), ["Carla C. Souza"]);
@@ -338,29 +351,42 @@ await step("auditoria mostra quem alterou o quê", async () => {
   await A.screenshot({ path: `${SHOTS}/09-auditoria.png`, fullPage: true });
 });
 
-await step("recuperação de senha por e-mail funciona", async () => {
-  await logout(sergio.page);
-  await sergio.page.goto(`${BASE}/recuperar-senha`);
-  await sergio.page.fill("#email", "sergio@implantta.com.br");
-  await sergio.page.getByRole("button", { name: "Enviar link" }).click();
-  await sergio.page.getByText("Se o e-mail estiver cadastrado").waitFor();
-  const link = await lastLinkFor("sergio@implantta.com.br", "recovery");
-  await sergio.page.goto(link);
-  await sergio.page.waitForURL(/definir-senha/);
-  await sergio.page.fill("#password", "OutraSenha#2026");
-  await sergio.page.fill("#confirm", "OutraSenha#2026");
-  await sergio.page.click("button[type=submit]");
-  await sergio.page.waitForURL(/painel/);
-  await logout(sergio.page);
-  await login(sergio.page, "sergio@implantta.com.br", "OutraSenha#2026");
+await step("telas antigas de senha e links de convite levam ao login", async () => {
+  const { page } = await newUser();
+  for (const path of ["/recuperar-senha", "/definir-senha", "/auth/erro?motivo=link", "/auth/confirm?token_hash=x&type=invite&next=/definir-senha"]) {
+    await page.goto(`${BASE}${path}`);
+    await page.waitForURL(/\/login/);
+  }
+  await page.context().close();
 });
 
-await step("link de convite usado duas vezes é recusado", async () => {
-  const link = await lastLinkFor("carla@implantta.com.br", "invite");
+await step("volta do login: conta sem cadastro é desconectada e removida", async () => {
+  // Simula uma conta criada pelo Google sem cadastro na plataforma.
+  const r = await fetch("http://localhost:54321/auth/v1/admin/users", { method: "POST", headers: ADMIN_HEADERS, body: JSON.stringify({ email: "intruso@implantta.com.br", email_confirm: true }) });
+  assert.equal(r.status, 200);
   const { page } = await newUser();
-  await page.goto(link);
-  await page.waitForURL(/auth\/erro/);
-  await page.getByText("Link inválido ou expirado").waitFor();
+  await voltaDoLogin(page, "intruso@implantta.com.br");
+  await page.waitForURL(/\/login\?erro=nao-liberado/);
+  assert.equal(await authUserId("intruso@implantta.com.br"), null, "conta sem cadastro removida");
+  // Conta de outro domínio (com o domínio configurado) também não entra.
+  await fetch("http://localhost:54321/auth/v1/admin/users", { method: "POST", headers: ADMIN_HEADERS, body: JSON.stringify({ email: "pessoal@gmail.com", email_confirm: true }) });
+  await voltaDoLogin(page, "pessoal@gmail.com");
+  await page.waitForURL(/\/login\?erro=dominio/);
+  await page.goto(`${BASE}/painel`);
+  await page.waitForURL(/\/login/);
+  await page.context().close();
+});
+
+await step("volta do login: cadastrado entra; desativado é recusado", async () => {
+  const { page } = await newUser();
+  await voltaDoLogin(page, "sergio@implantta.com.br");
+  await page.waitForURL(/\/painel/);
+  await page.context().close();
+  const p2 = (await newUser()).page;
+  await voltaDoLogin(p2, "carla@implantta.com.br"); // desativada no passo anterior
+  await p2.waitForURL(/\/login\?erro=inativo/);
+  await p2.getByText("Seu acesso foi desativado").waitFor();
+  await p2.context().close();
 });
 
 await step("telas cabem no celular sem rolagem lateral", async () => {
