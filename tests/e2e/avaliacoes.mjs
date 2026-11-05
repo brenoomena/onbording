@@ -33,29 +33,34 @@ const track = (await rest("tracks?select=id&name=eq.Onboarding%20Comercial"))[0]
 const A = await open("breno@implantta.com.br");
 let quizId;
 
-await step("admin cria avaliação na aba Novo conteúdo da trilha, com 3 tipos de pergunta", async () => {
+await step("Novo conteúdo não oferece mais Avaliação no formato", async () => {
   await A.goto(`${BASE}/trilhas/${track}`);
   await A.getByRole("tab", { name: "Novo conteúdo" }).click();
-  await A.locator("#module_id").selectOption({ index: 1 });
-  await A.locator("input[name=module_required]").uncheck();
-  await A.fill("#title", "Avaliação de produtos");
-  await A.locator("label", { hasText: /^Avaliação$/ }).click();
-  await A.fill("#passing_score", "60");
-  // Escolha única
-  await A.getByRole("button", { name: "Escolha única" }).click();
-  await A.getByPlaceholder("Escreva a pergunta").first().fill("Qual sistema faz a folha de pagamento?");
-  await A.getByLabel("Texto da alternativa 1").fill("Domínio Folha");
-  await A.getByLabel("Texto da alternativa 2").fill("Planilha");
-  // Verdadeiro ou falso
-  await A.getByRole("button", { name: "Verdadeiro ou falso" }).click();
-  await A.getByPlaceholder("Escreva a afirmação").fill("O Domínio Escrita Fiscal apura impostos.");
-  // Aberta, valendo 2 pontos
-  await A.getByRole("button", { name: "Resposta aberta" }).click();
-  await A.getByPlaceholder("Escreva a pergunta").last().fill("Como você apresentaria o Domínio a um cliente?");
-  await A.getByLabel("Pontos da pergunta 3").fill("2");
-  await A.screenshot({ path: `${SHOTS}/01-editor.png`, fullPage: true });
-  await A.getByRole("button", { name: "Criar e publicar" }).click();
-  await A.getByText(/publicado e incluído no módulo/).waitFor();
+  const panel = A.getByRole("tabpanel").filter({ hasText: "Novo conteúdo nesta trilha" });
+  await panel.getByText("Link externo").waitFor();
+  assert.equal(await panel.locator("label", { hasText: /^Avaliação$/ }).count(), 0);
+});
+
+await step("admin cria avaliação pela aba Nova avaliação, no fim de um módulo, com 3 tipos de pergunta", async () => {
+  await A.getByRole("tab", { name: "Nova avaliação" }).click();
+  const P = A.getByRole("tabpanel").filter({ hasText: "Onde a avaliação entra" });
+  await P.getByText("No fim de um módulo", { exact: true }).click();
+  await P.locator("#aval-module").selectOption({ index: 0 });
+  await P.locator("input[name=module_required]").uncheck();
+  await P.locator("#aval-title").fill("Avaliação de produtos");
+  await P.locator("#aval-passing_score").fill("60");
+  await P.getByRole("button", { name: "Escolha única" }).click();
+  await P.getByPlaceholder("Escreva a pergunta").first().fill("Qual sistema faz a folha de pagamento?");
+  await P.getByLabel("Texto da alternativa 1").fill("Domínio Folha");
+  await P.getByLabel("Texto da alternativa 2").fill("Planilha");
+  await P.getByRole("button", { name: "Verdadeiro ou falso" }).click();
+  await P.getByPlaceholder("Escreva a afirmação").fill("O Domínio Escrita Fiscal apura impostos.");
+  await P.getByRole("button", { name: "Resposta aberta" }).click();
+  await P.getByPlaceholder("Escreva a pergunta").last().fill("Como você apresentaria o Domínio a um cliente?");
+  await P.getByLabel("Pontos da pergunta 3").fill("2");
+  await A.screenshot({ path: `${SHOTS}/01-aba-avaliacao.png` });
+  await P.getByRole("button", { name: "Criar e publicar" }).click();
+  await A.getByText(/publicada e incluída no fim do módulo/).waitFor();
   const c = (await rest("contents?select=id,kind,passing_score&title=eq.Avalia%C3%A7%C3%A3o%20de%20produtos"))[0];
   quizId = c.id;
   assert.equal(c.kind, "avaliacao");
@@ -63,6 +68,27 @@ await step("admin cria avaliação na aba Novo conteúdo da trilha, com 3 tipos 
   const qs = await rest(`quiz_questions?select=kind,points,options&content_id=eq.${quizId}&order=position`);
   assert.deepEqual(qs.map((q) => [q.kind, q.points]), [["unica", 1], ["vf", 1], ["aberta", 2]]);
   assert.equal(qs[0].options.find((o) => o.correct).label, "Domínio Folha");
+  const mi = await rest(`module_items?select=position,module:modules(position)&content_id=eq.${quizId}`);
+  assert.equal(mi[0].module.position, 1);
+});
+
+await step("avaliação no fim da trilha cria o módulo 'Avaliação final' (e reaproveita)", async () => {
+  const before = (await rest(`modules?select=id&track_id=eq.${track}`)).length;
+  for (const t of ["Prova final A", "Prova final B"]) {
+    await A.goto(`${BASE}/trilhas/${track}?aba=avaliacao`);
+    const P = A.getByRole("tabpanel").filter({ hasText: "Onde a avaliação entra" });
+    await P.locator("#aval-title").fill(t);
+    await P.getByRole("button", { name: "Verdadeiro ou falso" }).click();
+    await P.getByPlaceholder("Escreva a afirmação").fill("Afirmação.");
+    await P.getByRole("button", { name: "Salvar rascunho" }).click();
+    await A.getByText(/no fim da trilha, no módulo "Avaliação final"/).waitFor();
+  }
+  const mods = await rest(`modules?select=title,position&track_id=eq.${track}&order=position`);
+  assert.equal(mods.length, before + 1);
+  assert.equal(mods.at(-1).title, "Avaliação final");
+  await A.getByRole("tab", { name: "Estrutura" }).click();
+  await A.getByRole("link", { name: "Prova final B" }).waitFor();
+  await A.screenshot({ path: `${SHOTS}/01b-estrutura.png`, fullPage: true });
 });
 
 await step("pergunta sem enunciado é recusada com mensagem clara", async () => {

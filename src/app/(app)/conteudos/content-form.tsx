@@ -170,7 +170,8 @@ export function ContentForm({
             <fieldset className="grid gap-3">
               <legend className="mb-2 text-[13px] font-medium">Formato</legend>
               <div className="flex flex-wrap gap-2">
-                {(Object.keys(KIND_LABEL) as ContentKind[]).map((k) => (
+                {/* Avaliação nova é criada na aba "Nova avaliação" da trilha; aqui só se edita. */}
+                {(content?.kind === "avaliacao" ? (["avaliacao"] as ContentKind[]) : (Object.keys(KIND_LABEL) as ContentKind[]).filter((k) => k !== "avaliacao")).map((k) => (
                   <label
                     key={k}
                     className={cx(
@@ -183,10 +184,7 @@ export function ContentForm({
                       name="kind"
                       value={k}
                       checked={kind === k}
-                      onChange={() => {
-                        setKind(k);
-                        if (k === "avaliacao" && !content && track === "biblioteca") setTrack("");
-                      }}
+                      onChange={() => setKind(k)}
                       className="sr-only"
                     />
                     {KIND_LABEL[k]}
@@ -329,7 +327,7 @@ export function ContentForm({
  * guardar como rascunho. O primeiro botão é o que o Enter aciona, então ele
  * nunca muda a situação atual do conteúdo.
  */
-function PublishBar({ status = "rascunho", isNew }: { status?: PublishStatus; isNew: boolean }) {
+export function PublishBar({ status = "rascunho", isNew }: { status?: PublishStatus; isNew: boolean }) {
   const tone = PUBLISH_TONE[status];
   return (
     <FormBar

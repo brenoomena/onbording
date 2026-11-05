@@ -137,6 +137,8 @@ export default async function EstudarPage({
       </header>
       {preview && <Alert tone="brand">Pré-visualização: o seu tempo e a conclusão não são registrados.</Alert>}
       {content.description && <Markdown>{content.description}</Markdown>}
+      {/* Na avaliação, as orientações vêm antes das perguntas. */}
+      {isQuiz && content.objective && <ObjectiveNote id="objetivo" text={content.objective} />}
 
       <article className="rounded-xl border border-line bg-surface p-5 sm:p-7">
         {isQuiz ? (
@@ -153,7 +155,7 @@ export default async function EstudarPage({
         )}
       </article>
 
-      {content.objective && (
+      {!isQuiz && content.objective && (
         <>
           <ObjectiveHint targetId="objetivo" />
           <ObjectiveNote id="objetivo" text={content.objective} />

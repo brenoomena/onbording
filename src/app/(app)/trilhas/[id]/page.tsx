@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Eye, FilePlus2, Layers3, Plus, Route, Settings2, Trash2, Users, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ClipboardCheck, Eye, FilePlus2, Layers3, Plus, Route, Settings2, Trash2, Users, X } from "lucide-react";
 import { Tabs, type TabDef } from "@/components/tabs";
 import type { Metadata } from "next";
 import { Markdown } from "@/components/markdown";
@@ -29,6 +29,7 @@ import {
 import { TrackForm } from "../track-form";
 import { loadTrack } from "./load";
 import { ModulePicker, NewContentButton, NewModuleForm, PlaceContent } from "./track-parts";
+import { NewQuizButton, NewQuizForm } from "./quiz-form";
 
 export const metadata: Metadata = { title: "Trilha" };
 
@@ -193,8 +194,9 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
                     </ol>
 
                     {canEdit && canCreateContent && (
-                      <div className="border-t border-line bg-bg/60 px-4 py-2.5">
+                      <div className="flex flex-wrap gap-1 border-t border-line bg-bg/60 px-4 py-2.5">
                         <NewContentButton moduleId={m.id} compact />
+                        <NewQuizButton moduleId={m.id} />
                       </div>
                     )}
                   </div>
@@ -256,6 +258,24 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
                         defaultTrackId={id}
                         inTrack={{ tab: "conteudo", extra: canEdit ? <ModulePicker modules={moduleOptions} /> : undefined }}
                       />
+                    </Card>
+                  ),
+                } satisfies TabDef,
+              ]
+            : []),
+          ...(canEdit && canCreateContent
+            ? [
+                {
+                  key: "avaliacao",
+                  label: "Nova avaliação",
+                  icon: <ClipboardCheck size={16} aria-hidden />,
+                  content: (
+                    <Card
+                      title="Nova avaliação"
+                      description="Prova com nota mínima, no fim da trilha ou no fim de um módulo. Ela conta como concluída quando a pessoa é aprovada."
+                      icon={ClipboardCheck}
+                    >
+                      <NewQuizForm action={saveContent} trackId={id} modules={moduleOptions} />
                     </Card>
                   ),
                 } satisfies TabDef,

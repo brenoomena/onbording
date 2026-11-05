@@ -24,12 +24,15 @@ export function QuizEditor({
   maxAttempts,
   error,
   disabled = false,
+  idPrefix = "",
 }: {
   initial: QuizQuestion[];
   passingScore: number;
   maxAttempts: number | null;
   error?: string;
   disabled?: boolean;
+  /** Prefixo dos ids dos campos, quando há outro formulário na mesma página. */
+  idPrefix?: string;
 }) {
   const [questions, setQuestions] = useState<QuizQuestion[]>(initial);
   const total = questions.reduce((s, q) => s + q.points, 0);
@@ -62,11 +65,11 @@ export function QuizEditor({
     <div className="grid gap-4">
       <input type="hidden" name="quiz" value={payload} />
       <div className="grid gap-4 rounded-xl border border-line bg-sunken/40 p-4 sm:grid-cols-3">
-        <Field label="Nota mínima para aprovar (%)" htmlFor="passing_score" hint="Calculada sobre os pontos das perguntas.">
-          <Input id="passing_score" name="passing_score" type="number" min={0} max={100} defaultValue={passingScore} required disabled={disabled} />
+        <Field label="Nota mínima para aprovar (%)" htmlFor={`${idPrefix}passing_score`} hint="Calculada sobre os pontos das perguntas.">
+          <Input id={`${idPrefix}passing_score`} name="passing_score" type="number" min={0} max={100} defaultValue={passingScore} required disabled={disabled} />
         </Field>
-        <Field label="Tentativas" htmlFor="max_attempts" hint="Vale a melhor nota.">
-          <Select id="max_attempts" name="max_attempts" defaultValue={maxAttempts ?? ""} disabled={disabled}>
+        <Field label="Tentativas" htmlFor={`${idPrefix}max_attempts`} hint="Vale a melhor nota.">
+          <Select id={`${idPrefix}max_attempts`} name="max_attempts" defaultValue={maxAttempts ?? ""} disabled={disabled}>
             <option value="">Ilimitadas</option>
             {[1, 2, 3, 4, 5, 10].map((n) => (
               <option key={n} value={n}>

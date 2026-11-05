@@ -10,6 +10,8 @@ import { fromZod, formObject, type ActionState } from "@/lib/action-state";
 import { contentSchema, parseAudience } from "@/lib/validation";
 import { parseQuiz } from "@/lib/quiz";
 
+const FINAL_MODULE = "Avaliação final";
+
 export async function saveContent(_: ActionState, fd: FormData): Promise<ActionState> {
   const denied = await denyUnless(fd.get("id") ? P.conteudosEditar : P.conteudosCriar);
   if (denied) return denied;
@@ -102,14 +104,31 @@ export async function saveContent(_: ActionState, fd: FormData): Promise<ActionS
   if (trackId) await revalidatePath(`/trilhas/${trackId}`);
   await revalidatePath("/materiais");
   if (!id && fd.get("em_trilha") === "1" && trackId) {
-    // Criado na aba "Novo conteúdo" da trilha: já entra no módulo escolhido.
-    const moduleId = String(fd.get("module_id") ?? "");
-    const published = d.status === "publicado" ? "publicado" : "criado como rascunho";
-    if (!/^[0-9a-f-]{36}$/i.test(moduleId)) {
-      return { ok: `Conteúdo "${d.title}" ${published}. Ele ainda não está em nenhum módulo.` };
+    // Criado nas abas da trilha: já entra no módulo escolhido.
+    const what = isQuiz ? `Avaliação "${d.title}"` : `Conteúdo "${d.title}"`;
+    const published = d.status === "publicado" ? (isQuiz ? "publicada" : "publicado") : isQuiz ? "criada como rascunho" : "criado como rascunho";
+    const endOfTrack = isQuiz && fd.get("posicao") === "fim_trilha";
+    let moduleId = String(fd.get("module_id") ?? "");
+    if (!endOfTrack && !/^[0-9a-f-]{36}$/i.test(moduleId)) {
+      return { ok: `${what} ${published}. Ainda não está em nenhum módulo.` };
     }
     if (await denyUnless(P.trilhasEditar)) {
-      return { ok: `Conteúdo "${d.title}" ${published}. Para incluí-lo num módulo é preciso a permissão de editar trilhas.` };
+      return { ok: `${what} ${published}. Para incluir num módulo é preciso a permissão de editar trilhas.` };
+    }
+    if (endOfTrack) {
+      // Fim da trilha: módulo próprio no fim ("Avaliação final"); reaproveita se já é o último.
+      const { data: lastMod } = await supabase.from("modules").select("id, title, position").eq("track_id", trackId).order("position", { ascending: false }).limit(1).maybeSingle();
+      if (lastMod && lastMod.title === FINAL_MODULE) {
+        moduleId = lastMod.id;
+      } else {
+        const { data: mod, error } = await supabase
+          .from("modules")
+          .insert({ track_id: trackId, title: FINAL_MODULE, position: (lastMod?.position ?? 0) + 1 })
+          .select("id")
+          .single();
+        if (error) return { ok: `${what} ${published}, mas não foi possível criar o módulo final: ${friendlyError(error)}` };
+        moduleId = mod.id;
+      }
     }
     const { data: last } = await supabase.from("module_items").select("position").eq("module_id", moduleId).order("position", { ascending: false }).limit(1).maybeSingle();
     const { error } = await supabase.from("module_items").insert({
@@ -118,9 +137,10 @@ export async function saveContent(_: ActionState, fd: FormData): Promise<ActionS
       position: (last?.position ?? 0) + 1,
       is_required: fd.get("module_required") === "on",
     });
-    if (error) return { ok: `Conteúdo "${d.title}" ${published}, mas não foi possível incluí-lo no módulo: ${friendlyError(error)}` };
+    if (error) return { ok: `${what} ${published}, mas não foi possível incluir no módulo: ${friendlyError(error)}` };
     await revalidatePath("/minhas-trilhas", "layout");
-    return { ok: `Conteúdo "${d.title}" ${published} e incluído no módulo.` };
+    if (endOfTrack) return { ok: `${what} ${published} no fim da trilha, no módulo "${FINAL_MODULE}".` };
+    return { ok: `${what} ${published} e ${isQuiz ? "incluída no fim do módulo" : "incluído no módulo"}.` };
   }
   if (!id) return { redirectTo: `/conteudos/${contentId}?aviso=criado` };
   const msg = { publicado: "Conteúdo publicado. Já aparece para o público dele.", rascunho: "Salvo como rascunho. Ainda não aparece para os colaboradores.", arquivado: "Conteúdo arquivado." };
