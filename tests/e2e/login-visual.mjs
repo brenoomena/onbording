@@ -132,6 +132,10 @@ await step("cor própria de cada texto e largura da logo", async () => {
   await A.locator("#lg-headline-color").fill("#ffcc00");
   await A.locator("#lg-title-color").locator("xpath=../..").getByLabel("Automática").uncheck();
   await A.locator("#lg-title-color").fill("#00ff88");
+  // Código digitado também vale (mesmo padrão dos outros campos de cor).
+  const tag = A.locator("#lg-tagline-color").locator("xpath=..").getByLabel("Código da cor do texto");
+  await tag.fill("#0a647b");
+  assert.equal(await A.locator("#lg-tagline-color").inputValue(), "#0a647b");
   await A.getByLabel("Usar o tamanho definido em Marca").uncheck();
   await A.locator("#lg-logo-w").fill("330");
   await A.getByRole("button", { name: "Salvar página de login" }).click();
@@ -143,6 +147,7 @@ await step("cor própria de cada texto e largura da logo", async () => {
   await head.waitFor();
   assert.equal(await head.evaluate((el) => getComputedStyle(el).color), "rgb(255, 204, 0)");
   assert.equal(await p.getByRole("heading").first().evaluate((el) => getComputedStyle(el).color), "rgb(0, 255, 136)");
+  assert.equal(await p.getByText("Trilhas, conteúdos e avaliações").evaluate((el) => getComputedStyle(el).color), "rgb(10, 100, 123)");
   const fs30 = await p.getByText("Onboarding Implantta").first().evaluate((el) => getComputedStyle(el).fontSize);
   assert.equal(fs30, "30px");
   await p.waitForTimeout(800);

@@ -277,6 +277,7 @@ function TextStyle({
 /** Cor própria do texto ou "automática" (segue a cor dos textos / do cartão). */
 function OptionalColor({ id, value, fallback, onChange }: { id: string; value: string; fallback: string; onChange: (v: string) => void }) {
   const auto = !value;
+  const [draft, setDraft] = useState<string | null>(null);
   return (
     <div className="grid gap-1.5">
       <span className="flex items-center justify-between text-[12.5px] font-medium text-muted">
@@ -286,16 +287,29 @@ function OptionalColor({ id, value, fallback, onChange }: { id: string; value: s
           Automática
         </label>
       </span>
-      <div className={cx("flex items-center gap-2", auto && "opacity-50")}>
+      <div className="flex items-center gap-2">
         <input
           id={id}
           type="color"
           value={value || fallback}
           onChange={(e) => onChange(e.target.value)}
-          className="h-8 w-10 shrink-0 cursor-pointer rounded-lg border border-line bg-surface p-0.5"
+          className={cx("h-9 w-11 shrink-0 cursor-pointer rounded-lg border border-line bg-surface p-0.5", auto && "opacity-50")}
           aria-label="Cor do texto"
         />
-        <span className="font-mono text-[12px] uppercase text-muted">{auto ? "automática" : value}</span>
+        <input
+          type="text"
+          spellCheck={false}
+          value={draft ?? (value || "")}
+          placeholder={auto ? "Automática" : undefined}
+          onChange={(e) => {
+            const v = e.target.value.trim();
+            setDraft(v);
+            if (HEX.test(v)) onChange(v.toLowerCase());
+          }}
+          onBlur={() => setDraft(null)}
+          aria-label="Código da cor do texto"
+          className="w-[92px] rounded-lg border border-line bg-surface px-2 py-1.5 font-mono text-[12px] uppercase placeholder:normal-case placeholder:font-sans"
+        />
       </div>
     </div>
   );
