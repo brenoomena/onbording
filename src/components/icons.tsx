@@ -1,4 +1,4 @@
-import { Award, BookOpenCheck, Briefcase, Building2, ChartColumnIncreasing, FileStack, History, Layers, LayoutDashboard, LibraryBig, Megaphone, Palette, Route, ShieldCheck, UserRound, Users, type LucideIcon } from "lucide-react";
+import { Award, BookOpenCheck, Briefcase, Building2, ChartColumnIncreasing, FileStack, History, Layers, LayoutDashboard, LibraryBig, Megaphone, Palette, Route, ShieldCheck, Trophy, UserRound, Users, type LucideIcon } from "lucide-react";
 import type { IconName } from "@/lib/permissions";
 
 /** Ícones dos módulos (menu, barra superior e cabeçalhos). Um só lugar para manter o padrão. */
@@ -8,6 +8,7 @@ export const MODULE_ICONS: Record<IconName, LucideIcon> = {
   materiais: LibraryBig,
   certificado: Award,
   comunicados: Megaphone,
+  conquistas: Trophy,
   trilhas: Route,
   conteudos: FileStack,
   colaboradores: Users,

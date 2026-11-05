@@ -31,7 +31,7 @@ export const ESTRUTURA_ANY: PermissionKey[] = [P.estruturaCriar, P.estruturaEdit
 /** Nome do ícone (ver components/icons.tsx). */
 export type IconName =
   | "painel" | "trilha" | "materiais" | "trilhas" | "conteudos" | "colaboradores" | "areas" | "cargos"
-  | "niveis" | "perfis" | "configuracoes" | "auditoria" | "meu-perfil" | "acompanhamento" | "certificado" | "comunicados";
+  | "niveis" | "perfis" | "configuracoes" | "auditoria" | "meu-perfil" | "acompanhamento" | "certificado" | "comunicados" | "conquistas";
 
 export interface MenuItem {
   href: string;
@@ -58,6 +58,7 @@ export const MENU: MenuGroup[] = [
     items: [
       { href: "/minhas-trilhas", label: "Minhas trilhas", icon: "trilha", anyOf: [] },
       { href: "/materiais", label: "Materiais", icon: "materiais", anyOf: [] },
+      { href: "/conquistas", label: "Conquistas", icon: "conquistas", anyOf: [] },
       { href: "/meus-certificados", label: "Certificados", icon: "certificado", anyOf: [] },
       { href: "/comunicados", label: "Comunicados", icon: "comunicados", anyOf: [] },
     ],

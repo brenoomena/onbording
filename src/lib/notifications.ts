@@ -6,7 +6,8 @@ export type NotificationKind =
   | "correcao_pendente"
   | "avaliacao_corrigida"
   | "certificado"
-  | "comunicado";
+  | "comunicado"
+  | "medalha";
 
 export interface NotificationItem {
   id: string;
@@ -26,6 +27,7 @@ export const NOTIFICATION_LABEL: Record<NotificationKind, string> = {
   avaliacao_corrigida: "Avaliação corrigida",
   certificado: "Certificado",
   comunicado: "Comunicado",
+  medalha: "Medalha",
 };
 
 export const NOTIFICATION_TONE: Record<NotificationKind, "blue" | "warn" | "danger" | "violet" | "ok" | "teal" | "orange"> = {
@@ -36,6 +38,7 @@ export const NOTIFICATION_TONE: Record<NotificationKind, "blue" | "warn" | "dang
   avaliacao_corrigida: "teal",
   certificado: "ok",
   comunicado: "orange",
+  medalha: "warn",
 };
 
 /** "agora", "há 5 min", "há 3 h", "ontem", "há 4 dias", depois a data. */
