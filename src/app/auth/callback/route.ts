@@ -3,6 +3,7 @@ import { decideAccess, deniedFromProviderError, safeNext } from "@/lib/access";
 import { publicEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { GROUPS_COOKIE } from "@/lib/theme";
 
 /**
  * Volta do login com Google. Só libera quem tem cadastro de colaborador
@@ -39,5 +40,8 @@ export async function GET(request: NextRequest) {
     return deny(access.reason);
   }
 
-  return NextResponse.redirect(`${origin}${safeNext(searchParams.get("next"))}`);
+  const res = NextResponse.redirect(`${origin}${safeNext(searchParams.get("next"))}`);
+  // Cada novo acesso começa com o menu no padrão (Estrutura e Administração recolhidos).
+  res.cookies.delete(GROUPS_COOKIE);
+  return res;
 }

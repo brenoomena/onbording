@@ -54,7 +54,8 @@ export function AppShell({ groups, user, logo, compact: initialCompact, collapse
   function toggleGroup(label: string) {
     setCollapsed((cur) => {
       const next = cur.includes(label) ? cur.filter((l) => l !== label) : [...cur, label];
-      document.cookie = `${GROUPS_COOKIE}=${serializeCollapsed(next)}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+      // Sem validade: vale só durante o acesso (some ao sair ou fechar o navegador).
+      document.cookie = `${GROUPS_COOKIE}=${serializeCollapsed(next)}; path=/; samesite=lax`;
       return next;
     });
   }

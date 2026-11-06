@@ -47,6 +47,25 @@ await step("recolher de novo também fica guardado; Aprendizagem também recolhe
   await group("Aprendizagem").click();
 });
 
+await step("ao sair e entrar de novo, os grupos voltam ao padrão", async () => {
+  await page.goto(`${BASE}/painel`);
+  await group("Estrutura").click();
+  await group("Administração").click();
+  await nav.getByRole("link", { name: "Áreas" }).waitFor();
+  const kept = (await page.context().cookies()).find((c) => c.name === "menu_grupos");
+  assert.ok(kept, "guardado durante o acesso");
+  assert.equal(kept.expires, -1, "cookie de sessão, sem validade");
+  await page.locator("header button[aria-haspopup=menu]").click();
+  await page.getByRole("menuitem", { name: "Sair" }).click();
+  await page.waitForURL(/login/);
+  assert.equal((await page.context().cookies()).some((c) => c.name === "menu_grupos"), false);
+  await entrar(page, "breno@implantta.com.br");
+  await page.goto(`${BASE}/painel`);
+  assert.equal(await group("Estrutura").getAttribute("aria-expanded"), "false");
+  assert.equal(await group("Administração").getAttribute("aria-expanded"), "false");
+  assert.equal(await group("Gestão").getAttribute("aria-expanded"), "true");
+});
+
 await step("página atual dentro de grupo recolhido continua visível no menu", async () => {
   await page.goto(`${BASE}/configuracoes`);
   await nav.getByRole("link", { name: "Configurações" }).waitFor();
