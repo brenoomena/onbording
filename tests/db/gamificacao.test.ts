@@ -81,6 +81,14 @@ run("Gamificação · pontos, medalhas e ranking", () => {
     await expect(asUser(db.pool, paula, (q) => q("select * from public.points_ranking($1)", [fin]))).rejects.toThrow(/sua área/);
     const s = (await asUser(db.pool, sup, (q) => q("select full_name from public.points_ranking($1)", [fin]))).rows;
     expect(s).toEqual([{ full_name: "Carlos Financeiro" }]);
+    // Supervisor e administrador não entram no ranking, mesmo com pontos.
+    await asSystem(db.pool, async (q) => {
+      const contabil = (await q("select area_id from profiles where id = $1", [vera])).rows[0].area_id;
+      await q("update profiles set area_id = $2 where id = $1", [sup, contabil]);
+      await q("insert into points_ledger (profile_id, points, reason, description, dedupe_key) values ($1, 999, 'trilha', 'x', 'teste-sup')", [sup]);
+    });
+    const names = (await asUser(db.pool, paula, (q) => q("select full_name from public.points_ranking()"))).rows.map((r) => r.full_name);
+    expect(names).not.toContain("Sérgio Supervisor");
     const me = (await asUser(db.pool, vera, (q) => q("select public.my_gamification() g"))).rows[0].g;
     expect(me).toMatchObject({ total: 120, month: 120, rank_total: 1, rank_month: 1, area_size: 2, badges: 5 });
   });

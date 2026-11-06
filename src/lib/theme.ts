@@ -14,3 +14,24 @@ export function themeAttr(t: Theme): "light" | "dark" | undefined {
 
 /** Cookie com a preferência de menu recolhido ("compacto") ou aberto. */
 export const MENU_COOKIE = "menu";
+
+/** Cookie com os grupos do menu recolhidos (nomes separados por "|"). */
+export const GROUPS_COOKIE = "menu_grupos";
+/** Recolhidos até a pessoa abrir: dão mais espaço ao menu. */
+export const DEFAULT_COLLAPSED = ["Estrutura", "Administração"];
+
+export function parseCollapsed(v: string | undefined | null): string[] {
+  if (v === undefined || v === null) return DEFAULT_COLLAPSED;
+  try {
+    return decodeURIComponent(v)
+      .split("|")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  } catch {
+    return DEFAULT_COLLAPSED;
+  }
+}
+
+export function serializeCollapsed(labels: string[]): string {
+  return encodeURIComponent(labels.join("|"));
+}

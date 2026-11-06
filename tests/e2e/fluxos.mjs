@@ -42,7 +42,12 @@ const newUser = async (opts = {}) => {
   page.on("pageerror", (e) => console.log("   [pageerror]", e.message));
   return { ctx, page };
 };
-const menu = async (page) => (await page.locator("aside nav a").allInnerTexts()).map((s) => s.trim());
+// Lista o menu completo: abre antes os grupos recolhidos (Estrutura e Administração vêm fechados).
+const menu = async (page) => {
+  const closed = page.locator('aside nav button[aria-expanded="false"]');
+  while (await closed.count()) await closed.first().click();
+  return (await page.locator("aside nav a").allInnerTexts()).map((s) => s.trim());
+};
 
 // Acesso só com Google: nos testes, a sessão é colocada direto (ver auth-helper.mjs).
 async function acceptInvite(page, email) {

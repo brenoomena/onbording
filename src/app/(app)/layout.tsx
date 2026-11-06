@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { AppShell } from "@/components/app-shell";
-import { MENU_COOKIE } from "@/lib/theme";
+import { GROUPS_COOKIE, MENU_COOKIE, parseCollapsed } from "@/lib/theme";
 import { isAdmin, requireUser } from "@/lib/auth";
 import { getBranding, logoFor, symbolFor } from "@/lib/branding";
 import { visibleMenu } from "@/lib/permissions";
@@ -29,6 +29,7 @@ export default async function AppLayout({ children, modal }: { children: React.R
       user={{ name: me.profile.full_name, role: me.profile.role.name, avatarPath: me.profile.avatar_path }}
       logo={logo}
       compact={jar.get(MENU_COOKIE)?.value === "compacto"}
+      collapsed={parseCollapsed(jar.get(GROUPS_COOKIE)?.value)}
       modal={modal}
     >
       {children}

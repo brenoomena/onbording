@@ -11,7 +11,7 @@ import { ModuleIcon } from "@/components/icons";
 import { cx } from "@/components/ui";
 import { sizeStyle, type BrandImage } from "@/lib/branding";
 import { sectionFor, type MenuGroup } from "@/lib/permissions";
-import { MENU_COOKIE } from "@/lib/theme";
+import { GROUPS_COOKIE, MENU_COOKIE, serializeCollapsed } from "@/lib/theme";
 
 
 interface ShellProps {
@@ -20,6 +20,8 @@ interface ShellProps {
   /** Logo (menu aberto) e símbolo (menu recolhido) para o fundo do menu em cada modo. */
   logo: { light: BrandImage | null; dark: BrandImage | null; symbolLight: BrandImage | null; symbolDark: BrandImage | null };
   compact: boolean;
+  /** Grupos do menu recolhidos (guardado em cookie). */
+  collapsed: string[];
   children: ReactNode;
   /** Janela de ver/editar aberta por cima da página (slot @modal). */
   modal?: ReactNode;
@@ -30,9 +32,19 @@ interface ShellProps {
  * superior com o módulo atual e área de conteúdo. No celular o menu abre
  * como gaveta.
  */
-export function AppShell({ groups, user, logo, compact: initialCompact, children, modal }: ShellProps) {
+export function AppShell({ groups, user, logo, compact: initialCompact, collapsed: initialCollapsed, children, modal }: ShellProps) {
   const pathname = usePathname();
   const [compact, setCompact] = useState(initialCompact);
+  const [collapsed, setCollapsed] = useState<string[]>(initialCollapsed);
+  const groupId = useId();
+
+  function toggleGroup(label: string) {
+    setCollapsed((cur) => {
+      const next = cur.includes(label) ? cur.filter((l) => l !== label) : [...cur, label];
+      document.cookie = `${GROUPS_COOKIE}=${serializeCollapsed(next)}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+      return next;
+    });
+  }
   const [open, setOpen] = useState(false);
   const section = sectionFor(pathname);
 
@@ -64,35 +76,53 @@ export function AppShell({ groups, user, logo, compact: initialCompact, children
         </div>
 
         <nav aria-label="Menu principal" className="flex-1 overflow-y-auto px-3 pb-4">
-          {groups.map((g, gi) => (
-            <div key={g.label ?? `g${gi}`} className="mt-3 grid gap-0.5 first:mt-0">
-              {g.label && !mini && (
-                <p className="px-3 pb-1.5 pt-2 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-sidebar-muted">{g.label}</p>
-              )}
-              {g.label && mini && <div aria-hidden className="mx-3 my-2 h-px bg-sidebar-text/10" />}
-              {g.items.map((item) => {
-                const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    aria-current={active ? "page" : undefined}
-                    title={mini ? item.label : undefined}
-                    className={cx(
-                      "group flex items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium transition-colors",
-                      mini && "justify-center px-0",
-                      active
-                        ? "bg-sidebar-active-bg text-sidebar-active-text shadow-[inset_3px_0_0_rgb(var(--brand))]"
-                        : "text-sidebar-text/85 hover:bg-sidebar-active-bg/60 hover:text-sidebar-active-text",
-                    )}
+          {groups.map((g, gi) => {
+            const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+            // Recolhido, mas com a página atual dentro: mostra o item ativo mesmo assim.
+            const closed = !!g.label && !mini && collapsed.includes(g.label);
+            const items = closed ? g.items.filter((i) => isActive(i.href)) : g.items;
+            const listId = `${groupId}-${gi}`;
+            return (
+              <div key={g.label ?? `g${gi}`} className="mt-3 grid gap-0.5 first:mt-0">
+                {g.label && !mini && (
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(g.label!)}
+                    aria-expanded={!closed}
+                    aria-controls={listId}
+                    className="group/g flex w-full items-center justify-between rounded-md px-3 pb-1.5 pt-2 text-left text-[10.5px] font-semibold uppercase tracking-[0.1em] text-sidebar-muted hover:text-sidebar-text"
                   >
-                    <ModuleIcon name={item.icon} size={18} className={active ? "text-brand" : "opacity-80 group-hover:opacity-100"} />
-                    {!mini && <span className="truncate">{item.label}</span>}
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
+                    {g.label}
+                    <ChevronDown size={14} aria-hidden className={cx("opacity-60 transition-transform group-hover/g:opacity-100", closed && "-rotate-90")} />
+                  </button>
+                )}
+                {g.label && mini && <div aria-hidden className="mx-3 my-2 h-px bg-sidebar-text/10" />}
+                <div id={listId} className="grid gap-0.5">
+                  {items.map((item) => {
+                    const active = isActive(item.href);
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        aria-current={active ? "page" : undefined}
+                        title={mini ? item.label : undefined}
+                        className={cx(
+                          "group flex items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium transition-colors",
+                          mini && "justify-center px-0",
+                          active
+                            ? "bg-sidebar-active-bg text-sidebar-active-text shadow-[inset_3px_0_0_rgb(var(--brand))]"
+                            : "text-sidebar-text/85 hover:bg-sidebar-active-bg/60 hover:text-sidebar-active-text",
+                        )}
+                      >
+                        <ModuleIcon name={item.icon} size={18} className={active ? "text-brand" : "opacity-80 group-hover:opacity-100"} />
+                        {!mini && <span className="truncate">{item.label}</span>}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </nav>
 
       </div>
