@@ -12,6 +12,7 @@ import { loadEnrollmentsOf, type MyEnrollment } from "@/lib/my-learning";
 import { P } from "@/lib/permissions";
 import { PROFILE_SELECT, type ProfileRow } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
+import { enrollmentTag } from "@/lib/tags";
 
 export const metadata: Metadata = { title: "Painel" };
 
@@ -32,7 +33,7 @@ function MyTracks({ enrollments }: { enrollments: MyEnrollment[] }) {
             <li key={e.id} className="grid gap-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <Link href={`/minhas-trilhas/${e.track.id}`} className="font-medium hover:text-accent">{e.track.name}</Link>
-                <Badge tone={overdue ? "danger" : ENROLLMENT_TONE[e.status]}>
+                <Badge tag={enrollmentTag(e.status, overdue)}>
                   {overdue ? "Em atraso" : ENROLLMENT_LABEL[e.status]}
                 </Badge>
               </div>

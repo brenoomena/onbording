@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { THEME_COOKIE, parseTheme, themeAttr } from "@/lib/theme";
 import "@fontsource-variable/inter";
 import { brandingUrl, getBranding } from "@/lib/branding";
+import { tagsCss } from "@/lib/tag-catalog";
 import { themeCss } from "@/lib/theme-tokens";
 import "./globals.css";
 
@@ -35,6 +36,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         {/* Cores da identidade visual (padrão + personalização do Administrador). Valores validados como #RRGGBB. */}
         <style id="theme-tokens" dangerouslySetInnerHTML={{ __html: themeCss(branding.theme) }} />
+        {/* Cores das etiquetas ajustadas em Configurações › Etiquetas (valores já validados). */}
+        <style id="tag-colors" dangerouslySetInnerHTML={{ __html: tagsCss(branding.tags) }} />
       </head>
       <body className="min-h-dvh antialiased">{children}</body>
     </html>

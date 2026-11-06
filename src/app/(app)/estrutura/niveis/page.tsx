@@ -101,7 +101,7 @@ export default async function NiveisPage() {
                     summary={
                       <div className="min-w-0">
                         <p className="flex flex-wrap items-center gap-2 font-semibold">
-                          <LevelBadge name={l.name} /> {!l.active && <Badge tone="silver">Inativo</Badge>}
+                          <LevelBadge name={l.name} /> {!l.active && <Badge tag="estrutura.inativo">Inativo</Badge>}
                         </p>
                         <p className="text-[12.5px] tabular-nums text-muted">
                           Usado em {positions} {positions === 1 ? "cargo" : "cargos"} · {people} {people === 1 ? "colaborador" : "colaboradores"}

@@ -2,6 +2,7 @@ import { createClient as createPlainClient } from "@supabase/supabase-js";
 import { unstable_cache } from "next/cache";
 import { publicEnv } from "@/lib/env";
 import { defaultSize, sanitizeSizes, type LogoSizes, type LogoSlot, type Size } from "@/lib/logo-sizes";
+import { sanitizeTags, type TagTheme } from "@/lib/tag-catalog";
 import { resolveCertificate, sanitizeCertificate, type CertificateTheme } from "@/lib/certificate";
 import { resolveLogin, sanitizeLogin, type LoginTheme } from "@/lib/login-theme";
 import { DEFAULT_THEME, isDark, sanitizeTheme, type ThemeConfig } from "@/lib/theme-tokens";
@@ -16,6 +17,7 @@ export interface Branding {
   sizes: LogoSizes;
   login: LoginTheme;
   certificate: CertificateTheme;
+  tags: TagTheme;
 }
 
 /** Imagem pronta para exibir: endereço e tamanho em pixels (null = tamanho automático). */
@@ -25,7 +27,7 @@ export interface BrandImage {
 }
 
 export const BRANDING_TAG = "branding";
-const EMPTY: Branding = { theme: {}, logoPath: null, logoDarkPath: null, symbolPath: null, symbolDarkPath: null, faviconPath: null, sizes: {}, login: resolveLogin({}), certificate: resolveCertificate({}) };
+const EMPTY: Branding = { theme: {}, logoPath: null, logoDarkPath: null, symbolPath: null, symbolDarkPath: null, faviconPath: null, sizes: {}, login: resolveLogin({}), certificate: resolveCertificate({}), tags: {} };
 
 /**
  * Identidade visual para desenhar as telas (inclusive login). Lida pela
@@ -52,12 +54,13 @@ export const getBranding = unstable_cache(
         sizes: sanitizeSizes(d.logo_sizes),
         login: resolveLogin(sanitizeLogin(d.login_theme)),
         certificate: resolveCertificate(sanitizeCertificate(d.certificate_theme)),
+        tags: sanitizeTags(d.tag_theme),
       };
     } catch {
       return EMPTY;
     }
   },
-  ["branding-v5"],
+  ["branding-v6"],
   { tags: [BRANDING_TAG], revalidate: 600 },
 );
 

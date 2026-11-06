@@ -47,7 +47,7 @@ export default async function ComunicadoPage({ params, searchParams }: { params:
         title={a.title}
         description={
           <span className="flex flex-wrap items-center gap-2">
-            {a.importance === "importante" && <Badge tone="danger">Importante</Badge>}
+            {a.importance === "importante" && <Badge tag="comunicado.importante">Importante</Badge>}
             {a.published_at ? `Publicado em ${formatDateTime(a.published_at)}` : "Rascunho"}
             {author && <span>· por {author}</span>}
           </span>

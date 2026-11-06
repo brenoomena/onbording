@@ -11,6 +11,7 @@ import { P } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { enrollPeople, removeEnrollment, updateDueDate } from "../../actions";
 import { loadTrack } from "../load";
+import { enrollmentTag } from "@/lib/tags";
 
 export const metadata: Metadata = { title: "Matrículas" };
 
@@ -101,7 +102,7 @@ export default async function MatriculasPage({ params }: { params: Promise<{ id:
                   </td>
                   <td className="min-w-[140px]"><ProgressBar value={Number(r.progress_percent)} label="" /></td>
                   <td>
-                    <Badge tone={overdue ? "danger" : tone[r.status]}>{overdue ? "Em atraso" : ENROLLMENT_LABEL[r.status]}</Badge>
+                    <Badge tag={enrollmentTag(r.status, overdue)}>{overdue ? "Em atraso" : ENROLLMENT_LABEL[r.status]}</Badge>
                     {r.completed_at && <p className="mt-1 text-[12px] text-muted">em {formatDate(r.completed_at)}</p>}
                     {certOf.get(r.profile.id) && (
                       <Link href={`/certificados/${certOf.get(r.profile.id)}`} className="mt-1 inline-block text-[12px] font-medium text-accent hover:underline">
