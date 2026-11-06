@@ -9,17 +9,17 @@ import { Field, Input, Select, buttonVariants, cx } from "@/components/ui";
 import type { ActionState } from "@/lib/action-state";
 import { addItem, addModule } from "../actions";
 
-/** Botão do módulo: abre a aba "Novo conteúdo" já com este módulo escolhido. */
-export function NewContentButton({ moduleId, compact = false }: { moduleId?: string; compact?: boolean }) {
+/** Botão do módulo: abre o painel "Novo conteúdo" já com este módulo escolhido. */
+export function NewContentButton({ moduleId, primary = false }: { moduleId?: string; primary?: boolean }) {
   const tabs = useTabs();
   if (!tabs) return null;
   return (
     <button
       type="button"
       onClick={() => tabs.go("conteudo", moduleId ? { moduleId } : undefined)}
-      className={cx(compact ? buttonVariants.ghost : buttonVariants.secondary, "py-1.5 text-[13px]")}
+      className={cx(primary ? buttonVariants.primary : buttonVariants.secondary, "text-[13.5px]")}
     >
-      <FilePlus2 size={15} aria-hidden /> Cadastrar conteúdo {moduleId ? "neste módulo" : "nesta trilha"}
+      <FilePlus2 size={15} aria-hidden /> {moduleId ? "Conteúdo neste módulo" : "Novo conteúdo"}
     </button>
   );
 }
@@ -105,7 +105,7 @@ export function ModulePicker({ modules }: { modules: { id: string; title: string
       <Field
         label="Incluir no módulo"
         htmlFor="module_id"
-        hint={modules.length ? "Ao criar, o conteúdo já entra no fim deste módulo." : "A trilha ainda não tem módulos: crie um na aba Novo módulo, ou inclua depois."}
+        hint={modules.length ? "Ao criar, o conteúdo já entra no fim deste módulo." : "A trilha ainda não tem módulos: crie um em Novo módulo, ou inclua depois."}
       >
         <Select id="module_id" name="module_id" key={preset ?? "none"} defaultValue={preset ?? modules[modules.length - 1]?.id ?? ""}>
           <option value="">Não incluir agora</option>

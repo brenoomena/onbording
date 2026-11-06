@@ -35,15 +35,17 @@ let quizId;
 
 await step("Novo conteúdo não oferece mais Avaliação no formato", async () => {
   await A.goto(`${BASE}/trilhas/${track}`);
-  await A.getByRole("tab", { name: "Novo conteúdo" }).click();
-  const panel = A.getByRole("tabpanel").filter({ hasText: "Novo conteúdo nesta trilha" });
+  await A.getByRole("complementary", { name: "Partes da trilha" }).getByRole("button", { name: /Visão geral/ }).click();
+  await A.getByRole("button", { name: "Novo conteúdo", exact: true }).click();
+  const panel = A.getByRole("region", { name: "Novo conteúdo" });
   await panel.getByText("Link externo").waitFor();
   assert.equal(await panel.locator("label", { hasText: /^Avaliação$/ }).count(), 0);
 });
 
 await step("admin cria avaliação pela aba Nova avaliação, no fim de um módulo, com 3 tipos de pergunta", async () => {
-  await A.getByRole("tab", { name: "Nova avaliação" }).click();
-  const P = A.getByRole("tabpanel").filter({ hasText: "Onde a avaliação entra" });
+  await A.getByRole("button", { name: "Fechar painel" }).filter({ visible: true }).click();
+  await A.getByRole("button", { name: "Nova avaliação", exact: true }).click();
+  const P = A.getByRole("region", { name: "Nova avaliação" });
   await P.getByText("No fim de um módulo", { exact: true }).click();
   await P.locator("#aval-module").selectOption({ index: 0 });
   await P.locator("input[name=module_required]").uncheck();
@@ -75,8 +77,8 @@ await step("admin cria avaliação pela aba Nova avaliação, no fim de um módu
 await step("avaliação no fim da trilha cria o módulo 'Avaliação final' (e reaproveita)", async () => {
   const before = (await rest(`modules?select=id&track_id=eq.${track}`)).length;
   for (const t of ["Prova final A", "Prova final B"]) {
-    await A.goto(`${BASE}/trilhas/${track}?aba=avaliacao`);
-    const P = A.getByRole("tabpanel").filter({ hasText: "Onde a avaliação entra" });
+    await A.goto(`${BASE}/trilhas/${track}?painel=avaliacao`);
+    const P = A.getByRole("region", { name: "Nova avaliação" });
     await P.locator("#aval-title").fill(t);
     await P.getByRole("button", { name: "Verdadeiro ou falso" }).click();
     await P.getByPlaceholder("Escreva a afirmação").fill("Afirmação.");
@@ -86,7 +88,7 @@ await step("avaliação no fim da trilha cria o módulo 'Avaliação final' (e r
   const mods = await rest(`modules?select=title,position&track_id=eq.${track}&order=position`);
   assert.equal(mods.length, before + 1);
   assert.equal(mods.at(-1).title, "Avaliação final");
-  await A.getByRole("tab", { name: "Estrutura" }).click();
+  await A.getByRole("complementary", { name: "Partes da trilha" }).getByRole("button", { name: /Avaliação final/ }).click();
   await A.getByRole("link", { name: "Prova final B" }).waitFor();
   await A.screenshot({ path: `${SHOTS}/01b-estrutura.png`, fullPage: true });
 });

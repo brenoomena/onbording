@@ -68,7 +68,12 @@ await step("estrutura da trilha mostra módulos e itens obrigatórios/opcionais"
   await A.getByRole("link", { name: /Onboarding Comercial/ }).click();
   await A.waitForURL(/trilhas\/[0-9a-f-]{36}$/);
   trackId = A.url().split("/").pop();
-  await A.locator("ol li", { hasText: "Workshop – Domínio Portal do Cliente" }).first().waitFor();
+  // Editor em página inteira: os módulos ficam no menu à esquerda.
+  const menu = A.getByRole("complementary", { name: "Partes da trilha" });
+  await menu.getByRole("button", { name: /Workshops de produto/ }).click();
+  await A.locator("ol li:visible", { hasText: "Workshop – Domínio Portal do Cliente" }).first().waitFor();
+  await menu.getByRole("button", { name: /Materiais de apoio/ }).click();
+  await A.getByText(/^Módulo 4 de 4$/).waitFor();
   assert.ok((await A.getByRole("button", { name: "Opcional" }).count()) >= 11);
   await A.screenshot({ path: `${SHOTS}/02-estrutura.png`, fullPage: true });
 });
@@ -167,29 +172,30 @@ await step("validação: link sem endereço é recusado", async () => {
 
 await step("inclui o texto em um novo módulo e coloca no início da trilha", async () => {
   await A.goto(`${BASE}/trilhas/${trackId}`);
-  await A.getByRole("tab", { name: "Novo módulo" }).click();
+  const menu = A.getByRole("complementary", { name: "Partes da trilha" });
+  await menu.getByRole("button", { name: "Novo módulo" }).click();
   await A.fill("#new-mod-title", "Boas-vindas");
   await A.getByRole("button", { name: "Criar módulo" }).click();
   await A.getByText('Módulo "Boas-vindas" criado.').waitFor();
-  // Volta sozinho para a Estrutura; o conteúdo fora dos módulos entra pelo seletor de módulo.
-  await A.getByRole("tab", { name: /Estrutura/, selected: true }).waitFor();
+  // O módulo novo abre sozinho; o conteúdo fora dos módulos entra pela Visão geral.
+  await A.getByText(/^Módulo 5 de 5$/).waitFor();
+  await menu.getByRole("button", { name: /Visão geral/ }).click();
   const row = A.locator("li", { hasText: "Boas-vindas ao time comercial" }).filter({ has: A.locator("select[name=module_id]") });
   const sel = row.locator("select[name=module_id]");
   const value = await sel.evaluate((el) => [...el.options].find((o) => o.text.endsWith(": Boas-vindas"))?.value);
   await sel.selectOption(value);
   await row.getByRole("button", { name: "Incluir" }).click();
   await A.getByText("Conteúdo incluído.").waitFor();
+  await menu.getByRole("button", { name: /Boas-vindas/ }).click();
   for (let i = 0; i < 4; i++) {
-    await A.reload();
-    const m = A.locator("div.rounded-xl", { has: A.locator("p.font-semibold", { hasText: /^Boas-vindas$/ }) }).first();
-    const up = m.getByRole("button", { name: "Subir módulo" }).first();
+    const up = A.getByRole("button", { name: "Subir módulo" });
     if (!(await up.count())) break;
     await up.click();
-    await A.waitForTimeout(700);
+    await A.waitForTimeout(900);
   }
   await A.reload();
-  const first = await A.locator("p.font-mono:text-is('Módulo 1') + p").innerText();
-  assert.equal(first.trim(), "Boas-vindas");
+  await A.getByText(/^Módulo 1 de 5$/).waitFor();
+  assert.match(await menu.locator("ol > li").first().innerText(), /Boas-vindas/);
 });
 
 // ---------------------------------------------------------------- vendedora
@@ -338,10 +344,11 @@ await step("trilha opcional aparece como disponível e a vendedora se inscreve",
   await A.getByRole("button", { name: "Criar módulo" }).click();
   await A.getByText('Módulo "Módulo único" criado.').waitFor();
   const newTrack = A.url().split("/trilhas/")[1].split("?")[0];
-  // Não há mais seletor de conteúdos no módulo: cadastra direto numa aba da mesma tela.
+  // Não há seletor de conteúdos no módulo: cadastra direto num painel ao lado do módulo.
   assert.equal(await A.locator("select[name=content_id]").count(), 0);
-  await A.getByRole("button", { name: "Cadastrar conteúdo neste módulo" }).first().click();
-  await A.getByRole("tab", { name: "Novo conteúdo", selected: true }).waitFor();
+  await A.getByRole("button", { name: "Conteúdo neste módulo" }).click();
+  const painel = A.getByRole("region", { name: "Novo conteúdo" });
+  await painel.waitFor();
   assert.equal(await A.inputValue("#track"), newTrack);
   assert.ok(await A.locator("#track").isDisabled(), "trilha fixa ao cadastrar dentro dela");
   await A.fill("#title", "Técnicas de negociação");
@@ -349,8 +356,8 @@ await step("trilha opcional aparece como disponível e a vendedora se inscreve",
   await A.fill("#body", "Ouça mais do que fala.");
   await A.getByRole("button", { name: "Criar e publicar" }).click();
   await A.getByText(/Técnicas de negociação" publicado e incluído no módulo/).waitFor();
-  await A.getByRole("tab", { name: /Estrutura/, selected: true }).waitFor();
-  await A.locator("a", { hasText: "Técnicas de negociação" }).waitFor();
+  await painel.waitFor({ state: "hidden" });
+  await A.locator("a:visible", { hasText: "Técnicas de negociação" }).waitFor();
   assert.ok(A.url().includes(`/trilhas/${newTrack}`), "continua na mesma tela da trilha");
   await A.getByRole("button", { name: "Publicar", exact: true }).click();
   await A.locator("header span.rounded-full", { hasText: "Publicado" }).waitFor();

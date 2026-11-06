@@ -188,6 +188,33 @@ export async function moveItem(_: ActionState, fd: FormData): Promise<ActionStat
   return {};
 }
 
+/**
+ * Arrastar e soltar: leva o item (ou módulo) `steps` casas para cima (<0) ou
+ * para baixo (>0), trocando com o vizinho uma casa por vez.
+ */
+async function reorder(fd: FormData, rpc: "move_module_item" | "move_module", param: "p_item" | "p_module"): Promise<ActionState> {
+  const denied = await denyUnless(P.trilhasEditar);
+  if (denied) return denied;
+  const id = fd.get("id");
+  const steps = Math.trunc(Number(fd.get("steps")));
+  if (!isId(id) || !Number.isFinite(steps) || steps === 0 || Math.abs(steps) > 200) return { error: "Posição inválida." };
+  const supabase = await createClient();
+  for (let i = 0; i < Math.abs(steps); i++) {
+    const { error } = await supabase.rpc(rpc, { [param]: id, p_direction: Math.sign(steps) } as never);
+    if (error) return { error: friendlyError(error) };
+  }
+  await refresh(String(fd.get("track_id")));
+  return {};
+}
+
+export async function reorderItem(_: ActionState, fd: FormData): Promise<ActionState> {
+  return reorder(fd, "move_module_item", "p_item");
+}
+
+export async function reorderModule(_: ActionState, fd: FormData): Promise<ActionState> {
+  return reorder(fd, "move_module", "p_module");
+}
+
 export async function removeItem(_: ActionState, fd: FormData): Promise<ActionState> {
   const denied = await denyUnless(P.trilhasEditar);
   if (denied) return denied;

@@ -12,13 +12,13 @@ import { QuizEditor } from "../../conteudos/quiz-editor";
 
 type Posicao = "fim_trilha" | "modulo";
 
-/** Botão do módulo: abre a aba "Nova avaliação" já no fim deste módulo. */
-export function NewQuizButton({ moduleId }: { moduleId: string }) {
+/** Botão do módulo: abre o painel "Nova avaliação" já no fim deste módulo. */
+export function NewQuizButton({ moduleId }: { moduleId?: string }) {
   const tabs = useTabs();
   if (!tabs) return null;
   return (
-    <button type="button" onClick={() => tabs.go("avaliacao", { moduleId })} className={cx(buttonVariants.ghost, "py-1.5 text-[13px]")}>
-      <ClipboardCheck size={15} aria-hidden /> Avaliação no fim deste módulo
+    <button type="button" onClick={() => tabs.go("avaliacao", moduleId ? { moduleId } : undefined)} className={cx(buttonVariants.secondary, "text-[13.5px]")}>
+      <ClipboardCheck size={15} aria-hidden /> {moduleId ? "Avaliação no fim deste módulo" : "Nova avaliação"}
     </button>
   );
 }

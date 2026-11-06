@@ -14,7 +14,7 @@ export interface TabDef {
   content: ReactNode;
 }
 
-interface TabsApi {
+export interface TabsApi {
   active: string;
   /** Troca de aba; `data` vai para a aba aberta (ex.: módulo já escolhido). */
   go: (key: string, data?: Record<string, string>) => void;
@@ -25,7 +25,7 @@ interface TabsApi {
   notify: (message: string) => void;
 }
 
-const TabsContext = createContext<TabsApi | null>(null);
+export const TabsContext = createContext<TabsApi | null>(null);
 
 export function useTabs() {
   return useContext(TabsContext);
@@ -104,8 +104,8 @@ export function Tabs({ tabs, initial, label }: { tabs: TabDef[]; initial?: strin
 }
 
 /**
- * Depois de salvar com sucesso numa aba: avisa, volta para a Estrutura e
- * limpa o formulário da aba de origem.
+ * Depois de salvar com sucesso numa aba: avisa, volta para a Estrutura (no
+ * editor de trilha: fecha o painel e volta ao módulo) e limpa o formulário.
  */
 export function AfterOk({ state, from }: { state: ActionState; from: string }) {
   const tabs = useTabs();
