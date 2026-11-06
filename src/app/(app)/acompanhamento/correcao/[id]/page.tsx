@@ -82,8 +82,8 @@ export default async function CorrecaoPage({
           <span className="flex flex-wrap items-center gap-2">
             {a.profile.full_name} · enviada em {formatDateTime(a.submitted_at)}
             <Badge
-              tag={
-                pending ? "correcao.aguardando" : a.status === "aprovada" ? "correcao.aprovada" : "correcao.reprovada"
+              tone={
+                pending ? "blue" : a.status === "aprovada" ? "ok" : "danger"
               }
             >
               {pending
@@ -141,12 +141,12 @@ export default async function CorrecaoPage({
                       </div>
                       {x.kind !== "aberta" &&
                         (x.correct ? (
-                          <Badge tag="pergunta.certa">
-                            Certa
+                          <Badge tone="ok">
+                            <CheckCircle2 size={12} aria-hidden /> Certa
                           </Badge>
                         ) : (
-                          <Badge tag="pergunta.errada">
-                            Errada
+                          <Badge tone="danger">
+                            <CircleX size={12} aria-hidden /> Errada
                           </Badge>
                         ))}
                     </div>

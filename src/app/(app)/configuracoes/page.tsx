@@ -1,4 +1,4 @@
-import { AppWindow, Award, ImageIcon, LogIn, Palette, Settings, Tags, type LucideIcon } from "lucide-react";
+import { AppWindow, Award, ImageIcon, LogIn, Palette, Settings, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Card, PageHeader, cx } from "@/components/ui";
@@ -12,10 +12,6 @@ import { resolveLogin, sanitizeLogin } from "@/lib/login-theme";
 import { resolveCertificate, sanitizeCertificate } from "@/lib/certificate";
 import { siteOrigin } from "@/lib/certificate-server";
 import { CertificateEditor } from "./certificate-editor";
-import { TagEditor, type Swatch } from "./tag-editor";
-import { TONES, TONE_VARS, sanitizeTags } from "@/lib/tag-catalog";
-import { STATUS } from "@/lib/theme-tokens";
-import type { Tone } from "@/lib/tags";
 import { resolveTheme, sanitizeTheme } from "@/lib/theme-tokens";
 import { FaviconEditor } from "./favicon-editor";
 import { LoginEditor } from "./login-editor";
@@ -24,12 +20,11 @@ import { ThemeEditor } from "./theme-editor";
 
 export const metadata: Metadata = { title: "Configurações" };
 
-type Secao = "marca" | "cores" | "etiquetas" | "login" | "certificado";
+type Secao = "marca" | "cores" | "login" | "certificado";
 
 const SECOES: { key: Secao; label: string; hint: string; icon: LucideIcon }[] = [
   { key: "marca", label: "Marca", hint: "Logomarca, símbolo e favicon", icon: ImageIcon },
   { key: "cores", label: "Cores do sistema", hint: "Modos claro e escuro", icon: Palette },
-  { key: "etiquetas", label: "Etiquetas", hint: "Cores de cada etiqueta", icon: Tags },
   { key: "login", label: "Página de login", hint: "Fundo, efeito, textos e botão", icon: LogIn },
   { key: "certificado", label: "Certificado", hint: "Modelo, assinatura e validação", icon: Award },
 ];
@@ -42,7 +37,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
   const supabase = await createClient();
   const { data } = await supabase
     .from("app_settings")
-    .select("theme, logo_path, logo_dark_path, symbol_path, symbol_dark_path, favicon_path, logo_sizes, login_theme, certificate_theme, tag_theme, updated_at")
+    .select("theme, logo_path, logo_dark_path, symbol_path, symbol_dark_path, favicon_path, logo_sizes, login_theme, certificate_theme, updated_at")
     .eq("id", 1)
     .maybeSingle();
   const theme = resolveTheme(sanitizeTheme(data?.theme));
@@ -61,7 +56,6 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
     sizes,
     login,
     certificate,
-    tags: sanitizeTags(data?.tag_theme),
   };
   const loginLogo = logoFor(brand, login.to);
 
@@ -73,8 +67,8 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
         title="Configurações"
         description="Identidade visual do sistema. As mudanças valem para todas as pessoas e todas as telas."
       />
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[230px_minmax(0,1fr)]">
-        <nav aria-label="Seções das configurações" className="min-w-0 lg:sticky lg:top-24">
+      <div className="grid items-start gap-5 lg:grid-cols-[230px_minmax(0,1fr)]">
+        <nav aria-label="Seções das configurações" className="lg:sticky lg:top-24">
           <ul className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 lg:mx-0 lg:grid lg:overflow-visible lg:px-0 lg:pb-0">
             {SECOES.map((s) => {
               const active = s.key === secao;
@@ -132,15 +126,6 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
               <ThemeEditor initial={theme} />
             </Card>
           )}
-          {secao === "etiquetas" && (
-            <Card
-              title="Etiquetas"
-              description="Todas as etiquetas do sistema, agrupadas pelo que informam. Troque a cor por outra da paleta ou defina cores próprias para os modos claro e escuro. A prévia mostra os dois modos."
-              icon={Tags}
-            >
-              <TagEditor initial={brand.tags} palette={tagPalette(theme)} />
-            </Card>
-          )}
           {secao === "certificado" && (
             <Card
               title="Certificado"
@@ -172,15 +157,4 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
       </div>
     </>
   );
-}
-
-/** Cores (hex) de cada cor da paleta nos dois modos, para a prévia das etiquetas. */
-function tagPalette(theme: ReturnType<typeof resolveTheme>): Record<Tone, Swatch> {
-  const pick = (mode: "light" | "dark", v: string) => (theme[mode] as Record<string, string>)[v] ?? STATUS[mode][v] ?? "#888888";
-  return Object.fromEntries(
-    TONES.map((tone) => {
-      const [t, b] = TONE_VARS[tone];
-      return [tone, { lt: pick("light", t), lb: pick("light", b), dt: pick("dark", t), db: pick("dark", b) }];
-    }),
-  ) as Record<Tone, Swatch>;
 }

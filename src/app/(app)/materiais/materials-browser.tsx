@@ -7,7 +7,6 @@ import { ContentViewer, ObjectiveNote, externalHref, type ViewerContent } from "
 import { StudyTracker } from "@/components/study-tracker";
 import { Badge, EmptyState, Input, buttonVariants, cx, KIND_TONE } from "@/components/ui";
 import { KIND_LABEL } from "@/lib/learning";
-import { KIND_TAG } from "@/lib/tags";
 
 export interface Material extends ViewerContent {
   description: string | null;
@@ -157,8 +156,8 @@ export function MaterialsBrowser({ items, viewed }: { items: Material[]; viewed:
                       {c.description && <span className="block text-[12.5px] text-muted">{plainText(c.description)}</span>}
                     </span>
                     <span className="flex items-center gap-1.5">
-                      {seen.has(c.id) && <Badge tag="estudo.visto">Visto</Badge>}
-                      <Badge tag={KIND_TAG[c.kind]}>{KIND_LABEL[c.kind]}</Badge>
+                      {seen.has(c.id) && <Badge tone="ok">Visto</Badge>}
+                      <Badge tone={KIND_TONE[c.kind]}>{KIND_LABEL[c.kind]}</Badge>
                     </span>
                   </button>
                 </li>

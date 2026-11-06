@@ -10,7 +10,6 @@ import { ENROLLMENT_LABEL, KIND_LABEL, isOverdue, itemStates } from "@/lib/learn
 import { loadEnrollmentsOf, loadProgressOf } from "@/lib/my-learning";
 import { createClient } from "@/lib/supabase/server";
 import { loadTrack } from "../../trilhas/[id]/load";
-import { enrollmentTag } from "@/lib/tags";
 
 export const metadata: Metadata = { title: "Trilha" };
 
@@ -83,7 +82,7 @@ export default async function MinhaTrilhaPage({ params }: { params: Promise<{ id
         <div className="grid gap-3 rounded-xl border border-line bg-surface p-4 sm:grid-cols-[1fr_auto] sm:items-center">
           <ProgressBar value={Number(enrollment.progress_percent)} label="Seu progresso" />
           <div className="flex flex-wrap gap-2 text-[13px]">
-            <Badge tag={enrollmentTag(enrollment.status, isOverdue(enrollment.due_date, enrollment.status))}>
+            <Badge tone={isOverdue(enrollment.due_date, enrollment.status) ? "danger" : ENROLLMENT_TONE[enrollment.status]}>
               {isOverdue(enrollment.due_date, enrollment.status) ? "Em atraso" : ENROLLMENT_LABEL[enrollment.status]}
             </Badge>
             {enrollment.due_date && <span className="text-muted">Prazo {formatDate(enrollment.due_date)}</span>}

@@ -85,7 +85,7 @@ export function PermissionMatrix({
                     <div className="min-w-0">
                       <p className="flex flex-wrap items-center gap-2 text-[13.5px] font-medium">
                         {p.name}
-                        {on ? <Badge tag="permissao.tem_acesso">Tem acesso</Badge> : <Badge tag="permissao.sem_acesso">Sem acesso</Badge>}
+                        {on ? <Badge tone="ok">Tem acesso</Badge> : <Badge>Sem acesso</Badge>}
                       </p>
                       <p className="text-[12px] text-muted">
                         {p.description}

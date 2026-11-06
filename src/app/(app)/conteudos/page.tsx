@@ -9,7 +9,6 @@ import { P } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { deleteContent } from "./actions";
 import { MoveContent } from "./move-content";
-import { KIND_TAG, PUBLISH_TAG } from "@/lib/tags";
 
 export const metadata: Metadata = { title: "Conteúdos" };
 
@@ -173,15 +172,15 @@ export default async function ConteudosPage({
                             {[c.category, c.external_platform].filter(Boolean).join(" · ") || " "}
                           </p>
                         </td>
-                        <td><Badge tag={KIND_TAG[c.kind]}>{KIND_LABEL[c.kind]}</Badge></td>
+                        <td><Badge tone={KIND_TONE[c.kind]}>{KIND_LABEL[c.kind]}</Badge></td>
                         <td className="text-[13px]">
                           <span className="flex flex-wrap items-center gap-1">
                             {isLib ? null : inModules ? <span>Em módulo</span> : <span className="text-warn">Fora dos módulos</span>}
-                            {c.is_library && <Badge tag="trilha.biblioteca">Biblioteca</Badge>}
+                            {c.is_library && <Badge tone="brand">Biblioteca</Badge>}
                           </span>
                         </td>
                         <td className="text-[13px] tabular-nums">{formatDate(c.updated_at)}</td>
-                        <td><Badge tag={PUBLISH_TAG[c.status]} dot>{PUBLISH_LABEL[c.status]}</Badge></td>
+                        <td><Badge tone={PUBLISH_TONE[c.status]} dot>{PUBLISH_LABEL[c.status]}</Badge></td>
                         <td>
                           <RowActions>
                             <IconLink href={`/conteudos/${c.id}/ver`} label="Ver como colaborador" icon={Eye} />

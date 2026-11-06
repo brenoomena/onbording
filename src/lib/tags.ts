@@ -24,19 +24,3 @@ export function levelTone(name: string | null | undefined): Tone {
   return "indigo";
 }
 
-
-import type { TagKey } from "@/lib/tag-catalog";
-
-export const PUBLISH_TAG = { rascunho: "publicacao.rascunho", publicado: "publicacao.publicado", arquivado: "publicacao.arquivado" } as const satisfies Record<string, TagKey>;
-export const ENROLLMENT_TAG = { nao_iniciada: "matricula.nao_iniciada", em_andamento: "matricula.em_andamento", concluida: "matricula.concluida" } as const satisfies Record<string, TagKey>;
-export const KIND_TAG = { texto: "material.texto", link: "material.link", video: "material.video", arquivo: "material.arquivo", avaliacao: "material.avaliacao" } as const satisfies Record<string, TagKey>;
-
-export function levelTag(name: string | null | undefined): TagKey {
-  const t = levelTone(name);
-  return t === "blue" ? "nivel.junior" : t === "silver" ? "nivel.pleno" : t === "gold" ? "nivel.senior" : t === "violet" ? "nivel.lideranca" : "nivel.outro";
-}
-
-/** Matrícula com atraso: a etiqueta de atraso vale sobre a situação. */
-export function enrollmentTag(status: keyof typeof ENROLLMENT_TAG, overdue = false): TagKey {
-  return overdue ? "matricula.em_atraso" : ENROLLMENT_TAG[status];
-}

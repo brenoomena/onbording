@@ -217,7 +217,7 @@ function ResultHeader({ quiz, attempt }: { quiz: LearnerQuiz; attempt: LearnerAt
             : `${quiz.attempts_used} ${quiz.attempts_used === 1 ? "tentativa" : "tentativas"}${quiz.max_attempts ? ` de ${quiz.max_attempts}` : ""} · melhor nota ${pct(quiz.best_score)}`}
         </p>
       </div>
-      <Badge tag={attempt.status === "aprovada" ? "avaliacao.aprovado" : attempt.status === "em_correcao" ? "avaliacao.aguardando_resultado" : "avaliacao.nao_atingiu"}>{ATTEMPT_LABEL[attempt.status]}</Badge>
+      <Badge tone={tone}>{ATTEMPT_LABEL[attempt.status]}</Badge>
       {attempt.feedback && (
         <div className="basis-full rounded-lg bg-surface/80 px-4 py-3 text-[13.5px]">
           <p className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.05em] text-muted">
@@ -243,12 +243,12 @@ function AttemptReview({ attempt }: { attempt: LearnerAttempt }) {
                 <span className="mr-1.5 text-muted">{i + 1}.</span>
                 {q.prompt}
               </p>
-              {state === "certa" && <Badge tag="pergunta.certa">Certa · {q.awarded}/{q.points}</Badge>}
-              {state === "parcial" && <Badge tag="pergunta.parcial">Parcial · {q.awarded}/{q.points}</Badge>}
-              {state === "errada" && <Badge tag="pergunta.errada">Errada · 0/{q.points}</Badge>}
+              {state === "certa" && <Badge tone="ok">Certa · {q.awarded}/{q.points}</Badge>}
+              {state === "parcial" && <Badge tone="orange">Parcial · {q.awarded}/{q.points}</Badge>}
+              {state === "errada" && <Badge tone="danger">Errada · 0/{q.points}</Badge>}
               {state === "pendente" && (
-                <Badge tag="pergunta.em_correcao">
-                  Em correção
+                <Badge tone="blue">
+                  <AlarmClock size={12} aria-hidden /> Em correção
                 </Badge>
               )}
             </div>

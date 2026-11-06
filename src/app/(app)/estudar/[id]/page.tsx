@@ -15,7 +15,6 @@ import { loadProgressOf } from "@/lib/my-learning";
 import { createClient } from "@/lib/supabase/server";
 import { loadTrack } from "../../trilhas/[id]/load";
 import { completeContent } from "../actions";
-import { KIND_TAG } from "@/lib/tags";
 
 export const metadata: Metadata = { title: "Estudar" };
 
@@ -108,7 +107,7 @@ export default async function EstudarPage({
           <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
             <h1 className="min-w-0 truncate text-[17px] font-semibold leading-snug tracking-tight sm:text-[18px]">{content.title}</h1>
             <span className="flex flex-wrap items-center gap-1.5 text-[12px] text-muted">
-              <Badge tag={KIND_TAG[content.kind]}>{KIND_LABEL[content.kind]}</Badge>
+              <Badge tone={KIND_TONE[content.kind]}>{KIND_LABEL[content.kind]}</Badge>
               {content.external_platform && <span>{content.external_platform}</span>}
               {content.estimated_minutes && <span>· cerca de {content.estimated_minutes} min</span>}
               <span className="hidden md:inline">
@@ -118,12 +117,12 @@ export default async function EstudarPage({
           </div>
         </div>
         {!preview && isQuiz && quiz && !done && (
-          <Badge tag={quiz.pending ? "avaliacao.aguardando_topo" : "avaliacao.nota_minima"}>{quiz.pending ? "Aguardando correção" : `Nota mínima ${quiz.passing_score}%`}</Badge>
+          <Badge tone={quiz.pending ? "blue" : "gold"}>{quiz.pending ? "Aguardando correção" : `Nota mínima ${quiz.passing_score}%`}</Badge>
         )}
         {!preview &&
           (done ? (
             <span className="flex items-center gap-2">
-              <Badge tag="estudo.concluido">Concluído em {formatDate(mine?.completed_at)}</Badge>
+              <Badge tone="ok">Concluído em {formatDate(mine?.completed_at)}</Badge>
               {nav.next && <Link href={`/estudar/${nav.next}${q}`} className={buttonVariants.primary}>Próximo →</Link>}
             </span>
           ) : isQuiz ? null : (

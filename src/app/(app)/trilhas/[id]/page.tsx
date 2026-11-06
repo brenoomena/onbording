@@ -30,7 +30,6 @@ import { TrackForm } from "../track-form";
 import { loadTrack } from "./load";
 import { ModulePicker, NewContentButton, NewModuleForm, PlaceContent } from "./track-parts";
 import { NewQuizButton, NewQuizForm } from "./quiz-form";
-import { KIND_TAG, PUBLISH_TAG } from "@/lib/tags";
 
 export const metadata: Metadata = { title: "Trilha" };
 
@@ -72,8 +71,8 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
         title={track.name}
         description={
           <span className="flex flex-wrap items-center gap-2">
-            <Badge tag={PUBLISH_TAG[track.status]}>{PUBLISH_LABEL[track.status]}</Badge>
-            {track.is_mandatory && <Badge tag="trilha.obrigatoria">Obrigatória</Badge>}
+            <Badge tone={tone[track.status]}>{PUBLISH_LABEL[track.status]}</Badge>
+            {track.is_mandatory && <Badge tone="brand">Obrigatória</Badge>}
             <span>
               {modules.length} módulos · {totalItems} conteúdos · {enrolled ?? 0} matrículas
             </span>
@@ -170,9 +169,9 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
                             <div className="min-w-0">
                               <Link href={`/conteudos/${it.content.id}`} className="text-[14px] font-medium hover:text-accent">{it.content.title}</Link>
                               <p className="flex flex-wrap items-center gap-1.5 text-[12px] text-muted">
-                                <Badge tag={KIND_TAG[it.content.kind]}>{KIND_LABEL[it.content.kind]}</Badge>
+                                <Badge tone={KIND_TONE[it.content.kind]}>{KIND_LABEL[it.content.kind]}</Badge>
                                 {it.content.external_platform && ` · ${it.content.external_platform}`}
-                                {it.content.status !== "publicado" && <Badge tag={PUBLISH_TAG[it.content.status]}>{PUBLISH_LABEL[it.content.status]}</Badge>}
+                                {it.content.status !== "publicado" && <Badge tone={PUBLISH_TONE[it.content.status]}>{PUBLISH_LABEL[it.content.status]}</Badge>}
                               </p>
                             </div>
                           </div>
@@ -189,7 +188,7 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
                               <ActionButton action={moveItem} hidden={{ id: it.id, direction: "1", track_id: id }} label="Descer" icon={<ArrowDown size={16} aria-hidden />} iconOnly />
                             )}
                             <ActionButton action={removeItem} hidden={{ id: it.id, track_id: id }} label="Remover do módulo" variant="danger" icon={<X size={16} aria-hidden />} iconOnly confirm confirmLabel="Remover" confirmText="O conteúdo sai deste módulo, mas continua cadastrado nesta trilha." />
-                          </div> : <Badge tag={it.is_required ? "trilha.etapa_obrigatoria" : "trilha.etapa_opcional"}>{it.is_required ? "Obrigatório" : "Opcional"}</Badge>}
+                          </div> : <Badge tone={it.is_required ? "brand" : "neutral"}>{it.is_required ? "Obrigatório" : "Opcional"}</Badge>}
                         </li>
                       ))}
                     </ol>
@@ -215,8 +214,8 @@ export default async function TrilhaPage({ params, searchParams }: { params: Pro
                         <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
                           <span className="flex min-w-0 items-center gap-2">
                             <span className="truncate text-[14px] font-medium">{o.title}</span>
-                            <Badge tag={KIND_TAG[o.kind]}>{KIND_LABEL[o.kind]}</Badge>
-                            {o.status !== "publicado" && <Badge tag={PUBLISH_TAG[o.status as keyof typeof PUBLISH_TAG]}>{PUBLISH_LABEL[o.status as keyof typeof PUBLISH_LABEL]}</Badge>}
+                            <Badge tone={KIND_TONE[o.kind]}>{KIND_LABEL[o.kind]}</Badge>
+                            {o.status !== "publicado" && <Badge tone={PUBLISH_TONE[o.status as keyof typeof PUBLISH_TONE]}>{PUBLISH_LABEL[o.status as keyof typeof PUBLISH_LABEL]}</Badge>}
                           </span>
                           {canEdit && moduleOptions.length > 0 && <PlaceContent trackId={id} contentId={o.id} modules={moduleOptions} />}
                         </li>

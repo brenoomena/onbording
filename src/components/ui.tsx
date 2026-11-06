@@ -1,8 +1,7 @@
-import { Check, CircleCheck, CircleSlash, CircleX, ClipboardCheck, Clock3, FileText, Hourglass, Link2, Paperclip, PlayCircle, Target, X, type LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
-import { TAGS, type TagIcon, type TagKey } from "@/lib/tag-catalog";
-import { levelTag, type Tone } from "@/lib/tags";
+import { levelTone, type Tone } from "@/lib/tags";
 
 export function cx(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
@@ -227,7 +226,7 @@ export function Field({
   );
 }
 
-export { ENROLLMENT_TAG, ENROLLMENT_TONE, KIND_TAG, KIND_TONE, PUBLISH_TAG, PUBLISH_TONE, enrollmentTag, levelTag, levelTone, type TagColor } from "@/lib/tags";
+export { ENROLLMENT_TONE, KIND_TONE, PUBLISH_TONE, levelTone, type TagColor } from "@/lib/tags";
 const toneClass: Record<Tone, string> = {
   neutral: "bg-sunken text-muted",
   brand: "bg-accent-soft text-accent",
@@ -245,36 +244,10 @@ const toneClass: Record<Tone, string> = {
   gold: "bg-tag-gold-soft text-tag-gold ring-1 ring-inset ring-tag-gold/30",
 };
 
-export const TAG_ICON: Record<TagIcon, LucideIcon> = {
-  check: Check,
-  partial: CircleSlash,
-  x: X,
-  clock: Clock3,
-  target: Target,
-  hourglass: Hourglass,
-  approved: CircleCheck,
-  failed: CircleX,
-  text: FileText,
-  link: Link2,
-  video: PlayCircle,
-  file: Paperclip,
-  quiz: ClipboardCheck,
-};
-
-/**
- * Etiqueta. Com `tag`, a cor vem do catálogo (e dos ajustes de
- * Configurações › Etiquetas) e, quando definido, mostra o ícone.
- */
-export function Badge({ tone, tag, children, dot = false }: { tone?: Tone; tag?: TagKey; children: ReactNode; dot?: boolean }) {
-  const def = tag ? TAGS[tag] : undefined;
-  const Icon = def?.icon ? TAG_ICON[def.icon] : null;
+export function Badge({ tone = "neutral", children, dot = false }: { tone?: Tone; children: ReactNode; dot?: boolean }) {
   return (
-    <span
-      data-tag={tag}
-      className={cx("inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-[12px] font-medium", toneClass[tone ?? def?.tone ?? "neutral"])}
-    >
+    <span className={cx("inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-[12px] font-medium", toneClass[tone])}>
       {dot && <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />}
-      {Icon && <Icon size={12} strokeWidth={2.4} aria-hidden className="-ml-0.5 shrink-0" />}
       {children}
     </span>
   );
@@ -282,14 +255,14 @@ export function Badge({ tone, tag, children, dot = false }: { tone?: Tone; tag?:
 
 /** Status do colaborador: ativo verde, em onboarding violeta, inativo prata. */
 export function StatusBadge({ status }: { status: "onboarding" | "ativo" | "inativo" }) {
-  if (status === "ativo") return <Badge tag="colaborador.ativo" dot>Ativo</Badge>;
-  if (status === "onboarding") return <Badge tag="colaborador.onboarding" dot>Em onboarding</Badge>;
-  return <Badge tag="colaborador.inativo" dot>Inativo</Badge>;
+  if (status === "ativo") return <Badge tone="ok" dot>Ativo</Badge>;
+  if (status === "onboarding") return <Badge tone="violet" dot>Em onboarding</Badge>;
+  return <Badge tone="silver" dot>Inativo</Badge>;
 }
 
 export function LevelBadge({ name }: { name: string | null | undefined }) {
   if (!name) return null;
-  return <Badge tag={levelTag(name)}>{name}</Badge>;
+  return <Badge tone={levelTone(name)}>{name}</Badge>;
 }
 
 export function Alert({ tone = "danger", children }: { tone?: "danger" | "ok" | "warn" | "brand"; children: ReactNode }) {

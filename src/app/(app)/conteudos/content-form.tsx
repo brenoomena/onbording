@@ -14,7 +14,6 @@ import type { TrackOption } from "./form-data";
 import { MoveContent } from "./move-content";
 import { QuizEditor } from "./quiz-editor";
 import type { QuizQuestion } from "@/lib/quiz";
-import { PUBLISH_TAG } from "@/lib/tags";
 
 const MAX_BYTES = 50 * 1024 * 1024;
 
@@ -329,11 +328,12 @@ export function ContentForm({
  * nunca muda a situação atual do conteúdo.
  */
 export function PublishBar({ status = "rascunho", isNew }: { status?: PublishStatus; isNew: boolean }) {
+  const tone = PUBLISH_TONE[status];
   return (
     <FormBar
       info={
         <span className="flex flex-wrap items-center gap-2">
-          Situação {isNew ? "ao criar" : "atual"}: <Badge tag={PUBLISH_TAG[status]} dot>{PUBLISH_LABEL[status]}</Badge>
+          Situação {isNew ? "ao criar" : "atual"}: <Badge tone={tone} dot>{PUBLISH_LABEL[status]}</Badge>
           {status !== "publicado" && <span className="hidden sm:inline">· só quem gerencia conteúdos vê.</span>}
         </span>
       }

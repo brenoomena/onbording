@@ -5,7 +5,6 @@ import { Badge, Card, EmptyState, PageHeader, Table, buttonVariants, cx, formatD
 import { can, requireUser } from "@/lib/auth";
 import { P } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
-import type { TagKey } from "@/lib/tag-catalog";
 
 export const metadata: Metadata = { title: "Comunicados" };
 
@@ -25,10 +24,10 @@ interface Managed {
   updated_at: string;
 }
 
-const STATUS: Record<Managed["status"], [string, TagKey]> = {
-  rascunho: ["Rascunho", "comunicado.rascunho"],
-  publicado: ["Publicado", "comunicado.publicado"],
-  arquivado: ["Arquivado", "comunicado.arquivado"],
+const STATUS: Record<Managed["status"], [string, "neutral" | "ok" | "warn"]> = {
+  rascunho: ["Rascunho", "warn"],
+  publicado: ["Publicado", "ok"],
+  arquivado: ["Arquivado", "neutral"],
 };
 
 export default async function ComunicadosPage({ searchParams }: { searchParams: Promise<{ aba?: string }> }) {
@@ -107,7 +106,7 @@ export default async function ComunicadosPage({ searchParams }: { searchParams: 
                       <span className={cx("block truncate text-[14px] text-heading", !r.read_at && "font-semibold")}>{r.announcement!.title}</span>
                       <span className="text-[12px] text-muted">{formatDateTime(r.announcement!.published_at)}</span>
                     </span>
-                    {r.announcement!.importance === "importante" && <Badge tag="comunicado.importante">Importante</Badge>}
+                    {r.announcement!.importance === "importante" && <Badge tone="danger">Importante</Badge>}
                     {!r.read_at && <span aria-label="Não lido" className="h-2 w-2 shrink-0 rounded-full bg-brand" />}
                   </Link>
                 </li>
@@ -139,12 +138,12 @@ export default async function ComunicadosPage({ searchParams }: { searchParams: 
                   <span className="font-medium">{a.title}</span>
                   {a.importance === "importante" && (
                     <span className="ml-2">
-                      <Badge tag="comunicado.importante">Importante</Badge>
+                      <Badge tone="danger">Importante</Badge>
                     </span>
                   )}
                 </td>
                 <td>
-                  <Badge tag={STATUS[a.status][1]}>{STATUS[a.status][0]}</Badge>
+                  <Badge tone={STATUS[a.status][1]}>{STATUS[a.status][0]}</Badge>
                 </td>
                 <td className="tabular-nums">{a.status === "rascunho" ? "—" : a.recipients}</td>
                 <td className="text-[13px]">{a.published_at ? formatDateTime(a.published_at) : "—"}</td>

@@ -59,12 +59,10 @@ import { PageNotice } from "@/components/forms";
 import { DueDateForm } from "./due-date-form";
 import { parseVista, type Vista } from "./export";
 import { loadAcompanhamento } from "./load";
-import { ENROLLMENT_TAG } from "@/lib/tags";
-import type { TagKey } from "@/lib/tag-catalog";
 
 export const metadata: Metadata = { title: "Acompanhamento" };
 
-const SIT_TAG: Record<Situacao, TagKey> = { ...ENROLLMENT_TAG, atrasada: "matricula.em_atraso" };
+const SIT_TONE: Record<Situacao, "silver" | "blue" | "ok" | "danger"> = { ...ENROLLMENT_TONE, atrasada: "danger" };
 
 type SP = Record<string, string | string[] | undefined>;
 
@@ -425,7 +423,7 @@ export default async function AcompanhamentoPage({ searchParams }: { searchParam
                   <div className="flex flex-wrap gap-1">
                     {r.trilhas.slice(0, 3).map((t) => (
                       <span key={t.id} title={`${t.name}: ${SITUACAO_LABEL[t.situacao]}, ${t.percent}%`}>
-                        <Badge tag={SIT_TAG[t.situacao]}>
+                        <Badge tone={SIT_TONE[t.situacao]}>
                           {t.name} · {t.percent}%
                         </Badge>
                       </span>
@@ -443,8 +441,8 @@ export default async function AcompanhamentoPage({ searchParams }: { searchParam
                 </td>
                 <td>
                   <div className="flex flex-wrap gap-1">
-                    {r.atrasadas > 0 && <Badge tag="alerta.atraso">{r.atrasadas} em atraso</Badge>}
-                    {r.paradas > 0 && <Badge tag="alerta.parada">{r.paradas} parada{r.paradas > 1 ? "s" : ""}</Badge>}
+                    {r.atrasadas > 0 && <Badge tone="danger">{r.atrasadas} em atraso</Badge>}
+                    {r.paradas > 0 && <Badge tone="orange">{r.paradas} parada{r.paradas > 1 ? "s" : ""}</Badge>}
                     {!r.atrasadas && !r.paradas && <span className="text-[12.5px] text-muted">Em dia</span>}
                   </div>
                 </td>
@@ -489,7 +487,7 @@ export default async function AcompanhamentoPage({ searchParams }: { searchParam
                     <span className="font-medium text-heading">{t.track.name}</span>
                     <p className="flex gap-1.5 text-[12px] text-muted">
                       {t.track.is_mandatory ? "Obrigatória" : "Opcional"}
-                      {t.track.status !== "publicado" && <Badge tag="publicacao.rascunho">Rascunho</Badge>}
+                      {t.track.status !== "publicado" && <Badge tone="orange">Rascunho</Badge>}
                     </p>
                   </td>
                   <td className="text-right tabular-nums">{t.matriculas}</td>
@@ -537,7 +535,7 @@ export default async function AcompanhamentoPage({ searchParams }: { searchParam
                 <td className="min-w-[160px] text-[13.5px]">
                   {a.track.name}
                   <p>
-                    <Badge tag={SIT_TAG[situacaoOf(a.enrollment, today)]}>{SITUACAO_LABEL[situacaoOf(a.enrollment, today)]}</Badge>
+                    <Badge tone={SIT_TONE[situacaoOf(a.enrollment, today)]}>{SITUACAO_LABEL[situacaoOf(a.enrollment, today)]}</Badge>
                   </p>
                 </td>
                 <td>
@@ -545,8 +543,8 @@ export default async function AcompanhamentoPage({ searchParams }: { searchParam
                 </td>
                 <td>
                   <div className="flex flex-wrap gap-1">
-                    {a.atrasada && <Badge tag="alerta.atraso">Prazo vencido</Badge>}
-                    {a.parada && <Badge tag="alerta.parada">Sem estudo há {a.diasSemAtividade} dias</Badge>}
+                    {a.atrasada && <Badge tone="danger">Prazo vencido</Badge>}
+                    {a.parada && <Badge tone="orange">Sem estudo há {a.diasSemAtividade} dias</Badge>}
                   </div>
                 </td>
                 <td className="whitespace-nowrap text-[13px]">{a.ultimaAtividade ? formatDate(a.ultimaAtividade) : "Nunca estudou"}</td>

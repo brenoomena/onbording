@@ -84,7 +84,7 @@ export default async function AreasPage() {
                     summary={
                       <div className="min-w-0">
                         <p className="flex flex-wrap items-center gap-2 font-semibold">
-                          {a.name} {!a.active && <Badge tag="estrutura.inativo">Inativa</Badge>}
+                          {a.name} {!a.active && <Badge tone="silver">Inativa</Badge>}
                         </p>
                         <p className="text-[12.5px] tabular-nums text-muted">
                           {positions} {positions === 1 ? "cargo" : "cargos"} · {people} {people === 1 ? "colaborador" : "colaboradores"}

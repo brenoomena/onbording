@@ -10,7 +10,6 @@ import { PUBLISH_LABEL, isOverdue, type EnrollmentStatus, type PublishStatus } f
 import { P } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { deleteTrack } from "./actions";
-import { PUBLISH_TAG } from "@/lib/tags";
 
 export const metadata: Metadata = { title: "Trilhas" };
 
@@ -106,8 +105,8 @@ export default async function TrilhasPage() {
                   <td>{total > 0 ? <ProgressBar value={avg} /> : <span className="text-[12.5px] text-muted">—</span>}</td>
                   <td>
                     <div className="flex flex-wrap gap-1">
-                      <Badge tag={PUBLISH_TAG[t.status]}>{PUBLISH_LABEL[t.status]}</Badge>
-                      {t.is_mandatory && <Badge tag="trilha.obrigatoria">Obrigatória</Badge>}
+                      <Badge tone={tone[t.status]}>{PUBLISH_LABEL[t.status]}</Badge>
+                      {t.is_mandatory && <Badge tone="brand">Obrigatória</Badge>}
                     </div>
                   </td>
                   <td>

@@ -126,7 +126,7 @@ export default async function ColaboradorPage({
                     <span className="text-[13px]">Nenhum: segue o perfil.</span>
                   ) : (
                     custom.map(([k, v]) => (
-                      <Badge key={k} tag={v ? "permissao.liberado" : "permissao.bloqueado"}>
+                      <Badge key={k} tone={v ? "ok" : "danger"}>
                         {v ? "Liberado" : "Bloqueado"}: {perms.permissions.find((p) => p.key === k)?.name ?? k}
                       </Badge>
                     ))

@@ -124,7 +124,7 @@ export const DEFAULT_THEME: Record<Mode, Record<TokenKey, string>> = {
 };
 
 /** Cores de estado (não personalizáveis, para manter o significado). */
-export const STATUS: Record<Mode, Record<string, string>> = {
+const STATUS: Record<Mode, Record<string, string>> = {
   light: {
     ok: "#15803d", "ok-soft": "#e7f5ec", warn: "#a16207", "warn-soft": "#fef3c7", danger: "#b91c1c", "danger-soft": "#fee2e2",
     // Etiquetas (situação, status, tipo de material, nível)
