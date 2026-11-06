@@ -9,6 +9,7 @@ import { DEFAULT_THEME, TOKEN_KEYS, sanitizeTheme, type ThemeConfig } from "@/li
 import type { ActionState } from "@/lib/action-state";
 import { diffLogin, sanitizeLogin } from "@/lib/login-theme";
 import { diffCertificate, sanitizeCertificate } from "@/lib/certificate";
+import { sanitizeTags } from "@/lib/tag-catalog";
 import { LOGO_SLOTS, defaultSize, fromWidth, sanitizeSizes, type LogoSlot } from "@/lib/logo-sizes";
 
 const LOGO_PATH = /^logo\/[0-9a-f-]{36}\.(png|webp|jpg)$/;
@@ -162,4 +163,24 @@ export async function saveCertificateTheme(_: ActionState, fd: FormData): Promis
   if (removed.length) await supabase.storage.from("branding").remove(removed);
   refreshBranding();
   return { ok: "Modelo do certificado salvo. Vale para todos os certificados, inclusive os já emitidos." };
+}
+
+/** Salva as cores das etiquetas (só as que mudam). Somente Administrador. */
+export async function saveTagTheme(_: ActionState, fd: FormData): Promise<ActionState> {
+  const denied = await denyUnlessAdmin();
+  if (denied) return denied;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(String(fd.get("tags") ?? "{}"));
+  } catch {
+    return { error: "Não foi possível ler as cores enviadas." };
+  }
+  const clean = sanitizeTags(parsed);
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("app_settings").update({ tag_theme: clean }).eq("id", 1).select("id");
+  if (error) return { error: friendlyError(error) };
+  if (!data?.length) return { error: "Somente administradores podem alterar as etiquetas." };
+  refreshBranding();
+  const n = Object.keys(clean).length;
+  return { ok: n ? `Cores das etiquetas salvas (${n} ${n === 1 ? "ajuste" : "ajustes"}).` : "Etiquetas de volta às cores padrão." };
 }

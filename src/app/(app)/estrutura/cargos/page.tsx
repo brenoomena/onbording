@@ -88,7 +88,7 @@ export default async function CargosPage() {
             return (
               <section key={area.id} className="grid gap-3">
                 <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.05em] text-muted">
-                  {area.name} {!area.active && <Badge tone="silver">Área inativa</Badge>}
+                  {area.name} {!area.active && <Badge tag="estrutura.inativo">Área inativa</Badge>}
                   <span className="font-mono text-[11px] font-normal">{list.length}</span>
                 </h2>
                 {list.length === 0 ? (
@@ -123,10 +123,10 @@ export default async function CargosPage() {
                           summary={
                             <div className="min-w-0 space-y-1.5">
                               <p className="flex flex-wrap items-center gap-2 font-semibold">
-                                {p.name} {!p.active && <Badge tone="silver">Inativo</Badge>}
+                                {p.name} {!p.active && <Badge tag="estrutura.inativo">Inativo</Badge>}
                               </p>
                               <div className="flex flex-wrap items-center gap-1.5">
-                                {lv.length ? lv.map((l) => <LevelBadge key={l.id} name={l.name} />) : <Badge tone="warn">Sem níveis</Badge>}
+                                {lv.length ? lv.map((l) => <LevelBadge key={l.id} name={l.name} />) : <Badge tag="estrutura.sem_niveis">Sem níveis</Badge>}
                                 <span className="text-[12.5px] tabular-nums text-muted">· {people} {people === 1 ? "colaborador" : "colaboradores"}</span>
                               </div>
                             </div>

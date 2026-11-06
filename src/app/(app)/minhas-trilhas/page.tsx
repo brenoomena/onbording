@@ -10,6 +10,7 @@ import { ENROLLMENT_LABEL, isOverdue } from "@/lib/learning";
 import { loadEnrollmentsOf } from "@/lib/my-learning";
 import { createClient } from "@/lib/supabase/server";
 import { enrollMe } from "../estudar/actions";
+import { enrollmentTag } from "@/lib/tags";
 
 export const metadata: Metadata = { title: "Minhas trilhas" };
 
@@ -39,8 +40,8 @@ export default async function MinhasTrilhasPage() {
         <div className="flex flex-wrap items-start justify-between gap-2">
           <h2 className="font-semibold">{e.track.name}</h2>
           <div className="flex gap-1.5">
-            {e.track.is_mandatory && <Badge tone="brand">Obrigatória</Badge>}
-            <Badge tone={overdue ? "danger" : ENROLLMENT_TONE[e.status]}>{overdue ? "Em atraso" : ENROLLMENT_LABEL[e.status]}</Badge>
+            {e.track.is_mandatory && <Badge tag="trilha.obrigatoria">Obrigatória</Badge>}
+            <Badge tag={enrollmentTag(e.status, overdue)}>{overdue ? "Em atraso" : ENROLLMENT_LABEL[e.status]}</Badge>
           </div>
         </div>
         {e.track.description && <p className="line-clamp-2 text-[13px] text-muted">{plainText(e.track.description)}</p>}
