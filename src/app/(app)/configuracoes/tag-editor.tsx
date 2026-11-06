@@ -201,7 +201,7 @@ export function TagEditor({
   );
 }
 
-function HexField({
+export function HexField({
   label,
   value,
   onChange,

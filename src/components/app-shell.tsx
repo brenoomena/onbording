@@ -89,7 +89,7 @@ export function AppShell({ groups, user, logo, compact: initialCompact, collapse
           )}
         </div>
 
-        <nav aria-label="Menu principal" className="flex-1 overflow-y-auto px-3 pb-4">
+        <nav aria-label="Menu principal" className="sidebar-scroll flex-1 overflow-y-auto px-3 pb-4">
           {groups.map((g, gi) => {
             const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
             // Recolhido, mas com a página atual dentro: mostra o item ativo mesmo assim.

@@ -1,4 +1,4 @@
-import { AppWindow, Award, ImageIcon, LogIn, Palette, Settings, Tags, type LucideIcon } from "lucide-react";
+import { AppWindow, Award, ImageIcon, LogIn, Palette, PanelLeft, Settings, Tags, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Card, PageHeader, cx } from "@/components/ui";
@@ -20,15 +20,18 @@ import { resolveTheme, sanitizeTheme } from "@/lib/theme-tokens";
 import { FaviconEditor } from "./favicon-editor";
 import { LoginEditor } from "./login-editor";
 import { LogoEditor } from "./logo-editor";
+import { ScrollbarEditor } from "./scrollbar-editor";
 import { ThemeEditor } from "./theme-editor";
+import { sanitizeScrollbar } from "@/lib/scrollbar";
 
 export const metadata: Metadata = { title: "Configurações" };
 
-type Secao = "marca" | "cores" | "etiquetas" | "login" | "certificado";
+type Secao = "marca" | "cores" | "menu" | "etiquetas" | "login" | "certificado";
 
 const SECOES: { key: Secao; label: string; hint: string; icon: LucideIcon }[] = [
   { key: "marca", label: "Marca", hint: "Logomarca, símbolo e favicon", icon: ImageIcon },
   { key: "cores", label: "Cores do sistema", hint: "Modos claro e escuro", icon: Palette },
+  { key: "menu", label: "Menu lateral", hint: "Barra de rolagem", icon: PanelLeft },
   { key: "etiquetas", label: "Etiquetas", hint: "Cores de cada etiqueta", icon: Tags },
   { key: "login", label: "Página de login", hint: "Fundo, efeito, textos e botão", icon: LogIn },
   { key: "certificado", label: "Certificado", hint: "Modelo, assinatura e validação", icon: Award },
@@ -42,7 +45,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
   const supabase = await createClient();
   const { data } = await supabase
     .from("app_settings")
-    .select("theme, logo_path, logo_dark_path, symbol_path, symbol_dark_path, favicon_path, logo_sizes, login_theme, certificate_theme, tag_theme, updated_at")
+    .select("theme, logo_path, logo_dark_path, symbol_path, symbol_dark_path, favicon_path, logo_sizes, login_theme, certificate_theme, tag_theme, menu_theme, updated_at")
     .eq("id", 1)
     .maybeSingle();
   const theme = resolveTheme(sanitizeTheme(data?.theme));
@@ -62,6 +65,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
     login,
     certificate,
     tags: sanitizeTags(data?.tag_theme),
+    scrollbar: sanitizeScrollbar((data?.menu_theme as Record<string, unknown> | null)?.scrollbar),
   };
   const loginLogo = logoFor(brand, login.to);
 
@@ -130,6 +134,21 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
           {secao === "cores" && (
             <Card title="Cores do sistema" description="Escolha as cores de cada elemento para o modo claro e para o modo escuro. A prévia mostra o resultado antes de salvar." icon={Palette}>
               <ThemeEditor initial={theme} />
+            </Card>
+          )}
+          {secao === "menu" && (
+            <Card
+              title="Barra de rolagem do menu lateral"
+              description="Aparece quando o menu tem mais itens do que cabem na tela. Escolha largura, formato, quando ela aparece e as cores nos modos claro e escuro. A prévia mostra o resultado antes de salvar."
+              icon={PanelLeft}
+            >
+              <ScrollbarEditor
+                initial={brand.scrollbar}
+                sidebar={{
+                  light: { bg: theme.light["sidebar-bg"], text: theme.light["sidebar-text"], activeBg: theme.light["sidebar-active-bg"], activeText: theme.light["sidebar-active-text"] },
+                  dark: { bg: theme.dark["sidebar-bg"], text: theme.dark["sidebar-text"], activeBg: theme.dark["sidebar-active-bg"], activeText: theme.dark["sidebar-active-text"] },
+                }}
+              />
             </Card>
           )}
           {secao === "etiquetas" && (

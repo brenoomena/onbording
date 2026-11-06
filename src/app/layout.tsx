@@ -5,6 +5,7 @@ import "@fontsource-variable/inter";
 import { brandingUrl, getBranding } from "@/lib/branding";
 import { tagsCss } from "@/lib/tag-catalog";
 import { themeCss } from "@/lib/theme-tokens";
+import { scrollbarCss } from "@/lib/scrollbar";
 import "./globals.css";
 
 /** Favicon: o enviado em Configurações; sem ele, o ícone padrão. */
@@ -37,6 +38,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* Cores da identidade visual (padrão + personalização do Administrador). Valores validados como #RRGGBB. */}
         <style id="theme-tokens" dangerouslySetInnerHTML={{ __html: themeCss(branding.theme) }} />
         {/* Cores das etiquetas ajustadas em Configurações › Etiquetas (valores já validados). */}
+        {/* Barra de rolagem do menu lateral (Configurações › Menu lateral; valores validados). */}
+        <style id="sidebar-scrollbar" dangerouslySetInnerHTML={{ __html: scrollbarCss(branding.scrollbar) }} />
         <style id="tag-colors" dangerouslySetInnerHTML={{ __html: tagsCss(branding.tags) }} />
       </head>
       <body className="min-h-dvh antialiased">{children}</body>
