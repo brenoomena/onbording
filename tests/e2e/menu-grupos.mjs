@@ -60,6 +60,27 @@ await step("ranking sem administrador; admin sem posição", async () => {
   assert.equal(await page.getByText("(você)").count(), 0);
 });
 
+await step("menu recolhido abre ao passar o mouse, por cima da página", async () => {
+  await page.goto(`${BASE}/painel`);
+  await page.getByRole("button", { name: "Recolher menu" }).click();
+  const aside = page.locator("aside").first();
+  const width = () => aside.evaluate((el) => el.getBoundingClientRect().width);
+  await page.waitForTimeout(400);
+  assert.equal(Math.round(await width()), 76);
+  const mainLeft = () => page.locator("main").evaluate((el) => Math.round(el.getBoundingClientRect().left));
+  const before = await mainLeft();
+  await aside.hover({ position: { x: 30, y: 300 } });
+  await page.waitForTimeout(600);
+  assert.equal(Math.round(await width()), 252);
+  await nav.getByText("Minhas trilhas").waitFor();
+  assert.equal(await mainLeft(), before, "o conteúdo não deve se mover");
+  await page.screenshot({ path: `${SHOTS}/03-hover.png` });
+  await page.mouse.move(900, 400);
+  await page.waitForTimeout(700);
+  assert.equal(Math.round(await width()), 76);
+  await page.getByRole("button", { name: "Expandir menu" }).click();
+});
+
 console.log(`\n${results.filter((r) => r === "ok").length}/${results.length} passos ok`);
 await browser.close();
 process.exit(0);

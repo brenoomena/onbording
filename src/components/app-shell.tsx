@@ -36,6 +36,19 @@ export function AppShell({ groups, user, logo, compact: initialCompact, collapse
   const pathname = usePathname();
   const [compact, setCompact] = useState(initialCompact);
   const [collapsed, setCollapsed] = useState<string[]>(initialCollapsed);
+  // Menu recolhido: ao passar o mouse ele abre por cima do conteúdo (sem empurrar a página).
+  const [peek, setPeek] = useState(false);
+  const peekTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startPeek = () => {
+    if (!compact) return;
+    if (peekTimer.current) clearTimeout(peekTimer.current);
+    peekTimer.current = setTimeout(() => setPeek(true), 120);
+  };
+  const endPeek = () => {
+    if (peekTimer.current) clearTimeout(peekTimer.current);
+    peekTimer.current = setTimeout(() => setPeek(false), 200);
+  };
+  useEffect(() => setPeek(false), [pathname, compact]);
   const groupId = useId();
 
   function toggleGroup(label: string) {
@@ -63,7 +76,7 @@ export function AppShell({ groups, user, logo, compact: initialCompact, collapse
   }
 
   const sidebar = (mobile: boolean) => {
-    const mini = compact && !mobile;
+    const mini = compact && !mobile && !peek;
     return (
       <div className="flex h-full flex-col">
         <div className={cx("relative flex items-start justify-center gap-2 px-4 pb-4 pt-5", mini && "px-2")}>
@@ -133,9 +146,16 @@ export function AppShell({ groups, user, logo, compact: initialCompact, collapse
     <div className="min-h-dvh">
       {/* Menu lateral fixo (telas largas) */}
       <aside
+        onMouseEnter={startPeek}
+        onMouseLeave={endPeek}
+        onFocus={startPeek}
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) endPeek();
+        }}
         className={cx(
-          "fixed inset-y-0 left-0 z-30 hidden bg-sidebar-bg transition-[width] duration-200 lg:block",
-          compact ? "w-[76px]" : "w-[252px]",
+          "fixed inset-y-0 left-0 z-30 hidden bg-sidebar-bg transition-[width,box-shadow] duration-200 lg:block",
+          compact && !peek ? "w-[76px]" : "w-[252px]",
+          compact && peek && "z-40 shadow-[8px_0_32px_rgba(0,0,0,0.35)]",
         )}
       >
         {sidebar(false)}
