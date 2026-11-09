@@ -28,6 +28,11 @@ const SAMPLES: { key: string; label: string; row: EmailRow }[] = [
     row: { kind: "prazo_vencido", subject: "Prazo vencido: Onboarding Comercial", data: { name: "Vera", track: "Onboarding Comercial", due: "30/11/2026", progress: 60, mandatory: true, link: "/minhas-trilhas" } },
   },
   {
+    key: "equipe",
+    label: "Atraso na equipe",
+    row: { kind: "equipe_atraso", subject: "Atraso na equipe: Vera Vendedora", data: { name: "Sérgio", person: "Vera Vendedora", track: "Onboarding Comercial", due: "30/11/2026", progress: 60, mandatory: true, link: "/colaboradores" } },
+  },
+  {
     key: "comunicado",
     label: "Comunicado",
     row: { kind: "comunicado", subject: "Mudança no horário do suporte", data: { name: "Vera", title: "Mudança no horário do suporte", body: "A partir de segunda o suporte atende das 8h às 18h.", link: "/comunicados" } },

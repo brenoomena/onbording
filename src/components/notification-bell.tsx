@@ -1,6 +1,6 @@
 "use client";
 
-import { Award, Bell, BellRing, CalendarClock, CalendarX2, CheckCheck, ClipboardCheck, ClipboardPen, Medal, Megaphone, Route, type LucideIcon } from "lucide-react";
+import { Award, Bell, BellRing, CalendarClock, CalendarX2, CheckCheck, ClipboardCheck, ClipboardPen, Medal, Megaphone, Route, UserX, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
@@ -17,6 +17,7 @@ export const KIND_ICON: Record<NotificationKind, LucideIcon> = {
   certificado: Award,
   comunicado: Megaphone,
   medalha: Medal,
+  equipe_atraso: UserX,
 };
 
 export const KIND_CLASS: Record<NotificationKind, string> = {
@@ -28,6 +29,7 @@ export const KIND_CLASS: Record<NotificationKind, string> = {
   certificado: "bg-ok-soft text-ok",
   comunicado: "bg-tag-orange-soft text-tag-orange",
   medalha: "bg-tag-gold-soft text-tag-gold",
+  equipe_atraso: "bg-danger-soft text-danger",
 };
 
 /** Sininho do topo: avisos recentes, contador de não lidos e atalho para todos. */

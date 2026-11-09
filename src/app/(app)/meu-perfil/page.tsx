@@ -20,14 +20,19 @@ export default async function MeuPerfilPage() {
   const p = data as unknown as ProfileRow;
   const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
   const [{ data: prefs }, { count: team }] = await Promise.all([
-    supabase.from("email_preferences").select("lembretes, comunicados, resumo").eq("profile_id", me.userId).maybeSingle(),
+    supabase.from("email_preferences").select("lembretes, comunicados, resumo, equipe").eq("profile_id", me.userId).maybeSingle(),
     supabase.from("profiles").select("id", { count: "exact", head: true }).eq("supervisor_id", me.userId).neq("status", "inativo"),
   ]);
-  const pref = { lembretes: prefs?.lembretes ?? true, comunicados: prefs?.comunicados ?? true, resumo: prefs?.resumo ?? true };
+  const pref = { lembretes: prefs?.lembretes ?? true, comunicados: prefs?.comunicados ?? true, resumo: prefs?.resumo ?? true, equipe: prefs?.equipe ?? true };
   const options: { name: keyof typeof pref; label: string; hint: string }[] = [
     { name: "lembretes", label: "Lembretes de prazo", hint: "Antes do prazo, no dia e quando atrasar (trilhas não obrigatórias)." },
     { name: "comunicados", label: "Comunicados importantes", hint: "Uma cópia por e-mail dos comunicados marcados como importantes." },
-    ...(team ? [{ name: "resumo" as const, label: "Resumo semanal da equipe", hint: "Toda segunda-feira: atrasos, andamento e conclusões da sua equipe." }] : []),
+    ...(team
+      ? [
+          { name: "equipe" as const, label: "Atraso na equipe", hint: "Assim que a trilha de alguém da sua equipe atrasa." },
+          { name: "resumo" as const, label: "Resumo semanal da equipe", hint: "Toda segunda-feira: atrasos, andamento e conclusões da sua equipe." },
+        ]
+      : []),
   ];
 
   return (
@@ -71,7 +76,12 @@ export default async function MeuPerfilPage() {
                   </label>
                 ))}
               </div>
-              {!team && <input type="hidden" name="resumo" value={pref.resumo ? "on" : ""} />}
+              {!team && (
+                <>
+                  <input type="hidden" name="resumo" value={pref.resumo ? "on" : ""} />
+                  <input type="hidden" name="equipe" value={pref.equipe ? "on" : ""} />
+                </>
+              )}
               <div><SubmitButton>Salvar preferências</SubmitButton></div>
             </ActionForm>
           </Card>

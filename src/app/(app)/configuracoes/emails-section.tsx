@@ -18,6 +18,7 @@ const KIND_LABEL: Record<string, string> = {
   prazo_vencido: "Prazo vencido",
   comunicado: "Comunicado",
   resumo_semanal: "Resumo semanal",
+  equipe_atraso: "Atraso na equipe",
   teste: "Teste",
 };
 const STATUS_LABEL: Record<string, string> = { pendente: "Na fila", enviando: "Enviando", enviado: "Enviado", erro: "Erro", ignorado: "Não enviado" };

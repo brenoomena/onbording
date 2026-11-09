@@ -70,6 +70,42 @@ run("E-mails · fila, lembretes e preferências", () => {
     expect((await outbox(carlos)).filter((e) => e.kind === "prazo_vencido")).toHaveLength(0);
   });
 
+  it("atraso na equipe: supervisor recebe aviso e e-mail, uma vez por prazo", async () => {
+    // Vera (equipe do Sérgio) tem a trilha obrigatória vencida em 12/11.
+    const supInbox = async () => (await asSystem(db.pool, (q) => q("select kind, title, link from notifications where profile_id = $1 and kind = 'equipe_atraso'", [sup]))).rows;
+    expect((await supInbox()).map((n) => n.title)).toEqual(expect.arrayContaining(["Atraso na equipe: Vera Vendedora"]));
+    const before = (await supInbox()).length;
+    expect((await jobs("2026-11-14")).equipe).toBeGreaterThanOrEqual(1);
+    expect((await supInbox()).length).toBe(before);
+    const mails = (await outbox(sup)).filter((e) => e.kind === "equipe_atraso");
+    expect(mails.map((e) => e.subject)).toEqual(expect.arrayContaining(["Atraso na equipe: Vera Vendedora"]));
+    expect(new Set(mails.map((e) => e.dedupe_key)).size).toBe(mails.length);
+    expect(mails[0].data.link).toBe(`/colaboradores/${vera}`);
+    // Vera desligou lembretes, mas o supervisor recebe do mesmo jeito; Vera não recebe o aviso da equipe.
+    expect((await outbox(vera)).some((e) => e.kind === "equipe_atraso")).toBe(false);
+  });
+
+  it("atraso na equipe aparece no sininho do supervisor ao abrir o sistema", async () => {
+    const t = (await asSystem(db.pool, (q) => q("insert into tracks (name, status) values ('Atrasada ontem', 'publicado') returning id"))).rows[0].id;
+    await asSystem(db.pool, (q) => q("insert into enrollments (profile_id, track_id, due_date) values ($1, $2, current_date - 1)", [carlos, t]));
+    await asUser(db.pool, sup, (q) => q("select public.sync_my_notifications()"));
+    const n = (await asUser(db.pool, sup, (q) => q("select title, body from notifications where kind = 'equipe_atraso' and title = 'Atraso na equipe: Carlos Financeiro'"))).rows;
+    expect(n).toHaveLength(1);
+    expect(n[0].body).toContain('"Atrasada ontem" venceu em');
+    // Quem não é supervisor de Carlos não recebe.
+    await asUser(db.pool, vera, (q) => q("select public.sync_my_notifications()"));
+    expect((await asUser(db.pool, vera, (q) => q("select count(*)::int n from notifications where kind = 'equipe_atraso'"))).rows[0].n).toBe(0);
+  });
+
+  it("supervisor pode desligar só o e-mail do atraso na equipe", async () => {
+    await asUser(db.pool, sup, (q) => q("insert into email_preferences (profile_id, equipe) values ($1, false) on conflict (profile_id) do update set equipe = false", [sup]));
+    const t = (await asSystem(db.pool, (q) => q("insert into tracks (name, status) values ('Outra atrasada', 'publicado') returning id"))).rows[0].id;
+    await asSystem(db.pool, (q) => q("insert into enrollments (profile_id, track_id, due_date) values ($1, $2, '2026-11-13')", [carlos, t]));
+    await jobs("2026-11-15");
+    expect((await outbox(sup)).some((e) => e.subject === "Atraso na equipe: Carlos Financeiro" && e.data.track === "Outra atrasada")).toBe(false);
+    expect((await asSystem(db.pool, (q) => q("select count(*)::int n from notifications where profile_id = $1 and body like '\"Outra atrasada\"%'", [sup]))).rows[0].n).toBe(1);
+  });
+
   it("preferência: cada um só mexe na própria", async () => {
     await expect(asUser(db.pool, carlos, (q) => q("insert into email_preferences (profile_id, resumo) values ($1, false)", [vera]))).rejects.toThrow();
     const r = await asUser(db.pool, carlos, (q) => q("update email_preferences set lembretes = true where profile_id = $1 returning 1", [vera]));
@@ -86,7 +122,7 @@ run("E-mails · fila, lembretes e preferências", () => {
     expect(resumo.data.late).toBeGreaterThanOrEqual(1);
     expect(resumo.data.rows.map((x: { person: string }) => x.person)).toEqual(expect.arrayContaining(["Vera Vendedora", "Carlos Financeiro"]));
     expect((await outbox(vera)).some((e) => e.kind === "resumo_semanal")).toBe(false);
-    await asUser(db.pool, sup, (q) => q("insert into email_preferences (profile_id, resumo) values ($1, false)", [sup]));
+    await asUser(db.pool, sup, (q) => q("insert into email_preferences (profile_id, resumo) values ($1, false) on conflict (profile_id) do update set resumo = false", [sup]));
     expect((await jobs("2026-11-23")).resumo).toBe(0);
   });
 

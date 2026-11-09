@@ -120,3 +120,12 @@ describe("visual dos e-mails", () => {
     expect(inkOn("#ffffff")).toBe("#0f172a");
   });
 });
+
+describe("atraso na equipe", () => {
+  it("conta ao supervisor quem atrasou e leva ao progresso da pessoa", () => {
+    const m = renderEmail({ kind: "equipe_atraso", subject: "Atraso na equipe: Vera", data: { name: "Sérgio", person: "Vera Vendedora", track: "Vendas", due: "12/11/2026", progress: 40, mandatory: true, link: "/colaboradores/abc" } }, ctx);
+    expect(m.text).toContain("A trilha Vendas de Vera Vendedora venceu em 12/11/2026");
+    expect(m.html).toContain('href="https://onbording.exemplo.com/colaboradores/abc"');
+    expect(m.html).toContain("obrigatória");
+  });
+});

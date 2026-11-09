@@ -50,6 +50,7 @@ export async function saveEmailPreferences(_: ActionState, fd: FormData): Promis
       lembretes: fd.get("lembretes") === "on",
       comunicados: fd.get("comunicados") === "on",
       resumo: fd.get("resumo") === "on",
+      equipe: fd.get("equipe") === "on",
       updated_at: new Date().toISOString(),
     },
     { onConflict: "profile_id" },

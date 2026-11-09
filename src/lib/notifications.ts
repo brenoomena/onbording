@@ -7,7 +7,8 @@ export type NotificationKind =
   | "avaliacao_corrigida"
   | "certificado"
   | "comunicado"
-  | "medalha";
+  | "medalha"
+  | "equipe_atraso";
 
 export interface NotificationItem {
   id: string;
@@ -28,6 +29,7 @@ export const NOTIFICATION_LABEL: Record<NotificationKind, string> = {
   certificado: "Certificado",
   comunicado: "Comunicado",
   medalha: "Medalha",
+  equipe_atraso: "Atraso na equipe",
 };
 
 export const NOTIFICATION_TONE: Record<NotificationKind, "blue" | "warn" | "danger" | "violet" | "ok" | "teal" | "orange"> = {
@@ -39,6 +41,7 @@ export const NOTIFICATION_TONE: Record<NotificationKind, "blue" | "warn" | "dang
   certificado: "ok",
   comunicado: "orange",
   medalha: "warn",
+  equipe_atraso: "danger",
 };
 
 /** "agora", "há 5 min", "há 3 h", "ontem", "há 4 dias", depois a data. */

@@ -187,6 +187,21 @@ export function renderEmail(row: EmailRow, ctx: EmailContext): RenderedEmail {
       };
       break;
     }
+    case "equipe_atraso": {
+      const person = str(d.person);
+      block = {
+        heading: `Atraso na equipe: ${person}`,
+        paragraphs: [
+          hello,
+          `A trilha <strong>${esc(str(d.track))}</strong> de <strong>${esc(person)}</strong> venceu em ${esc(str(d.due))} e ainda não foi concluída (progresso: <strong>${num(d.progress)}%</strong>).`,
+          d.mandatory === true ? "É uma trilha obrigatória. Vale conversar com a pessoa ou ajustar o prazo." : "Vale conversar com a pessoa ou ajustar o prazo.",
+        ],
+        text: [helloText, `A trilha ${str(d.track)} de ${person} venceu em ${str(d.due)} e ainda não foi concluída (progresso: ${num(d.progress)}%).`],
+        cta: { label: "Ver o progresso", href: link(ctx, d.link) },
+        footer: prefsFooter(ctx),
+      };
+      break;
+    }
     case "comunicado": {
       block = {
         heading: str(d.title) || row.subject,
