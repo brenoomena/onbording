@@ -8,6 +8,7 @@ export const EMAIL_KINDS = [
   { key: "prazo", label: "Prazo chegando", hint: "Lembrete antes do prazo e no dia, enquanto a trilha não estiver concluída.", optional: true },
   { key: "atraso", label: "Prazo vencido", hint: "Um e-mail no dia seguinte ao prazo (atrasos de até 7 dias).", optional: true },
   { key: "equipe", label: "Atraso na equipe (supervisor)", hint: "Assim que a trilha de alguém da equipe atrasa, o supervisor recebe um aviso (o do sininho sai sempre).", optional: true },
+  { key: "tarefas", label: "Tarefas de integração do dia", hint: "Um resumo para cada responsável quando alguma tarefa do checklist vence no dia ou acabou de atrasar.", optional: true },
   { key: "comunicado", label: "Comunicado importante", hint: "Comunicados marcados como importantes, ao publicar.", optional: true },
   { key: "resumo", label: "Resumo semanal ao gestor", hint: "Toda segunda-feira, para quem tem equipe: atrasos, andamento e conclusões da semana.", optional: true },
 ] as const;
@@ -23,7 +24,7 @@ export interface EmailSettings {
 }
 
 export const DEFAULT_EMAIL_SETTINGS: EmailSettings = {
-  kinds: { matricula: true, prazo: true, atraso: true, equipe: true, comunicado: true, resumo: true },
+  kinds: { matricula: true, prazo: true, atraso: true, equipe: true, tarefas: true, comunicado: true, resumo: true },
   reminderDays: [3, 0],
   get theme() {
     return DEFAULT_EMAIL_THEME;

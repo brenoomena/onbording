@@ -22,6 +22,7 @@ export const P = {
   avaliacoesCorrigir: "avaliacoes.corrigir",
   auditoriaVer: "auditoria.ver",
   comunicadosGerenciar: "comunicados.gerenciar",
+  checklistsGerenciar: "checklists.gerenciar",
 } as const;
 
 export type PermissionKey = (typeof P)[keyof typeof P];
@@ -31,7 +32,7 @@ export const ESTRUTURA_ANY: PermissionKey[] = [P.estruturaCriar, P.estruturaEdit
 /** Nome do ícone (ver components/icons.tsx). */
 export type IconName =
   | "painel" | "trilha" | "materiais" | "trilhas" | "conteudos" | "colaboradores" | "areas" | "cargos"
-  | "niveis" | "perfis" | "configuracoes" | "auditoria" | "meu-perfil" | "acompanhamento" | "certificado" | "comunicados" | "conquistas";
+  | "niveis" | "perfis" | "configuracoes" | "auditoria" | "meu-perfil" | "acompanhamento" | "certificado" | "comunicados" | "conquistas" | "tarefas" | "checklists";
 
 export interface MenuItem {
   href: string;
@@ -57,6 +58,7 @@ export const MENU: MenuGroup[] = [
     label: "Aprendizagem",
     items: [
       { href: "/minhas-trilhas", label: "Minhas trilhas", icon: "trilha", anyOf: [] },
+      { href: "/tarefas", label: "Minhas tarefas", icon: "tarefas", anyOf: [] },
       { href: "/materiais", label: "Materiais", icon: "materiais", anyOf: [] },
       { href: "/conquistas", label: "Conquistas", icon: "conquistas", anyOf: [] },
       { href: "/meus-certificados", label: "Certificados", icon: "certificado", anyOf: [] },
@@ -68,6 +70,7 @@ export const MENU: MenuGroup[] = [
     items: [
       { href: "/trilhas", label: "Trilhas", icon: "trilhas", anyOf: [P.trilhasVer] },
       { href: "/conteudos", label: "Conteúdos", icon: "conteudos", anyOf: [P.conteudosVer] },
+      { href: "/checklists", label: "Checklists", icon: "checklists", anyOf: [P.checklistsGerenciar] },
       { href: "/colaboradores", label: "Colaboradores", icon: "colaboradores", anyOf: [P.colaboradoresVer, P.equipeVer] },
       { href: "/acompanhamento", label: "Acompanhamento", icon: "acompanhamento", anyOf: [P.progressoVer, P.equipeVer, P.avaliacoesCorrigir] },
     ],

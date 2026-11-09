@@ -33,6 +33,22 @@ const SAMPLES: { key: string; label: string; row: EmailRow }[] = [
     row: { kind: "equipe_atraso", subject: "Atraso na equipe: Vera Vendedora", data: { name: "Sérgio", person: "Vera Vendedora", track: "Onboarding Comercial", due: "30/11/2026", progress: 60, mandatory: true, link: "/colaboradores" } },
   },
   {
+    key: "tarefas",
+    label: "Tarefas do dia",
+    row: {
+      kind: "tarefas_dia",
+      subject: "Tarefas de integração para hoje",
+      data: {
+        name: "Tiago",
+        link: "/tarefas",
+        rows: [
+          { title: "Criar e-mail e acessos", person: "Vera Vendedora", own: false, due: "27/11/2026", late: true },
+          { title: "Preparar estação de trabalho", person: "Caio Lima", own: false, due: "30/11/2026", late: false },
+        ],
+      },
+    },
+  },
+  {
     key: "comunicado",
     label: "Comunicado",
     row: { kind: "comunicado", subject: "Mudança no horário do suporte", data: { name: "Vera", title: "Mudança no horário do suporte", body: "A partir de segunda o suporte atende das 8h às 18h.", link: "/comunicados" } },

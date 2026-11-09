@@ -1,4 +1,5 @@
 import { GamificationSummary } from "@/components/gamification-summary";
+import { TasksSummary } from "../tarefas/tasks-summary";
 import { ImportantAnnouncements } from "@/components/important-announcements";
 import { AlarmClock, AlertTriangle, BookOpenCheck, CheckCircle2, CircleDashed, GraduationCap, IdCard, LayoutDashboard, Rocket, UserCheck, UserMinus, Users } from "lucide-react";
 import type { Metadata } from "next";
@@ -62,6 +63,7 @@ export default async function PainelPage() {
       <>
         <PageHeader eyebrow="Meu painel" icon={LayoutDashboard} title={`Olá, ${firstName}`} description="Suas trilhas e os dados do seu cadastro na plataforma." />
         <ImportantAnnouncements userId={me.userId} />
+        <TasksSummary me={me} />
         <GamificationSummary userId={me.userId} />
         {myEnrollments.length > 0 && (
           <div className="grid gap-4 sm:grid-cols-3">
@@ -143,6 +145,7 @@ export default async function PainelPage() {
         description={scope ? "Números da sua equipe direta." : "Números de todos os colaboradores cadastrados."}
       />
       <ImportantAnnouncements userId={me.userId} />
+        <TasksSummary me={me} />
       <GamificationSummary userId={me.userId} />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Colaboradores" value={total.count ?? 0} hint="Cadastrados no seu alcance" icon={Users} href="/colaboradores" />

@@ -1,4 +1,5 @@
 import { IdCard, Mail, Pencil, ShieldCheck, UserCheck, UserX } from "lucide-react";
+import { ChecklistCard } from "../../tarefas/checklist-card";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -139,6 +140,7 @@ export default async function ColaboradorPage({
       </div>
       {isSelf && <Alert tone="brand">Este é o seu cadastro. Por segurança, você não pode alterar o próprio perfil de acesso, suas permissões nem se desativar.</Alert>}
 
+      <ChecklistCard profileId={person.id} personName={person.full_name} me={me} />
       <LearningCard profileId={person.id} canManageTracks={can(me, P.trilhasMatricular)} />
       <Link href="/colaboradores" className="hide-in-modal text-[13px] font-medium text-accent hover:underline">← Voltar para a lista</Link>
     </>

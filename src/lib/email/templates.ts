@@ -202,6 +202,31 @@ export function renderEmail(row: EmailRow, ctx: EmailContext): RenderedEmail {
       };
       break;
     }
+    case "tarefas_dia": {
+      const rows = (Array.isArray(d.rows) ? d.rows : []) as Record<string, unknown>[];
+      const late = rows.filter((r) => r.late === true).length;
+      const html =
+        `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 4px;border-collapse:collapse">` +
+        rows
+          .map(
+            (r) =>
+              `<tr><td style="padding:8px 0;border-bottom:1px solid #eef2f6;font-size:14px"><strong>${esc(str(r.title))}</strong>` +
+              (r.own === true ? "" : `<br><span style="font-size:12.5px;opacity:.75">${esc(str(r.person))}</span>`) +
+              `</td><td align="right" style="padding:8px 0 8px 12px;border-bottom:1px solid #eef2f6;font-size:12.5px;white-space:nowrap;font-weight:600;color:${r.late === true ? "#b91c1c" : "#b45309"}">${r.late === true ? `Atrasada (${esc(str(r.due))})` : "Vence hoje"}</td></tr>`,
+          )
+          .join("") +
+        `</table>`;
+      const text = rows.map((r) => `- ${str(r.title)}${r.own === true ? "" : ` · ${str(r.person)}`} · ${r.late === true ? `atrasada (${str(r.due)})` : "vence hoje"}`).join("\n");
+      block = {
+        heading: "Tarefas de integração para hoje",
+        paragraphs: [hello, late ? `Você tem <strong>${rows.length}</strong> tarefa(s) do checklist de integração para resolver, <strong style="color:#b91c1c">${late} atrasada(s)</strong>.` : `Você tem <strong>${rows.length}</strong> tarefa(s) do checklist de integração que vencem hoje.`],
+        text: [helloText, `Você tem ${rows.length} tarefa(s) do checklist de integração${late ? `, ${late} atrasada(s)` : " que vencem hoje"}.`],
+        table: { html, text },
+        cta: { label: "Abrir minhas tarefas", href: link(ctx, d.link) },
+        footer: prefsFooter(ctx),
+      };
+      break;
+    }
     case "comunicado": {
       block = {
         heading: str(d.title) || row.subject,

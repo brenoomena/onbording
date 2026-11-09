@@ -177,6 +177,18 @@ export const TAG_GROUPS = [
     },
   },
   {
+    key: "tarefa",
+    label: "Tarefas do checklist",
+    where: "Minhas tarefas, Checklists e cadastro do colaborador",
+    tags: {
+      "tarefa.concluida": { label: "Concluída", tone: "ok", icon: "check" },
+      "tarefa.atrasada": { label: "Atrasada", tone: "danger", icon: "x" },
+      "tarefa.hoje": { label: "Vence hoje", tone: "warn", icon: "clock" },
+      "tarefa.proxima": { label: "No prazo", tone: "blue" },
+      "tarefa.sem_prazo": { label: "Sem prazo", tone: "silver" },
+    },
+  },
+  {
     key: "email",
     label: "Envio de e-mails",
     where: "Configurações › E-mails",

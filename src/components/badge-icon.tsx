@@ -1,4 +1,4 @@
-import { AlarmClockCheck, Crown, Flag, Flame, Footprints, Library, Medal, Star, Target, type LucideIcon } from "lucide-react";
+import { AlarmClockCheck, Crown, Flag, Flame, Footprints, Handshake, Library, Medal, Star, Target, type LucideIcon } from "lucide-react";
 import { cx } from "@/components/ui";
 import { BADGE_TONE } from "@/lib/gamification";
 
@@ -11,6 +11,7 @@ const ICONS: Record<string, LucideIcon> = {
   target: Target,
   alarm: AlarmClockCheck,
   flame: Flame,
+  handshake: Handshake,
 };
 
 /** Medalha redonda; apagada quando ainda não foi conquistada. */

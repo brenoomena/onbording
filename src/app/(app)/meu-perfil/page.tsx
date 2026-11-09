@@ -20,12 +20,13 @@ export default async function MeuPerfilPage() {
   const p = data as unknown as ProfileRow;
   const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
   const [{ data: prefs }, { count: team }] = await Promise.all([
-    supabase.from("email_preferences").select("lembretes, comunicados, resumo, equipe").eq("profile_id", me.userId).maybeSingle(),
+    supabase.from("email_preferences").select("lembretes, comunicados, resumo, equipe, tarefas").eq("profile_id", me.userId).maybeSingle(),
     supabase.from("profiles").select("id", { count: "exact", head: true }).eq("supervisor_id", me.userId).neq("status", "inativo"),
   ]);
-  const pref = { lembretes: prefs?.lembretes ?? true, comunicados: prefs?.comunicados ?? true, resumo: prefs?.resumo ?? true, equipe: prefs?.equipe ?? true };
+  const pref = { lembretes: prefs?.lembretes ?? true, comunicados: prefs?.comunicados ?? true, resumo: prefs?.resumo ?? true, equipe: prefs?.equipe ?? true, tarefas: prefs?.tarefas ?? true };
   const options: { name: keyof typeof pref; label: string; hint: string }[] = [
     { name: "lembretes", label: "Lembretes de prazo", hint: "Antes do prazo, no dia e quando atrasar (trilhas não obrigatórias)." },
+    { name: "tarefas", label: "Tarefas de integração do dia", hint: "Resumo quando uma tarefa do checklist que está com você vence ou atrasa." },
     { name: "comunicados", label: "Comunicados importantes", hint: "Uma cópia por e-mail dos comunicados marcados como importantes." },
     ...(team
       ? [

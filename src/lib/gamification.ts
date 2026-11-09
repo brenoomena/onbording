@@ -36,6 +36,8 @@ export const REASON_LABEL: Record<string, string> = {
   avaliacao_primeira: "Aprovado de primeira",
   trilha: "Trilha concluída",
   trilha_no_prazo: "Trilha no prazo",
+  tarefa: "Tarefa de integração",
+  checklist: "Checklist concluído",
 };
 
 /** Tabela de pontos (mesma regra do banco), para mostrar na tela. */
@@ -46,6 +48,8 @@ export const POINTS_RULES: [string, number][] = [
   ["Aprovado na primeira tentativa", 10],
   ["Trilha concluída", 50],
   ["Trilha concluída dentro do prazo", 25],
+  ["Tarefa de integração feita por você", 5],
+  ["Checklist de integração concluído", 20],
 ];
 
 /** Classes de cor (fundo suave + ícone) de cada tom de medalha. */
