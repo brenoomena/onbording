@@ -47,7 +47,7 @@ export async function EmailsSection({ raw }: { raw: unknown }) {
       >
         <ul className="grid gap-3 text-[13.5px] md:grid-cols-2">
           {item(cfg.apiKey, "RESEND_API_KEY", "Chave de API criada no Resend (permissão de envio).")}
-          {item(cfg.from, "EMAIL_FROM", 'Remetente com domínio verificado no Resend, ex.: "Onboarding Implantta <onboarding@implantta.com.br>".')}
+          {item(cfg.from, "EMAIL_FROM", 'Remetente com domínio verificado no Resend, ex.: "Onboarding Implantta <onboarding@implanttasistemas.com.br>".')}
           {item(cfg.cron, "CRON_SECRET", "Senha da tarefa diária (8h) que gera os lembretes de prazo, atraso e o resumo semanal.")}
           {item(cfg.serviceRole, "SUPABASE_SERVICE_ROLE_KEY", "Já usada pelo sistema para ler a fila.")}
         </ul>
