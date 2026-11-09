@@ -66,11 +66,11 @@ export async function flushOutbox(limit = 50): Promise<FlushResult> {
       const res = await fetch(process.env.RESEND_API_URL ?? "https://api.resend.com/emails", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+          Authorization: `Bearer ${(process.env.RESEND_API_KEY ?? "").trim()}`,
           "Content-Type": "application/json",
           "Idempotency-Key": `outbox-${row.id}`,
         },
-        body: JSON.stringify({ from: process.env.EMAIL_FROM, to: [row.to_email], subject: mail.subject, html: mail.html, text: mail.text }),
+        body: JSON.stringify({ from: (process.env.EMAIL_FROM ?? "").trim(), to: [row.to_email], subject: mail.subject, html: mail.html, text: mail.text }),
         signal: AbortSignal.timeout(15_000),
       });
       const body = (await res.json().catch(() => ({}))) as { id?: string; message?: string; name?: string };
