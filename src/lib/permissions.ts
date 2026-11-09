@@ -23,6 +23,7 @@ export const P = {
   auditoriaVer: "auditoria.ver",
   comunicadosGerenciar: "comunicados.gerenciar",
   checklistsGerenciar: "checklists.gerenciar",
+  pesquisaVer: "pesquisa.ver",
 } as const;
 
 export type PermissionKey = (typeof P)[keyof typeof P];
@@ -32,7 +33,7 @@ export const ESTRUTURA_ANY: PermissionKey[] = [P.estruturaCriar, P.estruturaEdit
 /** Nome do ícone (ver components/icons.tsx). */
 export type IconName =
   | "painel" | "trilha" | "materiais" | "trilhas" | "conteudos" | "colaboradores" | "areas" | "cargos"
-  | "niveis" | "perfis" | "configuracoes" | "auditoria" | "meu-perfil" | "acompanhamento" | "certificado" | "comunicados" | "conquistas" | "tarefas" | "checklists";
+  | "niveis" | "perfis" | "configuracoes" | "auditoria" | "meu-perfil" | "acompanhamento" | "certificado" | "comunicados" | "conquistas" | "tarefas" | "checklists" | "pesquisa";
 
 export interface MenuItem {
   href: string;
@@ -73,6 +74,7 @@ export const MENU: MenuGroup[] = [
       { href: "/checklists", label: "Checklists", icon: "checklists", anyOf: [P.checklistsGerenciar] },
       { href: "/colaboradores", label: "Colaboradores", icon: "colaboradores", anyOf: [P.colaboradoresVer, P.equipeVer] },
       { href: "/acompanhamento", label: "Acompanhamento", icon: "acompanhamento", anyOf: [P.progressoVer, P.equipeVer, P.avaliacoesCorrigir] },
+      { href: "/pesquisa", label: "Pesquisa de satisfação", icon: "pesquisa", anyOf: [P.pesquisaVer] },
     ],
   },
   {

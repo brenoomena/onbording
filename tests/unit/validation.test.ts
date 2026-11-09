@@ -76,7 +76,7 @@ describe("menu por permissão", () => {
 
   it("administrador vê todos os menus", () => {
     const items = visibleMenu(new Set(Object.values(P)), true).flatMap((g) => g.items.map((i) => i.label));
-    expect(items).toEqual(["Painel", "Minhas trilhas", "Minhas tarefas", "Materiais", "Conquistas", "Certificados", "Comunicados", "Trilhas", "Conteúdos", "Checklists", "Colaboradores", "Acompanhamento", "Áreas", "Cargos", "Níveis", "Perfis de acesso", "Configurações", "Auditoria"]);
+    expect(items).toEqual(["Painel", "Minhas trilhas", "Minhas tarefas", "Materiais", "Conquistas", "Certificados", "Comunicados", "Trilhas", "Conteúdos", "Checklists", "Colaboradores", "Acompanhamento", "Pesquisa de satisfação", "Áreas", "Cargos", "Níveis", "Perfis de acesso", "Configurações", "Auditoria"]);
   });
 
   it("acompanhamento aparece com progresso.ver, mesmo sem ver colaboradores", () => {

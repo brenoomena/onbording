@@ -11,7 +11,8 @@ export type NotificationKind =
   | "equipe_atraso"
   | "tarefa"
   | "tarefa_prazo"
-  | "checklist_concluido";
+  | "checklist_concluido"
+  | "pesquisa";
 
 export interface NotificationItem {
   id: string;
@@ -36,6 +37,7 @@ export const NOTIFICATION_LABEL: Record<NotificationKind, string> = {
   tarefa: "Tarefa",
   tarefa_prazo: "Prazo de tarefa",
   checklist_concluido: "Checklist concluído",
+  pesquisa: "Pesquisa de satisfação",
 };
 
 export const NOTIFICATION_TONE: Record<NotificationKind, "blue" | "warn" | "danger" | "violet" | "ok" | "teal" | "orange"> = {
@@ -51,6 +53,7 @@ export const NOTIFICATION_TONE: Record<NotificationKind, "blue" | "warn" | "dang
   tarefa: "blue",
   tarefa_prazo: "warn",
   checklist_concluido: "ok",
+  pesquisa: "warn",
 };
 
 /** "agora", "há 5 min", "há 3 h", "ontem", "há 4 dias", depois a data. */

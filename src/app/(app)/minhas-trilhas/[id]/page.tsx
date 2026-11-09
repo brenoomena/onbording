@@ -11,6 +11,7 @@ import { loadEnrollmentsOf, loadProgressOf } from "@/lib/my-learning";
 import { createClient } from "@/lib/supabase/server";
 import { loadTrack } from "../../trilhas/[id]/load";
 import { enrollmentTag } from "@/lib/tags";
+import { FeedbackForm } from "../../pesquisa/feedback-form";
 
 export const metadata: Metadata = { title: "Trilha" };
 
@@ -23,17 +24,25 @@ function LockIcon() {
   );
 }
 
-export default async function MinhaTrilhaPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function MinhaTrilhaPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const me = await requireUser();
   const { id } = await params;
+  const sp = (await searchParams) ?? {};
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const supabase = await createClient();
-  const [loaded, enrollments, progress, { data: cert }] = await Promise.all([
+  const [loaded, enrollments, progress, { data: cert }, { data: myFeedback }] = await Promise.all([
     loadTrack(id),
     loadEnrollmentsOf(me.userId),
     loadProgressOf(me.userId),
     supabase.from("certificates").select("id, code").eq("profile_id", me.userId).eq("track_id", id).maybeSingle(),
+    supabase.from("track_feedback").select("rating, comment, anonymous").eq("profile_id", me.userId).eq("track_id", id).maybeSingle(),
   ]);
   if (!loaded) notFound();
   const { track } = loaded;
@@ -78,6 +87,9 @@ export default async function MinhaTrilhaPage({ params }: { params: Promise<{ id
             </a>
           </div>
         </div>
+      )}
+      {enrollment?.status === "concluida" && (
+        <FeedbackForm key={JSON.stringify(myFeedback)} target="trilha" id={id} name={track.name} mine={myFeedback ?? null} highlight={sp.avaliar === "1" && !myFeedback} />
       )}
       {enrollment ? (
         <div className="grid gap-3 rounded-xl border border-line bg-surface p-4 sm:grid-cols-[1fr_auto] sm:items-center">

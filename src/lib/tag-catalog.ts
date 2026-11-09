@@ -189,6 +189,15 @@ export const TAG_GROUPS = [
     },
   },
   {
+    key: "pesquisa",
+    label: "Pesquisa de satisfação",
+    where: "Comentários da pesquisa de satisfação",
+    tags: {
+      "pesquisa.trilha": { label: "Trilha", tone: "blue" },
+      "pesquisa.conteudo": { label: "Conteúdo", tone: "violet" },
+    },
+  },
+  {
     key: "email",
     label: "Envio de e-mails",
     where: "Configurações › E-mails",

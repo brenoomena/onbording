@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadTrack } from "../../trilhas/[id]/load";
 import { completeContent } from "../actions";
 import { KIND_TAG } from "@/lib/tags";
+import { FeedbackForm } from "../../pesquisa/feedback-form";
 
 export const metadata: Metadata = { title: "Estudar" };
 
@@ -40,6 +41,10 @@ export default async function EstudarPage({
   const progress = await loadProgressOf(me.userId);
   const mine = progress.byContent.get(id);
   const done = mine?.status === "concluido";
+  const myFeedback =
+    done && !preview
+      ? (await supabase.from("content_feedback").select("rating, comment, anonymous").eq("profile_id", me.userId).eq("content_id", id).maybeSingle()).data
+      : null;
 
   // Contexto da trilha: anterior, próximo e bloqueio sequencial.
   let nav: { prev?: string; next?: string; locked: boolean; trackName?: string; trackId?: string } = { locked: false };
@@ -161,6 +166,10 @@ export default async function EstudarPage({
           <ObjectiveHint targetId="objetivo" />
           <ObjectiveNote id="objetivo" text={content.objective} />
         </>
+      )}
+
+      {done && !preview && (
+        <FeedbackForm key={JSON.stringify(myFeedback)} target="conteudo" id={id} name={content.title} mine={myFeedback ?? null} />
       )}
 
       {nav.trackId && (

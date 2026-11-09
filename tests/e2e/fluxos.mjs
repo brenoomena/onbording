@@ -105,7 +105,7 @@ await step("login só com Google: sem campo de senha", async () => {
 });
 
 await step("admin vê todos os menus", async () => {
-  assert.deepEqual(await menu(A), ["Painel", "Minhas trilhas", "Minhas tarefas", "Materiais", "Conquistas", "Certificados", "Comunicados", "Trilhas", "Conteúdos", "Checklists", "Colaboradores", "Acompanhamento", "Áreas", "Cargos", "Níveis", "Perfis de acesso", "Configurações", "Auditoria"]);
+  assert.deepEqual(await menu(A), ["Painel", "Minhas trilhas", "Minhas tarefas", "Materiais", "Conquistas", "Certificados", "Comunicados", "Trilhas", "Conteúdos", "Checklists", "Colaboradores", "Acompanhamento", "Pesquisa de satisfação", "Áreas", "Cargos", "Níveis", "Perfis de acesso", "Configurações", "Auditoria"]);
   await A.screenshot({ path: `${SHOTS}/01-painel-admin.png`, fullPage: true });
 });
 
