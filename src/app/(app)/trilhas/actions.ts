@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "@/lib/revalidate";
+import { kickEmails } from "@/lib/email/send";
 
 import { denyUnless, denyUnlessAdmin, requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -23,6 +24,8 @@ async function refresh(trackId?: string) {
 // ------------------------------------------------------------------ trilha
 
 export async function saveTrack(_: ActionState, fd: FormData): Promise<ActionState> {
+  // Matrícula nova ou comunicado importante: o e-mail sai logo depois da resposta.
+  kickEmails();
   const denied = await denyUnless(fd.get("id") ? P.trilhasEditar : P.trilhasCriar);
   if (denied) return denied;
   const raw = formObject(fd);
@@ -55,6 +58,8 @@ export async function saveTrack(_: ActionState, fd: FormData): Promise<ActionSta
 }
 
 export async function setTrackStatus(_: ActionState, fd: FormData): Promise<ActionState> {
+  // Matrícula nova ou comunicado importante: o e-mail sai logo depois da resposta.
+  kickEmails();
   const denied = await denyUnless(P.trilhasEditar);
   if (denied) return denied;
   const id = String(fd.get("id"));
@@ -228,6 +233,8 @@ export async function removeItem(_: ActionState, fd: FormData): Promise<ActionSt
 // ------------------------------------------------------------------ matrículas
 
 export async function enrollPeople(_: ActionState, fd: FormData): Promise<ActionState> {
+  // Matrícula nova ou comunicado importante: o e-mail sai logo depois da resposta.
+  kickEmails();
   const denied = await denyUnless(P.trilhasMatricular);
   if (denied) return denied;
   const me = await requireUser();

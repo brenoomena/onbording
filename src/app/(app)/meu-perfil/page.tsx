@@ -7,7 +7,7 @@ import { PROFILE_SELECT, type ProfileRow } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { THEME_COOKIE, parseTheme } from "@/lib/theme";
-import { updateMyName } from "./actions";
+import { saveEmailPreferences, updateMyName } from "./actions";
 import { AvatarEditor } from "./avatar-editor";
 import { ThemePicker } from "./theme-picker";
 
@@ -19,6 +19,16 @@ export default async function MeuPerfilPage() {
   const { data } = await supabase.from("profiles").select(PROFILE_SELECT).eq("id", me.userId).single();
   const p = data as unknown as ProfileRow;
   const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
+  const [{ data: prefs }, { count: team }] = await Promise.all([
+    supabase.from("email_preferences").select("lembretes, comunicados, resumo").eq("profile_id", me.userId).maybeSingle(),
+    supabase.from("profiles").select("id", { count: "exact", head: true }).eq("supervisor_id", me.userId).neq("status", "inativo"),
+  ]);
+  const pref = { lembretes: prefs?.lembretes ?? true, comunicados: prefs?.comunicados ?? true, resumo: prefs?.resumo ?? true };
+  const options: { name: keyof typeof pref; label: string; hint: string }[] = [
+    { name: "lembretes", label: "Lembretes de prazo", hint: "Antes do prazo, no dia e quando atrasar (trilhas não obrigatórias)." },
+    { name: "comunicados", label: "Comunicados importantes", hint: "Uma cópia por e-mail dos comunicados marcados como importantes." },
+    ...(team ? [{ name: "resumo" as const, label: "Resumo semanal da equipe", hint: "Toda segunda-feira: atrasos, andamento e conclusões da sua equipe." }] : []),
+  ];
 
   return (
     <>
@@ -47,7 +57,26 @@ export default async function MeuPerfilPage() {
             </div>
           </dl>
         </Card>
-        <div className="grid gap-6">
+        <section id="emails" className="scroll-mt-24 lg:col-start-1">
+          <Card title="E-mails" description={`Enviados para ${p.email}. Matrícula nova e atraso de trilha obrigatória sempre são enviados.`}>
+            <ActionForm action={saveEmailPreferences}>
+              <div className="grid gap-2">
+                {options.map((o) => (
+                  <label key={o.name} className="flex cursor-pointer items-start gap-3 rounded-xl border border-line px-4 py-3 hover:border-accent/50">
+                    <input type="checkbox" name={o.name} defaultChecked={pref[o.name]} className="mt-0.5 h-[18px] w-[18px] accent-[rgb(var(--brand))]" />
+                    <span>
+                      <span className="font-medium text-heading">{o.label}</span>
+                      <span className="block text-[12.5px] text-muted">{o.hint}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {!team && <input type="hidden" name="resumo" value={pref.resumo ? "on" : ""} />}
+              <div><SubmitButton>Salvar preferências</SubmitButton></div>
+            </ActionForm>
+          </Card>
+        </section>
+        <div className="grid gap-6 lg:row-span-2">
           <Card title="Foto">
             <AvatarEditor userId={me.userId} name={p.full_name} path={me.profile.avatar_path} />
           </Card>

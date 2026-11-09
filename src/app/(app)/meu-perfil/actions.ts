@@ -39,3 +39,22 @@ export async function removeMyAvatar(): Promise<ActionState> {
   revalidatePath("/", "layout");
   return { ok: "Foto removida." };
 }
+
+/** Quais e-mails a pessoa quer receber (matrícula e atraso de trilha obrigatória sempre vão). */
+export async function saveEmailPreferences(_: ActionState, fd: FormData): Promise<ActionState> {
+  const me = await requireUser();
+  const supabase = await createClient();
+  const { error } = await supabase.from("email_preferences").upsert(
+    {
+      profile_id: me.userId,
+      lembretes: fd.get("lembretes") === "on",
+      comunicados: fd.get("comunicados") === "on",
+      resumo: fd.get("resumo") === "on",
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "profile_id" },
+  );
+  if (error) return { error: friendlyError(error) };
+  revalidatePath("/meu-perfil");
+  return { ok: "Preferências de e-mail salvas." };
+}

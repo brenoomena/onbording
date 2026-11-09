@@ -1,4 +1,4 @@
-import { AppWindow, Award, ImageIcon, LogIn, Palette, PanelLeft, Settings, Tags, type LucideIcon } from "lucide-react";
+import { AppWindow, Award, ImageIcon, LogIn, Mail, Palette, PanelLeft, Settings, Tags, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Card, PageHeader, cx } from "@/components/ui";
@@ -21,12 +21,13 @@ import { FaviconEditor } from "./favicon-editor";
 import { LoginEditor } from "./login-editor";
 import { LogoEditor } from "./logo-editor";
 import { ScrollbarEditor } from "./scrollbar-editor";
+import { EmailsSection } from "./emails-section";
 import { ThemeEditor } from "./theme-editor";
 import { sanitizeScrollbar } from "@/lib/scrollbar";
 
 export const metadata: Metadata = { title: "Configurações" };
 
-type Secao = "marca" | "cores" | "menu" | "etiquetas" | "login" | "certificado";
+type Secao = "marca" | "cores" | "menu" | "etiquetas" | "login" | "certificado" | "emails";
 
 const SECOES: { key: Secao; label: string; hint: string; icon: LucideIcon }[] = [
   { key: "marca", label: "Marca", hint: "Logomarca, símbolo e favicon", icon: ImageIcon },
@@ -35,6 +36,7 @@ const SECOES: { key: Secao; label: string; hint: string; icon: LucideIcon }[] = 
   { key: "etiquetas", label: "Etiquetas", hint: "Cores de cada etiqueta", icon: Tags },
   { key: "login", label: "Página de login", hint: "Fundo, efeito, textos e botão", icon: LogIn },
   { key: "certificado", label: "Certificado", hint: "Modelo, assinatura e validação", icon: Award },
+  { key: "emails", label: "E-mails", hint: "Avisos, lembretes e resumo", icon: Mail },
 ];
 
 /** Identidade visual do sistema. Exclusivo do perfil Administrador (rota, ações e banco). */
@@ -45,7 +47,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
   const supabase = await createClient();
   const { data } = await supabase
     .from("app_settings")
-    .select("theme, logo_path, logo_dark_path, symbol_path, symbol_dark_path, favicon_path, logo_sizes, login_theme, certificate_theme, tag_theme, menu_theme, updated_at")
+    .select("theme, logo_path, logo_dark_path, symbol_path, symbol_dark_path, favicon_path, logo_sizes, login_theme, certificate_theme, tag_theme, menu_theme, email_settings, updated_at")
     .eq("id", 1)
     .maybeSingle();
   const theme = resolveTheme(sanitizeTheme(data?.theme));
@@ -151,6 +153,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
               />
             </Card>
           )}
+          {secao === "emails" && <EmailsSection raw={data?.email_settings} />}
           {secao === "etiquetas" && (
             <Card
               title="Etiquetas"

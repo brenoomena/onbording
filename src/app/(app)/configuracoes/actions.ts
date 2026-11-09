@@ -11,6 +11,8 @@ import { diffLogin, sanitizeLogin } from "@/lib/login-theme";
 import { diffCertificate, sanitizeCertificate } from "@/lib/certificate";
 import { sanitizeTags } from "@/lib/tag-catalog";
 import { isDefaultScrollbar, sanitizeScrollbar } from "@/lib/scrollbar";
+import { EMAIL_KINDS, sanitizeEmailSettings, toDb as toEmailDb } from "@/lib/email-settings";
+import { emailReady, flushOutbox } from "@/lib/email/send";
 import { LOGO_SLOTS, defaultSize, fromWidth, sanitizeSizes, type LogoSlot } from "@/lib/logo-sizes";
 
 const LOGO_PATH = /^logo\/[0-9a-f-]{36}\.(png|webp|jpg)$/;
@@ -204,4 +206,35 @@ export async function saveScrollbar(_: ActionState, fd: FormData): Promise<Actio
   if (!data?.length) return { error: "Somente administradores podem alterar o menu lateral." };
   refreshBranding();
   return { ok: isDefaultScrollbar(clean) ? "Barra de rolagem de volta ao padrão." : "Barra de rolagem do menu salva e aplicada." };
+}
+
+/** Configurações › E-mails: tipos ligados e dias dos lembretes. Somente Administrador. */
+export async function saveEmailSettings(_: ActionState, fd: FormData): Promise<ActionState> {
+  const denied = await denyUnlessAdmin();
+  if (denied) return denied;
+  const clean = sanitizeEmailSettings({
+    kinds: Object.fromEntries(EMAIL_KINDS.map((k) => [k.key, fd.get(`kind_${k.key}`) === "on"])),
+    reminder_days: fd.getAll("reminder_days").map(Number),
+  });
+  if (clean.kinds.prazo && clean.reminderDays.length === 0) return { error: "Escolha ao menos um dia para o lembrete de prazo, ou desligue o lembrete." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("app_settings").update({ email_settings: toEmailDb(clean) }).eq("id", 1).select("id");
+  if (error) return { error: friendlyError(error) };
+  if (!data?.length) return { error: "Somente administradores podem alterar os e-mails." };
+  revalidatePath("/configuracoes");
+  return { ok: "Configuração de e-mails salva." };
+}
+
+/** Manda um e-mail de teste para o próprio Administrador, na hora. */
+export async function sendTestEmail(_: ActionState, _fd: FormData): Promise<ActionState> {
+  const denied = await denyUnlessAdmin();
+  if (denied) return denied;
+  if (!emailReady()) return { error: "O envio ainda não está configurado: cadastre RESEND_API_KEY e EMAIL_FROM na Vercel." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("queue_test_email");
+  if (error) return { error: friendlyError(error) };
+  const r = await flushOutbox(10);
+  revalidatePath("/configuracoes");
+  if (r.failed && !r.sent) return { error: `O Resend recusou o envio: ${r.lastError ?? "erro desconhecido"}` };
+  return { ok: "E-mail de teste enviado. Confira sua caixa de entrada (e o spam)." };
 }

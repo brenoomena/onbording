@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "@/lib/revalidate";
+import { kickEmails } from "@/lib/email/send";
 
 import { denyUnless, denyUnlessAdmin, requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -24,6 +25,8 @@ async function findAuthUserId(email: string): Promise<string | null> {
 }
 
 export async function createProfile(_: ActionState, formData: FormData): Promise<ActionState> {
+  // Matrícula nova ou comunicado importante: o e-mail sai logo depois da resposta.
+  kickEmails();
   const denied = await denyUnless(P.colaboradoresCriar);
   if (denied) return denied;
   const parsed = profileCreateSchema.safeParse(formObject(formData));
@@ -65,6 +68,8 @@ export async function createProfile(_: ActionState, formData: FormData): Promise
 }
 
 export async function updateProfile(_: ActionState, formData: FormData): Promise<ActionState> {
+  // Matrícula nova ou comunicado importante: o e-mail sai logo depois da resposta.
+  kickEmails();
   const denied = await denyUnless(P.colaboradoresEditar);
   if (denied) return denied;
   const id = String(formData.get("id") ?? "");
@@ -83,6 +88,8 @@ export async function updateProfile(_: ActionState, formData: FormData): Promise
 }
 
 export async function setProfileStatus(_: ActionState, formData: FormData): Promise<ActionState> {
+  // Matrícula nova ou comunicado importante: o e-mail sai logo depois da resposta.
+  kickEmails();
   const denied = await denyUnless(P.colaboradoresDesativar);
   if (denied) return denied;
   const id = String(formData.get("id") ?? "");

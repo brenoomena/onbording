@@ -176,6 +176,18 @@ export const TAG_GROUPS = [
       "comunicado.arquivado": { label: "Arquivado", tone: "neutral" },
     },
   },
+  {
+    key: "email",
+    label: "Envio de e-mails",
+    where: "Configurações › E-mails",
+    tags: {
+      "email.pendente": { label: "Na fila", tone: "silver", icon: "clock" },
+      "email.enviando": { label: "Enviando", tone: "blue", icon: "hourglass" },
+      "email.enviado": { label: "Enviado", tone: "ok", icon: "check" },
+      "email.erro": { label: "Erro", tone: "danger", icon: "x" },
+      "email.ignorado": { label: "Não enviado", tone: "neutral" },
+    },
+  },
 ] as const satisfies readonly { key: string; label: string; where: string; tags: Record<string, TagDef> }[];
 
 type Groups = (typeof TAG_GROUPS)[number];

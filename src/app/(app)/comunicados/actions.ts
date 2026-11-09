@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { kickEmails } from "@/lib/email/send";
 import { revalidatePath } from "@/lib/revalidate";
 import { denyUnless } from "@/lib/auth";
 import { friendlyError } from "@/lib/errors";
@@ -13,6 +14,8 @@ const isId = (v: unknown) => typeof v === "string" && /^[0-9a-f-]{36}$/i.test(v)
 
 /** Salva o comunicado (rascunho) e, se pedido, publica para o público escolhido. */
 export async function saveAnnouncement(_: ActionState, fd: FormData): Promise<ActionState> {
+  // Matrícula nova ou comunicado importante: o e-mail sai logo depois da resposta.
+  kickEmails();
   const denied = await denyUnless(P.comunicadosGerenciar);
   if (denied) return denied;
   const id = String(fd.get("id") ?? "");
