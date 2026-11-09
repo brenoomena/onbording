@@ -26,7 +26,7 @@ await step("tarefa diária envia a fila (matrículas do cadastro inicial)", asyn
   assert.ok(j.sent >= 1, JSON.stringify(j));
   const s = sent();
   assert.ok(s.some((m) => /^Nova trilha:/.test(m.subject)), JSON.stringify(s.slice(0, 3)));
-  assert.ok(s.every((m) => m.from === "Onboarding Implantta <onboarding@implantta.com.br>" && m.key.startsWith("outbox-") && m.hasCta));
+  assert.ok(s.every((m) => m.from === '"Onboarding Implantta" <onboarding@implantta.com.br>' && m.key.startsWith("outbox-") && m.hasCta));
   // Rodar de novo não repete nada.
   const n = s.length;
   const j2 = await (await fetch(`${BASE}/api/cron/emails`, { headers: { authorization: "Bearer segredo-cron" } })).json();
@@ -86,5 +86,37 @@ await step("comunicado importante sai por e-mail logo após publicar", async () 
   assert.ok(news.length >= 2, `enviados: ${news.length}`);
   assert.ok(news.every((m) => m.subject === "Mudança de horário do suporte"));
 });
-console.log(`${ok}/6 passos ok`);
+await step("visual: nome do remetente, layout, cores e textos com prévia", async () => {
+  await page.goto(`${BASE}/configuracoes?secao=emails`);
+  await page.getByRole("heading", { name: "Visual dos e-mails" }).waitFor();
+  await page.locator("#em-sender").fill("Onbording Implantta");
+  await page.getByText("Faixa", { exact: true }).click();
+  await page.getByLabel("Código: Faixa do cabeçalho").fill("#0f2a4a");
+  await page.locator("#em-greeting").fill("Oi {nome}, tudo bem?");
+  await page.locator("#em-signature").fill("Time de RH Implantta");
+  await page.locator("#em-footer").fill("Dúvidas: rh@implanttasistemas.com.br");
+  const frame = page.frameLocator('iframe[title="Prévia do e-mail"]');
+  await frame.getByText("Oi Vera, tudo bem?").waitFor();
+  await frame.getByText("Time de RH Implantta").waitFor();
+  await page.getByText("Resumo semanal", { exact: true }).last().click();
+  await frame.getByText("Oi Sérgio, tudo bem?").waitFor();
+  await page.screenshot({ path: "shots/em-3-visual.png", fullPage: true });
+  await page.getByRole("button", { name: "Salvar visual" }).click();
+  await page.getByText("Visual dos e-mails salvo.", { exact: false }).waitFor();
+  // Salvar os tipos não apaga o visual.
+  await page.reload();
+  await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await page.getByText("Configuração de e-mails salva.").waitFor();
+  await page.reload();
+  assert.equal(await page.locator("#em-sender").inputValue(), "Onbording Implantta");
+  assert.equal(await page.locator("#em-signature").inputValue(), "Time de RH Implantta");
+  const before = sent().length;
+  await page.getByRole("button", { name: "Enviar e-mail de teste para mim" }).click();
+  await page.getByText("E-mail de teste enviado.", { exact: false }).waitFor();
+  const last = sent().at(-1);
+  assert.equal(sent().length, before + 1);
+  assert.equal(last.from, '"Onbording Implantta" <onboarding@implantta.com.br>');
+  assert.ok(last.htmlHas.includes("Time de RH Implantta") && last.htmlHas.includes("#0f2a4a"));
+});
+console.log(`${ok}/7 passos ok`);
 await browser.close();

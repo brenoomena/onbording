@@ -1,8 +1,13 @@
-import { CheckCircle2, Mail, MailCheck, Send, XCircle } from "lucide-react";
+import { CheckCircle2, Mail, MailCheck, Palette, Send, XCircle } from "lucide-react";
 import { ActionButton, ActionForm, FormBar, SubmitButton } from "@/components/forms";
 import { Badge, Card, cx, formatDateTime } from "@/components/ui";
 import { EMAIL_KINDS, REMINDER_OPTIONS, reminderLabel, sanitizeEmailSettings } from "@/lib/email-settings";
-import { emailConfig } from "@/lib/email/send";
+import { BRANDING_STORAGE, emailConfig } from "@/lib/email/send";
+import { fromHeader } from "@/lib/email-settings";
+import { getBranding, logoFor } from "@/lib/branding";
+import { publicEnv } from "@/lib/env";
+import { resolveTheme } from "@/lib/theme-tokens";
+import { EmailThemeEditor } from "./email-theme-editor";
 import { createClient } from "@/lib/supabase/server";
 import type { TagKey } from "@/lib/tag-catalog";
 import { saveEmailSettings, sendTestEmail } from "./actions";
@@ -27,6 +32,8 @@ export async function EmailsSection({ raw }: { raw: unknown }) {
     supabase.from("email_outbox").select("id", { count: "exact", head: true }).in("status", ["pendente", "erro", "enviando"]),
   ]);
   const ready = cfg.apiKey && cfg.from && cfg.serviceRole;
+  const b = await getBranding();
+  const address = process.env.EMAIL_FROM ? fromHeader(process.env.EMAIL_FROM, "") : "";
   const item = (ok: boolean, label: string, hint: string) => (
     <li className="flex items-start gap-2.5">
       {ok ? <CheckCircle2 size={18} aria-hidden className="mt-0.5 shrink-0 text-ok" /> : <XCircle size={18} aria-hidden className="mt-0.5 shrink-0 text-danger" />}
@@ -56,6 +63,21 @@ export async function EmailsSection({ raw }: { raw: unknown }) {
             ? `Envio ativo. ${queued ? `${queued} e-mail(s) aguardando na fila.` : "Nenhum e-mail aguardando."}`
             : `Envio desligado: os e-mails ficam guardados na fila (${queued ?? 0} agora) e saem quando a configuração estiver completa. Os que passarem de 7 dias na fila são descartados.`}
         </p>
+      </Card>
+
+      <Card
+        title="Visual dos e-mails"
+        description="Nome do remetente, layout, logomarca, cores e textos de todas as mensagens. A prévia ao lado mostra cada tipo de e-mail antes de salvar."
+        icon={Palette}
+      >
+        <EmailThemeEditor
+          initial={settings.theme}
+          brandColor={resolveTheme(b.theme).light.brand}
+          brandLogo={{ onLight: logoFor(b, "#ffffff")?.src ?? null, onDark: logoFor(b, "#0f172a")?.src ?? null }}
+          storageBase={BRANDING_STORAGE()}
+          siteUrl={publicEnv.siteUrl}
+          address={address}
+        />
       </Card>
 
       <Card title="O que é enviado" description="Vale para todos. Cada pessoa ainda pode desligar lembretes, comunicados e o resumo em Meu perfil; matrícula nova e atraso de trilha obrigatória sempre são enviados." icon={Mail}>

@@ -11,7 +11,7 @@ import { diffLogin, sanitizeLogin } from "@/lib/login-theme";
 import { diffCertificate, sanitizeCertificate } from "@/lib/certificate";
 import { sanitizeTags } from "@/lib/tag-catalog";
 import { isDefaultScrollbar, sanitizeScrollbar } from "@/lib/scrollbar";
-import { EMAIL_KINDS, sanitizeEmailSettings, toDb as toEmailDb } from "@/lib/email-settings";
+import { EMAIL_KINDS, sanitizeEmailSettings, sanitizeEmailTheme, toDb as toEmailDb } from "@/lib/email-settings";
 import { emailReady, flushOutbox } from "@/lib/email/send";
 import { LOGO_SLOTS, defaultSize, fromWidth, sanitizeSizes, type LogoSlot } from "@/lib/logo-sizes";
 
@@ -208,16 +208,23 @@ export async function saveScrollbar(_: ActionState, fd: FormData): Promise<Actio
   return { ok: isDefaultScrollbar(clean) ? "Barra de rolagem de volta ao padrão." : "Barra de rolagem do menu salva e aplicada." };
 }
 
+async function currentEmailSettings(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data } = await supabase.from("app_settings").select("email_settings").eq("id", 1).maybeSingle();
+  return sanitizeEmailSettings(data?.email_settings);
+}
+
 /** Configurações › E-mails: tipos ligados e dias dos lembretes. Somente Administrador. */
 export async function saveEmailSettings(_: ActionState, fd: FormData): Promise<ActionState> {
   const denied = await denyUnlessAdmin();
   if (denied) return denied;
+  const supabase = await createClient();
+  const current = await currentEmailSettings(supabase);
   const clean = sanitizeEmailSettings({
     kinds: Object.fromEntries(EMAIL_KINDS.map((k) => [k.key, fd.get(`kind_${k.key}`) === "on"])),
     reminder_days: fd.getAll("reminder_days").map(Number),
+    theme: current.theme,
   });
   if (clean.kinds.prazo && clean.reminderDays.length === 0) return { error: "Escolha ao menos um dia para o lembrete de prazo, ou desligue o lembrete." };
-  const supabase = await createClient();
   const { data, error } = await supabase.from("app_settings").update({ email_settings: toEmailDb(clean) }).eq("id", 1).select("id");
   if (error) return { error: friendlyError(error) };
   if (!data?.length) return { error: "Somente administradores podem alterar os e-mails." };
@@ -237,4 +244,29 @@ export async function sendTestEmail(_: ActionState, _fd: FormData): Promise<Acti
   revalidatePath("/configuracoes");
   if (r.failed && !r.sent) return { error: `O Resend recusou o envio: ${r.lastError ?? "erro desconhecido"}` };
   return { ok: "E-mail de teste enviado. Confira sua caixa de entrada (e o spam)." };
+}
+
+/** Visual dos e-mails: remetente, layout, logo, cores e textos. Somente Administrador. */
+export async function saveEmailTheme(_: ActionState, fd: FormData): Promise<ActionState> {
+  const denied = await denyUnlessAdmin();
+  if (denied) return denied;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(String(fd.get("theme") ?? "{}"));
+  } catch {
+    return { error: "Não foi possível ler a configuração enviada." };
+  }
+  const supabase = await createClient();
+  const current = await currentEmailSettings(supabase);
+  const theme = sanitizeEmailTheme(parsed);
+  if (theme.logoSource === "propria" && !theme.logoPath) return { error: "Envie a logo dos e-mails ou escolha usar a logo da Marca." };
+  const { data, error } = await supabase
+    .from("app_settings")
+    .update({ email_settings: toEmailDb({ ...current, theme }) })
+    .eq("id", 1)
+    .select("id");
+  if (error) return { error: friendlyError(error) };
+  if (!data?.length) return { error: "Somente administradores podem alterar os e-mails." };
+  revalidatePath("/configuracoes");
+  return { ok: "Visual dos e-mails salvo. Vale para os próximos envios." };
 }

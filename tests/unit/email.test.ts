@@ -73,3 +73,50 @@ describe("cor do botão", () => {
     expect(buttonColor("#0f172a")).toBe("#0f172a");
   });
 });
+
+import { DEFAULT_EMAIL_THEME, fromHeader, sanitizeEmailTheme } from "@/lib/email-settings";
+import { emailLogo, inkOn } from "@/lib/email/templates";
+
+describe("visual dos e-mails", () => {
+  it("nome do remetente aparece junto do endereço", () => {
+    expect(fromHeader("onboarding@implanttasistemas.com.br", "Onboarding Implantta")).toBe('"Onboarding Implantta" <onboarding@implanttasistemas.com.br>');
+    expect(fromHeader("Outro <onboarding@implanttasistemas.com.br>", "Onboarding Implantta")).toBe('"Onboarding Implantta" <onboarding@implanttasistemas.com.br>');
+    expect(fromHeader(" onboarding@x.com \n", "")).toBe("onboarding@x.com");
+    // Aspas, < > e quebras não escapam do nome.
+    expect(fromHeader("a@x.com", 'Ev"il <b@y.com>\r\nBcc: c@z.com')).toBe('"Ev il b@y.com Bcc: c@z.com" <a@x.com>');
+  });
+
+  it("valores inválidos voltam ao padrão", () => {
+    const t = sanitizeEmailTheme({ layout: "outro", header: "red", accent: "", logoHeight: 500, logoPath: "../x.png", senderName: "   ", footer: "<b>oi</b>" });
+    expect(t.layout).toBe("cartao");
+    expect(t.header).toBe(DEFAULT_EMAIL_THEME.header);
+    expect(t.accent).toBe("");
+    expect(t.logoHeight).toBe(80);
+    expect(t.logoPath).toBeNull();
+    expect(t.senderName).toBe("Onboarding Implantta");
+    expect(t.footer).toBe("boi/b");
+  });
+
+  it("saudação, assinatura, rodapé e cores entram no e-mail", () => {
+    const theme = { ...DEFAULT_EMAIL_THEME, layout: "faixa" as const, header: "#0f2a4a", accent: "#ffcc00", greeting: "Oi {nome}, tudo bem?", signature: "Time de RH", footer: "Dúvidas: rh@x.com" };
+    const m = renderEmail({ kind: "matricula", subject: "s", data: { name: "Vera", title: "Nova trilha: T", link: "/x" } }, { ...ctx, theme, logoUrl: null });
+    expect(m.html).toContain("Oi Vera, tudo bem?");
+    expect(m.html).toContain("Time de RH");
+    expect(m.html).toContain("Dúvidas: rh@x.com");
+    expect(m.html).toContain("background:#0f2a4a");
+    expect(m.html).toContain("background:#ffcc00");
+    expect(m.html).toContain("color:#0f172a;text-decoration:none"); // texto escuro no botão amarelo
+    expect(m.text).toContain("Time de RH");
+    const semNome = renderEmail({ kind: "teste", subject: "s", data: {} }, { ...ctx, theme: { ...theme, greeting: "Olá, {nome}!" } });
+    expect(semNome.html).toContain(">Olá!<");
+  });
+
+  it("logo: versão da marca conforme o fundo, própria ou nenhuma", () => {
+    const brand = { onLight: "https://x/logo-escura.png", onDark: "https://x/logo-branca.png" };
+    expect(emailLogo({ ...DEFAULT_EMAIL_THEME, header: "#ffffff" }, brand, "https://s")).toBe(brand.onLight);
+    expect(emailLogo({ ...DEFAULT_EMAIL_THEME, layout: "faixa", header: "#0f2a4a" }, brand, "https://s")).toBe(brand.onDark);
+    expect(emailLogo({ ...DEFAULT_EMAIL_THEME, logoSource: "propria", logoPath: "logo/a.png" }, brand, "https://s/")).toBe("https://s/logo/a.png");
+    expect(emailLogo({ ...DEFAULT_EMAIL_THEME, logoSource: "nenhuma" }, brand, "https://s")).toBeNull();
+    expect(inkOn("#ffffff")).toBe("#0f172a");
+  });
+});

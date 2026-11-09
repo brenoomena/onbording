@@ -4,7 +4,8 @@ import { getBranding, logoFor } from "@/lib/branding";
 import { publicEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveTheme } from "@/lib/theme-tokens";
-import { renderEmail, type EmailContext } from "./templates";
+import { fromHeader, sanitizeEmailSettings } from "@/lib/email-settings";
+import { emailLogo, renderEmail, type EmailContext } from "./templates";
 
 /** O que falta para os e-mails saírem (sem mostrar nenhum valor). */
 export function emailConfig() {
@@ -22,14 +23,16 @@ export const emailReady = () => {
 
 const STALE_MS = 7 * 24 * 60 * 60 * 1000;
 
-async function context(): Promise<EmailContext> {
+export const BRANDING_STORAGE = () => `${publicEnv.supabaseUrl.replace(/\/$/, "")}/storage/v1/object/public/branding`;
+
+async function context(): Promise<{ ctx: EmailContext; from: string }> {
   const b = await getBranding();
-  const logo = logoFor(b, "#ffffff");
+  const { data } = await createAdminClient().from("app_settings").select("email_settings").eq("id", 1).maybeSingle();
+  const theme = sanitizeEmailSettings(data?.email_settings).theme;
+  const logoUrl = emailLogo(theme, { onLight: logoFor(b, "#ffffff")?.src ?? null, onDark: logoFor(b, "#0f172a")?.src ?? null }, BRANDING_STORAGE());
   return {
-    siteUrl: publicEnv.siteUrl,
-    appName: "Onboarding Implantta",
-    brand: resolveTheme(b.theme).light.brand,
-    logoUrl: logo?.src && /^https:\/\//.test(logo.src) ? logo.src : null,
+    ctx: { siteUrl: publicEnv.siteUrl, appName: "Onboarding Implantta", brand: resolveTheme(b.theme).light.brand, logoUrl, theme },
+    from: fromHeader(process.env.EMAIL_FROM ?? "", theme.senderName),
   };
 }
 
@@ -53,7 +56,7 @@ export async function flushOutbox(limit = 50): Promise<FlushResult> {
   const rows = (batch ?? []) as { id: string; kind: string; subject: string; data: Record<string, unknown>; to_email: string; created_at: string }[];
   if (!rows.length) return { configured: true, sent: 0, failed: 0, skipped: 0 };
 
-  const ctx = await context();
+  const { ctx, from } = await context();
   const out: FlushResult = { configured: true, sent: 0, failed: 0, skipped: 0 };
   for (const row of rows) {
     if (Date.now() - new Date(row.created_at).getTime() > STALE_MS) {
@@ -70,7 +73,7 @@ export async function flushOutbox(limit = 50): Promise<FlushResult> {
           "Content-Type": "application/json",
           "Idempotency-Key": `outbox-${row.id}`,
         },
-        body: JSON.stringify({ from: (process.env.EMAIL_FROM ?? "").trim(), to: [row.to_email], subject: mail.subject, html: mail.html, text: mail.text }),
+        body: JSON.stringify({ from, to: [row.to_email], subject: mail.subject, html: mail.html, text: mail.text }),
         signal: AbortSignal.timeout(15_000),
       });
       const body = (await res.json().catch(() => ({}))) as { id?: string; message?: string; name?: string };

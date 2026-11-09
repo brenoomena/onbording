@@ -4,6 +4,8 @@
  * assunto, HTML e texto. Todo valor vindo do banco é escapado.
  */
 
+import { DEFAULT_EMAIL_THEME, type EmailTheme } from "@/lib/email-settings";
+
 export interface EmailRow {
   kind: string;
   subject: string;
@@ -13,8 +15,12 @@ export interface EmailRow {
 export interface EmailContext {
   siteUrl: string;
   appName: string;
+  /** Cor da marca (usada quando o tema não escolhe a cor do botão). */
   brand: string;
+  /** Logo já resolvida para o cabeçalho (absoluta, https) ou null. */
   logoUrl: string | null;
+  /** Visual escolhido em Configurações › E-mails; sem ele, o padrão. */
+  theme?: EmailTheme;
 }
 
 export interface RenderedEmail {
@@ -63,30 +69,71 @@ export function buttonColor(brand: string): string {
   return hex();
 }
 
+/** Texto legível sobre um fundo: branco ou quase preto. */
+export function inkOn(bg: string): string {
+  if (!/^#[0-9a-f]{6}$/i.test(bg)) return "#ffffff";
+  return 1.05 / (lum(bg) + 0.05) >= 4.5 ? "#ffffff" : "#0f172a";
+}
+
+/** Mistura a cor com branco (0 = cor, 1 = branco): tons suaves para bordas. */
+function soft(hex: string, amount: number): string {
+  if (!/^#[0-9a-f]{6}$/i.test(hex)) return "#e2e8f0";
+  return "#" + [1, 3, 5].map((i) => Math.round(parseInt(hex.slice(i, i + 2), 16) + (255 - parseInt(hex.slice(i, i + 2), 16)) * amount).toString(16).padStart(2, "0")).join("");
+}
+
 function layout(ctx: EmailContext, b: Block): { html: string; text: string } {
-  const btn = buttonColor(ctx.brand);
-  const header = ctx.logoUrl
-    ? `<img src="${esc(ctx.logoUrl)}" alt="${esc(ctx.appName)}" height="36" style="display:block;height:36px;max-width:220px;border:0">`
-    : `<span style="font-size:18px;font-weight:700;color:${esc(btn)}">${esc(ctx.appName)}</span>`;
+  const t = ctx.theme ?? DEFAULT_EMAIL_THEME;
+  const accent = t.accent || buttonColor(ctx.brand);
+  const btnInk = inkOn(accent);
+  const align = t.logoAlign === "centro" ? "center" : "left";
+  const headerBg = t.layout === "faixa" ? t.header : t.layout === "minimalista" ? t.background : t.header;
+  const headerInk = inkOn(headerBg) === "#ffffff" ? "#ffffff" : accent;
+  const muted = soft(t.text, 0.42);
+  const name = esc(t.senderName || ctx.appName);
+  const logo = ctx.logoUrl
+    ? `<img src="${esc(ctx.logoUrl)}" alt="${name}" height="${t.logoHeight}" style="display:${align === "center" ? "inline-block" : "block"};height:${t.logoHeight}px;max-width:260px;border:0">`
+    : `<span style="font-size:18px;font-weight:700;color:${esc(headerInk)}">${name}</span>`;
   const button = b.cta
-    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0 8px"><tr><td style="border-radius:8px;background:${esc(btn)}"><a href="${esc(b.cta.href)}" style="display:inline-block;padding:12px 22px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px">${esc(b.cta.label)}</a></td></tr></table>`
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0 8px"><tr><td style="border-radius:8px;background:${esc(accent)}"><a href="${esc(b.cta.href)}" style="display:inline-block;padding:12px 22px;font-size:15px;font-weight:600;color:${btnInk};text-decoration:none;border-radius:8px">${esc(b.cta.label)}</a></td></tr></table>`
     : "";
-  const footer = b.footer ?? "Você recebeu este e-mail porque tem acesso ao Onboarding Implantta.";
+  const custom = t.footer ? esc(t.footer).replace(/\n/g, "<br>") : "";
+  const footer = [custom, b.footer ?? `Você recebeu este e-mail porque tem acesso ao ${name}.`].filter(Boolean).join("<br><br>");
+  const signature = t.signature ? `<p style="margin:22px 0 0;font-size:15px;line-height:1.55">${esc(t.signature)}</p>` : "";
+  const card = t.layout === "minimalista" ? "" : `background:${esc(t.card)};border-radius:14px;border:1px solid ${soft(t.text, 0.85)};`;
+  const headerRow =
+    t.layout === "faixa"
+      ? `<tr><td align="${align}" style="padding:24px 28px;background:${esc(t.header)};border-radius:14px 14px 0 0">${logo}</td></tr>`
+      : t.layout === "minimalista"
+        ? `<tr><td align="${align}" style="padding:8px 4px 18px;border-bottom:2px solid ${esc(accent)}">${logo}</td></tr>`
+        : `<tr><td align="${align}" style="padding:22px 28px;background:${esc(t.header)};border-radius:14px 14px 0 0;border-bottom:3px solid ${esc(accent)}">${logo}</td></tr>`;
+  const pad = t.layout === "minimalista" ? "24px 4px" : "28px";
   const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(b.heading)}</title></head>
-<body style="margin:0;padding:0;background:#f3f5f8;font-family:Inter,Segoe UI,Helvetica,Arial,sans-serif;color:#1e293b">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f5f8;padding:24px 12px"><tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:14px;border:1px solid #e2e8f0">
-<tr><td style="padding:22px 28px;border-bottom:3px solid ${esc(ctx.brand)}">${header}</td></tr>
-<tr><td style="padding:28px">
-<h1 style="margin:0 0 14px;font-size:20px;line-height:1.3;color:#0f172a">${esc(b.heading)}</h1>
-${b.paragraphs.map((p) => `<p style="margin:0 0 12px;font-size:15px;line-height:1.55">${p}</p>`).join("")}
+<body style="margin:0;padding:0;background:${esc(t.background)};font-family:Inter,Segoe UI,Helvetica,Arial,sans-serif;color:${esc(t.text)}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${esc(t.background)};padding:24px 12px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;${card}">
+${headerRow}
+<tr><td style="padding:${pad};color:${esc(t.text)}">
+<h1 style="margin:0 0 14px;font-size:20px;line-height:1.3;color:${esc(t.text)}">${esc(b.heading)}</h1>
+${b.paragraphs.filter(Boolean).map((p) => `<p style="margin:0 0 12px;font-size:15px;line-height:1.55">${p}</p>`).join("")}
 ${b.table?.html ?? ""}
 ${button}
-${b.cta ? `<p style="margin:12px 0 0;font-size:12px;color:#64748b">Se o botão não abrir, copie o endereço: <a href="${esc(b.cta.href)}" style="color:#475569">${esc(b.cta.href)}</a></p>` : ""}
+${b.cta ? `<p style="margin:12px 0 0;font-size:12px;color:${muted}">Se o botão não abrir, copie o endereço: <a href="${esc(b.cta.href)}" style="color:${muted}">${esc(b.cta.href)}</a></p>` : ""}
+${signature}
 </td></tr>
-<tr><td style="padding:16px 28px 22px;border-top:1px solid #eef2f6;font-size:12px;line-height:1.5;color:#64748b">${footer}</td></tr>
+<tr><td style="padding:${t.layout === "minimalista" ? "16px 4px" : "16px 28px 22px"};border-top:1px solid ${soft(t.text, 0.88)};font-size:12px;line-height:1.5;color:${muted}">${footer}</td></tr>
 </table></td></tr></table></body></html>`;
-  const text = [b.heading, "", ...b.text, ...(b.table ? ["", b.table.text] : []), ...(b.cta ? ["", `${b.cta.label}: ${b.cta.href}`] : []), "", "—", ctx.appName].join("\n");
+  const text = [
+    b.heading,
+    "",
+    ...b.text.filter(Boolean),
+    ...(b.table ? ["", b.table.text] : []),
+    ...(b.cta ? ["", `${b.cta.label}: ${b.cta.href}`] : []),
+    ...(t.signature ? ["", t.signature] : []),
+    "",
+    "—",
+    ...(t.footer ? [t.footer] : []),
+    t.senderName || ctx.appName,
+  ].join("\n");
   return { html, text };
 }
 
@@ -96,8 +143,9 @@ const prefsFooter = (ctx: EmailContext) =>
 export function renderEmail(row: EmailRow, ctx: EmailContext): RenderedEmail {
   const d = row.data ?? {};
   const name = str(d.name);
-  const hello = name ? `Olá, ${esc(name)}!` : "Olá!";
-  const helloText = name ? `Olá, ${name}!` : "Olá!";
+  const greeting = (ctx.theme ?? DEFAULT_EMAIL_THEME).greeting;
+  const helloText = greeting ? (name ? greeting.replace(/\{nome\}/g, name) : greeting.replace(/,?\s*\{nome\}/g, "")) : "";
+  const hello = esc(helloText);
   let block: Block;
 
   switch (row.kind) {
@@ -193,4 +241,25 @@ export function renderEmail(row: EmailRow, ctx: EmailContext): RenderedEmail {
 
   const { html, text } = layout(ctx, block);
   return { subject: row.subject, html, text };
+}
+
+/** Fundo onde a logo fica, conforme o layout. */
+export function headerBackground(t: EmailTheme): string {
+  return t.layout === "minimalista" ? t.background : t.header;
+}
+
+/**
+ * Logo do cabeçalho: a da Marca (versão para fundo claro ou escuro, conforme o
+ * cabeçalho), a enviada só para os e-mails, ou nenhuma. Só endereços https.
+ */
+export function emailLogo(t: EmailTheme, brand: { onLight: string | null; onDark: string | null }, storageBase: string): string | null {
+  const url =
+    t.logoSource === "nenhuma"
+      ? null
+      : t.logoSource === "propria" && t.logoPath
+        ? `${storageBase.replace(/\/$/, "")}/${t.logoPath}`
+        : inkOn(headerBackground(t)) === "#ffffff"
+          ? (brand.onDark ?? brand.onLight)
+          : (brand.onLight ?? brand.onDark);
+  return url && /^https:\/\//.test(url) ? url : null;
 }

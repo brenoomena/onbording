@@ -28,7 +28,7 @@ const MARKERS: [string, string][] = [
 ];
 
 /** Imagem em PNG (mantém a transparência), reduzida para caber em maxW × maxH. */
-async function toPng(file: File, maxW = 900, maxH = 300): Promise<Blob> {
+export async function toPng(file: File, maxW = 900, maxH = 300): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, maxW / bitmap.width, maxH / bitmap.height);
   const canvas = document.createElement("canvas");
