@@ -27,3 +27,13 @@ enviados para o teste ler os links.
 
 Com o Supabase CLI (`npx supabase start`, que usa Docker) o teste também funciona.
 Nesse caso, troque a leitura de e-mails em `lastLinkFor` pela API do Mailpit do CLI.
+
+## Isolamento entre roteiros
+
+Cada roteiro parte de um banco recém-criado:
+- `fluxos.mjs` espera o banco vazio, logo após o `reset.sh`.
+- Os demais (`acompanhamento`, `avaliacoes`, `certificados`, `comunicacao`, `emails`, `checklist`, `pesquisa`...) rodam depois de `fluxos-etapa2.mjs`.
+
+Não encadeie vários roteiros no mesmo banco: eles criam trilhas, avisos e cadastros com nomes fixos e um atrapalha o outro. Isso dá erros como nome de trilha repetido ou "resolved to 3 elements" no sininho.
+
+`emails.mjs` precisa do `fake-resend.mjs` rodando na porta 54398.

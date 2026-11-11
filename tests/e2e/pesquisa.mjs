@@ -37,7 +37,7 @@ const open = async (email, viewport = { width: 1440, height: 900 }) => {
 };
 
 const vera = (await rest("profiles?select=id&email=eq.vera@implantta.com.br"))[0].id;
-const [track] = await rest("tracks", { method: "POST", body: JSON.stringify({ name: "Cultura Implantta", status: "publicado", is_sequential: false }) });
+const [track] = await rest("tracks", { method: "POST", body: JSON.stringify({ name: "Trilha da Pesquisa", status: "publicado", is_sequential: false }) });
 const [mod] = await rest("modules", { method: "POST", body: JSON.stringify({ track_id: track.id, title: "Quem somos", position: 1 }) });
 const [content] = await rest("contents", { method: "POST", body: JSON.stringify({ title: "Nossos valores", kind: "texto", body: "Cliente no centro.", track_id: track.id, status: "publicado" }) });
 await rest("module_items", { method: "POST", body: JSON.stringify({ module_id: mod.id, content_id: content.id, position: 1, is_required: true }) });
@@ -74,13 +74,13 @@ await step("avalia o conteúdo com 4 estrelas e comentário", async () => {
 await step("convite no sininho leva à avaliação da trilha", async () => {
   await V.goto(`${BASE}/painel`);
   await V.getByRole("button", { name: /Avisos|Notificações/ }).first().click();
-  const link = V.getByRole("button", { name: /Como foi a trilha Cultura Implantta\?/ }).first();
+  const link = V.getByRole("button", { name: /Como foi a trilha Trilha da Pesquisa\?/ }).first();
   await link.waitFor();
   await V.screenshot({ path: `${SHOTS}/2-sininho.png` });
   await link.click();
   await V.waitForURL(/avaliar=1/);
   await V.getByRole("region", { name: "Avaliar a trilha" }).waitFor();
-  await V.getByRole("heading", { name: "Como foi a trilha Cultura Implantta?" }).waitFor();
+  await V.getByRole("heading", { name: "Como foi a trilha Trilha da Pesquisa?" }).waitFor();
   await V.screenshot({ path: `${SHOTS}/3-trilha-form.png`, fullPage: true });
 });
 
@@ -119,7 +119,7 @@ await step("RH vê o relatório: indicadores, trilha, conteúdo e comentários (
   await A.getByRole("link", { name: "Pesquisa de satisfação" }).first().click();
   await A.waitForURL(/\/pesquisa$/);
   await A.getByRole("heading", { name: "Pesquisa de satisfação" }).waitFor();
-  const row = A.getByRole("row", { name: /Cultura Implantta/ });
+  const row = A.getByRole("row", { name: /Trilha da Pesquisa/ });
   await row.waitFor();
   assert.match(await row.innerText(), /3,0[\s\S]*1\s*de 1[\s\S]*100%/);
   await A.screenshot({ path: `${SHOTS}/5-rh-trilhas.png`, fullPage: true });
@@ -144,7 +144,7 @@ await step("filtro de período antigo esvazia; exportação CSV e Excel", async 
   assert.equal(csv.status(), 200);
   const text = await csv.text();
   assert.match(text, /Trilha;Nota média;Avaliações;Conclusões;Taxa de resposta/);
-  assert.match(text, /Cultura Implantta;3;1;1;100%;0;0;1;0;0;1/);
+  assert.match(text, /Trilha da Pesquisa;3;1;1;100%;0;0;1;0;0;1/);
   const com = await (await A.request.get(`${BASE}/pesquisa/exportar?formato=csv&periodo=tudo&vista=comentarios`)).text();
   assert.match(com, /Faltaram exemplos práticos\.;Anônimo/);
   const x = await A.request.get(`${BASE}/pesquisa/exportar?formato=xlsx&vista=conteudos`);
